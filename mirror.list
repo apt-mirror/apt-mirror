@@ -1,0 +1,69 @@
+# apt-mirror configuration file
+
+##
+## The default configuration options (uncomment and change to override)
+##
+#
+# set base_path	   /var/spool/apt-mirror
+# set mirror_path  $base_path/mirror
+# set skel_path	   $base_path/skel
+# set var_path     $base_path/var
+#
+# set defaultarch  <running host architecture>
+# set nthreads     20
+#
+
+
+##
+## Example sources
+##
+
+# sarge's section
+deb http://ftp.fi.debian.org/debian sarge main contrib non-free
+deb-src http://ftp.fi.debian.org/debian sarge main contrib non-free
+
+deb http://security.debian.org/debian-security sarge/updates main contrib non-free
+deb-src http://security.debian.org/debian-security sarge/updates main contrib non-free
+
+deb http://ftp.fi.debian.org/debian sarge main/debian-installer
+
+
+# sarge-proposed-updates's section
+deb http://ftp.fi.debian.org/debian sarge-proposed-updates main contrib non-free
+deb-src http://ftp.fi.debian.org/debian sarge-proposed-updates main contrib non-free
+
+
+# sid's section
+deb http://ftp.fi.debian.org/debian sid main contrib non-free
+deb-src http://ftp.fi.debian.org/debian sid main contrib non-free
+
+deb http://ftp.fi.debian.org/debian sid main/debian-installer
+
+
+# experimental section
+deb http://ftp.fi.debian.org/debian ../project/experimental main contrib non-free
+deb-src http://ftp.fi.debian.org/debian ../project/experimental main contrib non-free
+
+
+##
+## Cleaner configuration example
+##
+#
+# set cleanscript $var_path/clean.sh
+#
+
+# Cleaning section
+clean http://security.debian.org/
+clean http://ftp.fi.debian.org/
+
+
+skip-clean http://ftp.fi.debian.org/doc/
+skip-clean http://ftp.fi.debian.org/tools/
+skip-clean http://ftp.fi.debian.org/debian-cd/
+skip-clean http://ftp.fi.debian.org/debian-minicd/
+skip-clean http://ftp.fi.debian.org/debian/dists/sarge/main/installer-i386/
+skip-clean http://ftp.fi.debian.org/debian/dists/sid/main/installer-i386/
+skip-clean http://ftp.fi.debian.org/debian/doc/
+skip-clean http://ftp.fi.debian.org/debian/tools/
+skip-clean http://ftp.fi.debian.org/debian/project/
+skip-clean http://ftp.fi.debian.org/debian-non-US/project/
