@@ -1,14 +1,19 @@
 0.4.6
 
+  * added rate_limit option ( closes sf.net bug #1729402 )
+    a value of 25 is equal to 25 Bytes/Second
+    a value of 25k is equal to 25 KiloBytes/Second
+    a value of 25m is equal to 25 MegaBytes/Second
+
 0.4.5
 
-+added mipsel, armel, and lpia arch support
-+fixed the tilde replace code so it works with 2 or more tilde
- in the package names
-+default _tilde option set to 0
-+minor updates to the manpage wordings
-+new _stat function to cache and speed up parsing
-+download size now in human readable numbers ( KiB,MiB,GiB,etc )
+  * added mipsel, armel, and lpia arch support
+  * fixed the tilde replace code so it works with 2 or more tilde
+    in the package names
+  * default _tilde option set to 0
+  * minor updates to the manpage wordings
+  * new _stat function to cache and speed up parsing
+  * download size now in human readable numbers ( KiB,MiB,GiB,etc )
 
 0.4.4
-changes documented in the debian changelog
+old changes documented in the debian/changelog
