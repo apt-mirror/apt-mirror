@@ -1,0 +1,6 @@
+etc/apt
+usr/bin
+var/spool/apt-mirror
+var/spool/apt-mirror/mirror
+var/spool/apt-mirror/skel
+var/spool/apt-mirror/var

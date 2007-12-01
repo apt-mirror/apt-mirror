@@ -1,0 +1,61 @@
+#!/usr/bin/make -f
+# GNU copyright 1997 to 1999 by Joey Hess.
+
+version = $(shell uscan --dehs | sed -n 's/.*<upstream-version>\(.*\)<\/upstream-version>.*/\1/p')
+builddist = $(shell lsb_release -si)
+
+build: build-stamp
+
+build-stamp:
+	dh_testdir
+	touch build-stamp
+
+clean:
+	dh_testdir
+	dh_testroot
+	rm -f build-stamp
+	rm -f debian/conffiles
+	dpatch deapply-all
+	rm -rf debian/patched
+	dh_clean
+
+install: build
+	dh_testdir
+	dh_testroot
+	dh_clean -k
+	dh_installdirs
+
+	dpatch apply-all
+	install -g root -o root -m 755 \
+		apt-mirror debian/apt-mirror/usr/bin/apt-mirror
+	install -g root -o root -m 644 \
+		debian/${builddist}-mirror.list debian/apt-mirror/etc/apt/mirror.list
+	install -d -g root -o root -m 0755 debian/apt-mirror/usr/share/man/man1
+	pod2man apt-mirror | gzip -9 -c > debian/apt-mirror/usr/share/man/man1/apt-mirror.1.gz
+
+
+get-orig-source:
+	uscan --verbose --force-download
+
+
+# Build architecture-independent files here.
+binary-indep: build install
+# We have nothing to do by default.
+
+# Build architecture-dependent files here.
+binary-arch: build install
+	dh_testdir
+	dh_testroot
+	dh_installdocs
+	dh_installcron
+	dh_installinfo
+	dh_installchangelogs 
+	dh_compress
+	dh_fixperms
+	dh_installdeb
+	dh_gencontrol
+	dh_md5sums
+	dh_builddeb
+
+binary: binary-indep binary-arch
+.PHONY: build clean binary-indep binary-arch binary install configure
