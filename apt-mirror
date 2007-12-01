@@ -58,9 +58,14 @@ F</var/spool/apt-mirror/var>
 
 Do not specify default http port (80) explicitly. (i.e. deb http://server:80/ sid ...)
 
-=head1 AUTHOR
+=head1 ORIGINAL AUTHOR
 
 Dmitry N. Hramtsov E<lt>hdn@nsu.ruE<gt>
+
+=head1 MAINTAINERS
+
+Dmitry N. Hramtsov E<lt>hdn@nsu.ruE<gt>
+Brandon Holtsclaw E<lt>brandon@imbrandon.comE<gt>
 
 =cut
 
@@ -82,7 +87,7 @@ my %config_variables = (
     "_contents"   => 1,
     "_autoclean"  => 0,
     "_tilde"	  => 0
-    "limit_rate"  => 100M
+    "limit_rate"  => 100m
 );
 
 my @config_binaries = ();

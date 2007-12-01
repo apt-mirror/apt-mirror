@@ -1,69 +1,53 @@
-# apt-mirror configuration file
-
-##
-## The default configuration options (uncomment and change to override)
-##
+############# Config ##################
 #
-# set base_path	   /var/spool/apt-mirror
-# set mirror_path  $base_path/mirror
-# set skel_path	   $base_path/skel
-# set var_path     $base_path/var
+## default configuration options (uncomment and change to override)
 #
-# set defaultarch  <running host architecture>
-# set nthreads     20
+#set base_path    /var/spool/apt-mirror
 #
-
-
-##
-## Example sources
-##
-
-# sarge's section
-deb http://ftp.fi.debian.org/debian sarge main contrib non-free
-deb-src http://ftp.fi.debian.org/debian sarge main contrib non-free
-
-deb http://security.debian.org/debian-security sarge/updates main contrib non-free
-deb-src http://security.debian.org/debian-security sarge/updates main contrib non-free
-
-deb http://ftp.fi.debian.org/debian sarge main/debian-installer
-
-
-# sarge-proposed-updates's section
-deb http://ftp.fi.debian.org/debian sarge-proposed-updates main contrib non-free
-deb-src http://ftp.fi.debian.org/debian sarge-proposed-updates main contrib non-free
-
-
-# sid's section
-deb http://ftp.fi.debian.org/debian sid main contrib non-free
-deb-src http://ftp.fi.debian.org/debian sid main contrib non-free
-
-deb http://ftp.fi.debian.org/debian sid main/debian-installer
-
-
-# experimental section
-deb http://ftp.fi.debian.org/debian ../project/experimental main contrib non-free
-deb-src http://ftp.fi.debian.org/debian ../project/experimental main contrib non-free
-
-
-##
-## Cleaner configuration example
-##
+## if you change the base path you must create the directories below with write privlages
 #
-# set cleanscript $var_path/clean.sh
+#set mirror_path  $base_path/mirror
+#set skel_path    $base_path/skel
+#set var_path     $base_path/var
+#set cleanscript $var_path/clean.sh
+#
+#set defaultarch  <running host architecture>
+#set nthreads     20
+#set _tilde 0
+#
+## valid values for limit_rate are :
+## 10 for 10 Bytes/Second, 10k for 10 Kilobytes/Second, and 10m for 10 Megabytes/Second
+#
+#set limit_rate 100m
+#
+############# End Config ##############
+
+######### Mirroring List ##############
+#
+# supported apt-mirror list entries:
+#
+# debian source : deb-src http://...
+# default native arch : deb http://...
+# debian non-native arch : deb-$arch http://...
+# where $arch can = (alpha|amd64|armel|arm|hppa|hurd-i386|i386|ia64|lpia|m68k|mipsel|mips|powerpc|s390|sh|sparc)
 #
 
-# Cleaning section
-clean http://security.debian.org/
-clean http://ftp.fi.debian.org/
+deb http://ftp.us.debian.org/debian unstable main contrib non-free
+deb-src http://ftp.us.debian.org/debian unstable main contrib non-free
 
+#
+######### End Mirroring List ##########
 
-skip-clean http://ftp.fi.debian.org/doc/
-skip-clean http://ftp.fi.debian.org/tools/
-skip-clean http://ftp.fi.debian.org/debian-cd/
-skip-clean http://ftp.fi.debian.org/debian-minicd/
-skip-clean http://ftp.fi.debian.org/debian/dists/sarge/main/installer-i386/
-skip-clean http://ftp.fi.debian.org/debian/dists/sid/main/installer-i386/
-skip-clean http://ftp.fi.debian.org/debian/doc/
-skip-clean http://ftp.fi.debian.org/debian/tools/
-skip-clean http://ftp.fi.debian.org/debian/project/
-skip-clean http://ftp.fi.debian.org/debian-non-US/project/
+######### Cleaning Section ############
+#
+
+## directorys managed by apt-mirror
+clean http://ftp.us.debian.org/debian
+
+## directorys NOT managed by apt-mirror
+#skip-clean http://ftp.us.debian.org/debian-minicd/
+#skip-clean http://ftp.us.debian.org/debian/dists/sarge/main/installer-i386/
+#skip-clean http://ftp.us.debian.org/debian/dists/sid/main/installer-i386/
+
+#
+######### End Cleaning Section ########
