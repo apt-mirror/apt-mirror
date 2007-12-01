@@ -82,6 +82,7 @@ my %config_variables = (
     "_contents"   => 1,
     "_autoclean"  => 0,
     "_tilde"	  => 0
+    "limit_rate"  => 100M
 );
 
 my @config_binaries = ();
@@ -181,7 +182,7 @@ sub download_urls {
 	
 	if($pid == 0) {
 #	    print " * Running wget $i...\n";
-	    exec 'wget', '-t', '0', '-r', '-N', '-l', 'inf', '-o', get_variable("var_path") . "/$stage-log.$i", '-i', get_variable("var_path") . "/$stage-urls.$i";
+	    exec 'wget', '--limit-rate='.get_variable("limit_rate"), '-t', '0', '-r', '-N', '-l', 'inf', '-o', get_variable("var_path") . "/$stage-log.$i", '-i', get_variable("var_path") . "/$stage-urls.$i";
 #	    print " * Can't exec $i...\n";
 #	    unlink get_variable("var_path") . "/URLS.$i";
 #	    unlink get_variable("var_path") . "/wget-log.$i";
