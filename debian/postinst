@@ -17,8 +17,12 @@ setup_aptmirror_user() {
 
 setup_aptmirror_clean() {
 	touch /var/spool/apt-mirror/var/clean.sh
-	chown apt-mirror:apt-mirror /var/spool/apt-mirror/var/clean.sh
 	chmod +x /var/spool/apt-mirror/var/clean.sh
+}
+
+setup_postmirror_script() {
+	touch /var/spool/apt-mirror/var/postmirror.sh
+	chmod +x /var/spool/apt-mirror/var/postmirror.sh
 }
 
 set_aptmirror_owner() {
@@ -27,9 +31,11 @@ set_aptmirror_owner() {
 	chown apt-mirror:apt-mirror /var/spool/apt-mirror/skel
 	chown apt-mirror:apt-mirror /var/spool/apt-mirror/var
 	chown apt-mirror:apt-mirror /var/spool/apt-mirror/var/clean.sh
+	chown apt-mirror:apt-mirror /var/spool/apt-mirror/var/postmirror.sh
 }
 
 setup_aptmirror_user
 setup_aptmirror_clean
+setup_postmirror_script
 set_aptmirror_owner
 

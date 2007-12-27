@@ -1,5 +1,12 @@
 0.4.6
 
+  * minor cleanup to the documentation
+  * applied patch from Steve Kowalik ( stevenk@ubuntu.com ) to 
+    allow user:pass@host ( http and ftp authenticated ) 
+    and port numbers in the url host:8080 etc
+  * Added ability to run a shell script after apt-mirror completes the 
+    mirroring confg values "run_postmirror" 0/1 
+    and "postmirror_script" /path/to/script.sh
   * added rate_limit option ( closes sf.net bug #1729402 )
     a value of 25 is equal to 25 Bytes/Second
     a value of 25k is equal to 25 KiloBytes/Second

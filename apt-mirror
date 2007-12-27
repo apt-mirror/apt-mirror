@@ -28,14 +28,14 @@ Main features:
 =head1 COMMENTS
 
 apt-mirror uses F</etc/apt/mirror.list> as a configuration file.
-By default it is tuned to official debian mirror in Finland. Change
+By default it is tuned to official Debian or Ubuntu mirrors. Change
 it for your needs.
 
 After you setup the configuration file you may run as root:
 
     # su - apt-mirror -c apt-mirror
 
-Or uncomment line in F</etc/cron.d/apt-mirror> to enable daily mirror upgrades.
+Or uncomment line in F</etc/cron.d/apt-mirror> to enable daily mirror updates.
 
 =head1 FILES
 
@@ -54,9 +54,22 @@ F</var/spool/apt-mirror/skel>
 F</var/spool/apt-mirror/var>
         Log files placed here. URLs and MD5 summs also here.
 
-=head1 KNOWN BUGS
+=head1 CONFIGURATION EXAMPLES
 
-Do not specify default http port (80) explicitly. (i.e. deb http://server:80/ sid ...)
+The mirror.list configuration supports many options, the file is well commented explinging each option.
+here are some sample mirror configuration lines showing the various supported ways :
+
+Normal:
+deb http://example.com/debian stable main contrib non-free
+
+Arch Specific: ( many other arch's are supported )
+deb-powerpc http://example.com/debian stable main contrib non-free
+
+HTTP and FTP Auth or non-standard port:
+deb http://user:pass@example.com:8080/debian stable main contrib non-free
+
+Source Mirroring:
+deb-src http://example.com/debian stable main contrib non-free
 
 =head1 ORIGINAL AUTHOR
 
@@ -86,8 +99,10 @@ my %config_variables = (
     "cleanscript" => '$var_path/clean.sh',
     "_contents"   => 1,
     "_autoclean"  => 0,
-    "_tilde"	  => 0
-    "limit_rate"  => 100m
+    "_tilde"	  => 0,
+    "limit_rate"  => '100m',
+    "run_postmirror" => 0,
+    "postmirror_script" => '$var_path/postmirror.sh'
 );
 
 my @config_binaries = ();
@@ -370,14 +385,21 @@ sub remove_spaces($) {
     }
 }
 
+sub sanitise_uri {
+    my $uri = shift;
+    $uri =~ s[^(\w+)://][];
+    $uri =~ s/^([^@]+)?@?// if $uri =~ /@/;
+    $uri =~ s&:\d+/&/&; # and port information
+    $uri =~ s/~/\%7E/g if get_variable("_tilde");
+    return $uri;
+}
+
 sub proceed_index_gz {
     my $uri = shift;
     my $index = shift;
     my ($path, $package, $mirror, $files) = '';
 
-    $path = $uri;
-    $path =~ s[^(\w+)://][];
-    $path =~ s/~/\%7E/g if get_variable("_tilde");
+    $path = sanitise_uri($uri);
     local $/ = "\n\n";
     $mirror = get_variable("mirror_path") . "/" . $path;
     
@@ -494,8 +516,8 @@ sub copy_file {
 
 foreach (@index_urls) {
     die("apt-mirror: invalid url in index_urls") unless s[^(\w+)://][];
-    copy_file(get_variable("skel_path") . "/$_", get_variable("mirror_path") . "/$_");
-    copy_file(get_variable("skel_path") . "/$_", get_variable("mirror_path") . "/$_") if(s/\.gz$//);
+    copy_file(get_variable("skel_path") . "/" . sanitise_uri("$_"), get_variable("mirror_path") . "/" . sanitise_uri("$_"));
+    copy_file(get_variable("skel_path") . "/" . sanitise_uri("$_"), get_variable("mirror_path") . "/" . sanitise_uri("$_")) if(s/\.gz$//);
 }
 
 
@@ -513,8 +535,7 @@ sub process_file {
     my $file = shift;
     $file =~ s[~][%7E]g if get_variable("_tilde");
     return 1 if $skipclean{$file};
-    $file =~ s[%7E][~] if get_variable("_tilde");
-    push @rm_files, $file;
+    push @rm_files, sanitise_uri($file);
     my (undef, undef, undef, undef, undef, undef, undef, $size, undef, undef, undef, undef, $blocks) = stat($file);
     $unnecessary_bytes += $blocks * 512;
     return 0;
@@ -586,4 +607,15 @@ if(get_variable("_autoclean")) {
 					
     close CLEAN;
 
+}
+
+if(get_variable("run_postmirror")) {
+    print "Running the Post Mirror script ...\n";
+    print "(" . get_variable("postmirror_script") . ")\n\n";
+    if(-x get_variable("postmirror_script")){
+        system (get_variable("postmirror_script"));        
+    } else {
+        system ('/bin/sh ' . get_variable("postmirror_script"));
+    }
+    print "\nPost Mirror script has completed. See above output for any possible errors.\n\n";
 }
