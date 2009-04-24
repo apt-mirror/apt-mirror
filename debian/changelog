@@ -2,7 +2,8 @@ apt-mirror (0.4.6-0) UNRELEASED; urgency=low
 
   * New Upstream Release
   * updated debian/*-mirror.list to reflect new upsteam options
-  * added postmirror.sh creation in postinst
+  * added postmirror.sh creation and configuration options
+  * added file locking, more than one apt-mirror instance cant run at once
 
  -- Brandon Holtsclaw <brandon@imbrandon.com>  Thu, 27 Dec 2007 01:55:18 -0600
 
