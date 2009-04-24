@@ -16,17 +16,17 @@ set _tilde 0
 #
 ############# end config ##############
 
-deb http://archive.ubuntu.com/ubuntu hardy main restricted universe multiverse
-deb http://archive.ubuntu.com/ubuntu hardy-updates main restricted universe multiverse
-#deb http://archive.ubuntu.com/ubuntu hardy-backports main restricted universe multiverse
-deb http://archive.ubuntu.com/ubuntu hardy-security main restricted universe multiverse
-#deb http://archive.ubuntu.com/ubuntu hardy-proposed main restricted universe multiverse
+deb http://archive.ubuntu.com/ubuntu jaunty main restricted universe multiverse
+deb http://archive.ubuntu.com/ubuntu jaunty-updates main restricted universe multiverse
+#deb http://archive.ubuntu.com/ubuntu jaunty-backports main restricted universe multiverse
+deb http://archive.ubuntu.com/ubuntu jaunty-security main restricted universe multiverse
+#deb http://archive.ubuntu.com/ubuntu jaunty-proposed main restricted universe multiverse
 
-deb-src http://archive.ubuntu.com/ubuntu hardy main restricted universe multiverse
-deb-src http://archive.ubuntu.com/ubuntu hardy-updates main restricted universe multiverse
-#deb-src http://archive.ubuntu.com/ubuntu hardy-backports main restricted universe multiverse
-deb-src http://archive.ubuntu.com/ubuntu hardy-security main restricted universe multiverse
-#deb-src http://archive.ubuntu.com/ubuntu hardy-proposed main restricted universe multiverse
+deb-src http://archive.ubuntu.com/ubuntu jaunty main restricted universe multiverse
+deb-src http://archive.ubuntu.com/ubuntu jaunty-updates main restricted universe multiverse
+#deb-src http://archive.ubuntu.com/ubuntu jaunty-backports main restricted universe multiverse
+deb-src http://archive.ubuntu.com/ubuntu jaunty-security main restricted universe multiverse
+#deb-src http://archive.ubuntu.com/ubuntu jaunty-proposed main restricted universe multiverse
 
 clean http://archive.ubuntu.com/ubuntu
 

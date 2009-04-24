@@ -101,7 +101,7 @@ my %config_variables = (
     "_autoclean"  => 0,
     "_tilde"	  => 0,
     "limit_rate"  => '100m',
-    "run_postmirror" => 0,
+    "run_postmirror" => 1,
     "postmirror_script" => '$var_path/postmirror.sh'
 );
 
@@ -175,6 +175,21 @@ sub get_variable {
 	die("apt-mirror: too many substitution while evaluating variable") if ($count --) < 0;
     }
     return $value;
+}
+
+sub lock_aptmirror {
+	system ("touch " . get_variable("var_path") . "/apt-mirror.lock");
+}
+
+sub check_lock {
+	if(-e get_varible("var_path") . /apt-mirror.lock)
+	{
+		die("apt-mirror is already running, exiting");
+	}
+}
+
+sub unlock_aptmirror {
+	system ("rm -f " . get_variable("var_path") . "/apt-mirror.lock");
 }
 
 sub download_urls {
@@ -274,6 +289,9 @@ while(<CONFIG>) {
 close CONFIG;
 
 die("Please explicitly specify 'defaultarch' in mirror.list") unless get_variable("defaultarch");
+
+check_lock();
+lock_aptmirror();
 
 
 ######################################################################################
@@ -619,3 +637,5 @@ if(get_variable("run_postmirror")) {
     }
     print "\nPost Mirror script has completed. See above output for any possible errors.\n\n";
 }
+
+unlock_aptmirror();

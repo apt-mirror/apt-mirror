@@ -20,10 +20,6 @@ setup_aptmirror_clean() {
 	chmod +x /var/spool/apt-mirror/var/clean.sh
 }
 
-setup_postmirror_script() {
-	touch /var/spool/apt-mirror/var/postmirror.sh
-	chmod +x /var/spool/apt-mirror/var/postmirror.sh
-}
 
 set_aptmirror_owner() {
 	chown apt-mirror:apt-mirror /var/spool/apt-mirror
@@ -36,6 +32,6 @@ set_aptmirror_owner() {
 
 setup_aptmirror_user
 setup_aptmirror_clean
-setup_postmirror_script
+#setup_postmirror_script
 set_aptmirror_owner
 
