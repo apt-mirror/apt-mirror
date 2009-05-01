@@ -182,14 +182,14 @@ sub lock_aptmirror {
 }
 
 sub check_lock {
-	if(-e get_varible("var_path") . /apt-mirror.lock)
+	if(-e get_variable("var_path") . "/apt-mirror.lock")
 	{
 		die("apt-mirror is already running, exiting");
 	}
 }
 
 sub unlock_aptmirror {
-	system ("rm -f " . get_variable("var_path") . "/apt-mirror.lock");
+	unlink(get_variable("var_path") . "/apt-mirror.lock");
 }
 
 sub download_urls {
