@@ -1,4 +1,4 @@
-apt-mirror (0.4.6-0) UNRELEASED; urgency=low
+apt-mirror (0.4.6-0ubuntu1) karmic; urgency=low
 
   * New Upstream Release
   * updated debian/*-mirror.list to reflect new upsteam options

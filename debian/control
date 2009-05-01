@@ -7,7 +7,7 @@ Uploaders: Rudy Godoy <rudy@debian.org>
 Homepage: http://apt-mirror.sourceforge.net/
 Build-Depends: debhelper (>= 5), dpatch
 Build-Depends-Indep: lsb-release
-Standards-Version: 3.7.2
+Standards-Version: 3.8.1
 
 Package: apt-mirror
 Architecture: all

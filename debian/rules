@@ -28,8 +28,6 @@ install: build
 	dpatch apply-all
 	install -g root -o root -m 755 \
 		apt-mirror debian/apt-mirror/usr/bin/apt-mirror
-	install -g root -o root -m 755 \
-		postmirror.sh debian/var/spool/apt-mirror/var/postmirror.sh
 	install -g root -o root -m 644 \
 		debian/${builddist}-mirror.list debian/apt-mirror/etc/apt/mirror.list
 	install -d -g root -o root -m 0755 debian/apt-mirror/usr/share/man/man1
