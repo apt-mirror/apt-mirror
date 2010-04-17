@@ -1,4 +1,6 @@
-#!/bin/sh -e
+#!/bin/sh
+set -e
+
 #DEBHELPER#
 
 action="$1"
@@ -17,6 +19,7 @@ setup_aptmirror_user() {
 
 setup_aptmirror_clean() {
 	touch /var/spool/apt-mirror/var/clean.sh
+	touch /var/spool/apt-mirror/var/postmirror.sh
 	chmod +x /var/spool/apt-mirror/var/clean.sh
 }
 

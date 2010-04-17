@@ -291,6 +291,11 @@ close CONFIG;
 die("Please explicitly specify 'defaultarch' in mirror.list") unless get_variable("defaultarch");
 
 check_lock();
+
+$SIG{INT} = "unlock_aptmirror";
+$SIG{HUP} = "unlock_aptmirror";
+$SIG{TERM} = "unlock_aptmirror";
+
 lock_aptmirror();
 
 
@@ -325,9 +330,11 @@ foreach (@config_sources) {
 	foreach (@components) {
 	    add_url_to_download($url . $_ . "/source/Release");
 	    add_url_to_download($url . $_ . "/source/Sources.gz");
+	    add_url_to_download($url . $_ . "/source/Sources.bz2");
 	}
     } else {
 	add_url_to_download($uri . "/$distribution/Sources.gz");
+	add_url_to_download($uri . "/$distribution/Sources.bz2");
     }
 }
 
@@ -339,13 +346,18 @@ foreach (@config_binaries) {
 
 	add_url_to_download($url . "Release");
 	add_url_to_download($url . "Release.gpg");
-	add_url_to_download($url . "Contents-" . $arch . ".gz") if get_variable("_contents");
+        if (get_variable("_contents")) {
+            add_url_to_download($url . "Contents-" . $arch . ".gz");
+            add_url_to_download($url . "Contents-" . $arch . ".bz2");
+        }
 	foreach (@components) {
 	    add_url_to_download($url . $_ . "/binary-" . $arch . "/Release");
 	    add_url_to_download($url . $_ . "/binary-" . $arch . "/Packages.gz");
+	    add_url_to_download($url . $_ . "/binary-" . $arch . "/Packages.bz2");
 	}
     } else {
 	add_url_to_download($uri . "/$distribution/Packages.gz");
+	add_url_to_download($uri . "/$distribution/Packages.bz2");
     }
 }
 
@@ -358,6 +370,7 @@ foreach (keys %urls_to_download) {
     s[~][%7E]g if get_variable("_tilde");
     $skipclean{$_} = 1;
     $skipclean{$_} = 1 if s[\.gz$][];
+    $skipclean{$_} = 1 if s[\.bz2$][];
 }
 
 ######################################################################################
@@ -536,6 +549,7 @@ foreach (@index_urls) {
     die("apt-mirror: invalid url in index_urls") unless s[^(\w+)://][];
     copy_file(get_variable("skel_path") . "/" . sanitise_uri("$_"), get_variable("mirror_path") . "/" . sanitise_uri("$_"));
     copy_file(get_variable("skel_path") . "/" . sanitise_uri("$_"), get_variable("mirror_path") . "/" . sanitise_uri("$_")) if(s/\.gz$//);
+    copy_file(get_variable("skel_path") . "/" . sanitise_uri("$_"), get_variable("mirror_path") . "/" . sanitise_uri("$_")) if(s/\.bz2$//);
 }
 
 
@@ -563,14 +577,14 @@ sub process_directory {
     my $dir = shift;
     my $is_needed = 0;
     return 1 if $skipclean{$dir};
-    opendir(DIR, $dir) or die "apt-mirror: can't opendir $dir: $!";
-    foreach (grep { !/^\.$/ && !/^\.\.$/ } readdir(DIR)) {
+    opendir(my $dir_h, $dir) or die "apt-mirror: can't opendir $dir: $!";
+    foreach (grep { !/^\.$/ && !/^\.\.$/ } readdir($dir_h)) {
 	my $item = $dir . "/". $_;
 	$is_needed |= process_directory($item)	if -d $item && ! -l $item;
 	$is_needed |= process_file($item)	if -f $item;
 	$is_needed |= process_symlink($item)	if -l $item;
     }
-    closedir DIR;
+    closedir $dir_h;
     push @rm_dirs, $dir unless $is_needed;
     return $is_needed;
 }

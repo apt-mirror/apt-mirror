@@ -1,3 +1,38 @@
+apt-mirror (0.4.6-0ubuntu4) lucid; urgency=low
+
+  * Add 03-clean-lock-file.patch to delete the lock file on every exit
+    (LP: #424462).
+  * Update default config to mention lucid (LP: #551605).
+
+ -- Benjamin Drung <bdrung@ubuntu.com>  Thu, 15 Apr 2010 23:20:51 +0200
+
+apt-mirror (0.4.6-0ubuntu3) karmic; urgency=low
+
+  * Switch to cdbs and add simple-patchsys.
+  * Add patches again and refresh them:
+    - debian/patches/01-ubuntu-mirror-bz2.patch (LP: #184063)
+    - debian/patches/02-fix-invalid-dirhandle.patch (LP: #244613)
+  * Install upstream changelog.
+  * Refer to versioned copyright file.
+  * Bump Debian standards version to 3.8.3, no changes needed.
+
+ -- Benjamin Drung <bdrung@ubuntu.com>  Fri, 16 Oct 2009 16:29:23 +0200
+
+apt-mirror (0.4.6-0ubuntu2) karmic; urgency=low
+
+  * Readd dropped changelog entries.
+  * Reapply changes, which were dropped with 0.4.6-0ubuntu1:
+    - debian/Ubuntu-mirror.list: fix typo (privlages -> privileges)
+    - debian/rules: Move binary-arch commands to binary-indep
+    - debian/control:
+      - remove homepage from description
+      - Update Maintainer field
+  * debian/Debian-mirror.list: fix typo (privlages -> privileges)
+  * debian/Ubuntu-mirror.list: update distribution to karmic (LP: #378836)
+  * Remove dpatch (there is no patch to apply)
+
+ -- Benjamin Drung <bdrung@ubuntu.com>  Wed, 20 May 2009 11:41:34 +0200
+
 apt-mirror (0.4.6-0ubuntu1) karmic; urgency=low
 
   * New Upstream Release
@@ -7,6 +42,26 @@ apt-mirror (0.4.6-0ubuntu1) karmic; urgency=low
 
  -- Brandon Holtsclaw <brandon@imbrandon.com>  Thu, 27 Dec 2007 01:55:18 -0600
 
+apt-mirror (0.4.5-1ubuntu2) jaunty; urgency=low
+
+  * Add 02-fix-invalid-dirhandle.dpatch (LP: #244613)
+  * debian/Ubuntu-mirror.list:
+    - fix typo (privlages -> privileges)
+    - update distribution to jaunty
+  * debian/rules: Move binary-arch commands to binary-indep
+  * debian/control:
+    - remove homepage from description
+    - bump Debian standards version to 3.8.0, no changes needed
+
+ -- Benjamin Drung <benjamin.drung@gmail.com>  Sat, 01 Nov 2008 20:41:20 +0100
+
+apt-mirror (0.4.5-1ubuntu1) intrepid; urgency=low
+
+  * Add 01-ubuntu-mirror-bz2.patch (LP: #184063)
+  * Bump Debian standards version to 3.7.3, no changes needed
+
+ -- David Futcher <bobbocanfly@gmail.com>  Thu, 27 Mar 2008 14:20:06 +0000
+
 apt-mirror (0.4.5-1) unstable; urgency=low
 
   * new upstream release
@@ -14,6 +69,8 @@ apt-mirror (0.4.5-1) unstable; urgency=low
   * removed all patches, applied upstream
   * new upstream fixes LP: #172454
   * get-orig-source updated
+  * Removed DM-Upload-Allowed field from debian/control
+  * Removed Rudy Godoy from Uploaders field
 
  -- Brandon Holtsclaw <brandon@imbrandon.com>  Thu, 30 Nov 2007 17:31:37 -0600
 

@@ -1,17 +1,18 @@
 Source: apt-mirror
 Section: net
 Priority: optional
-Maintainer: Brandon Holtsclaw <brandon@imbrandon.com>
+Maintainer: Ubuntu Developers <ubuntu-devel-discuss@lists.ubuntu.com>
+XSBC-Original-Maintainer: Brandon Holtsclaw <me@brandonholtsclaw.com>
 Dm-Upload-Allowed: yes
 Uploaders: Rudy Godoy <rudy@debian.org>
 Homepage: http://apt-mirror.sourceforge.net/
-Build-Depends: debhelper (>= 5), dpatch
+Build-Depends: cdbs, debhelper (>= 5)
 Build-Depends-Indep: lsb-release
-Standards-Version: 3.8.1
+Standards-Version: 3.8.4
 
 Package: apt-mirror
 Architecture: all
-Depends: wget, perl, perl-modules, adduser
+Depends: wget, perl, perl-modules, adduser, ${misc:Depends}
 Description: APT sources mirroring tool
  A small and efficient tool that lets you mirror a part of or
  the whole Debian GNU/Linux distribution or any other apt sources.
@@ -25,6 +26,4 @@ Description: APT sources mirroring tool
   * It works well on overloaded channel to internet
   * It never produces an inconsistent mirror including while mirroring
   * It works on all POSIX complied systems with perl and wget
- .
-  Homepage: http://apt-mirror.sourceforge.net/ 
 
