@@ -1,3 +1,10 @@
+apt-mirror (0.4.7-1) UNRELEASED; urgency=low
+
+  * all previous patches applied upstream 
+    (Closes: #457714) and (Closes: #484876)
+
+ -- Brandon Holtsclaw <imbrandon@ubuntu.com>  Sat, 17 Apr 2010 15:48:28 -0500
+
 apt-mirror (0.4.6-0ubuntu4) lucid; urgency=low
 
   * Add 03-clean-lock-file.patch to delete the lock file on every exit

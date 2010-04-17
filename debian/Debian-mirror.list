@@ -2,8 +2,6 @@
 #
 # set base_path    /var/spool/apt-mirror
 #
-# if you change the base path you must create the directories below with write privileges
-#
 # set mirror_path  $base_path/mirror
 # set skel_path    $base_path/skel
 # set var_path     $base_path/var

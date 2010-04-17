@@ -237,6 +237,14 @@ sub download_urls {
     print "\nEnd time: " . localtime() . "\n\n";
 }
 
+######################################################################################
+## Create the 3 needed directories if they don't exist yet
+my @needed_directories = (get_variable("mirror_path"), get_variable("skel_path"), get_variable("var_path"));
+foreach my $needed_directory (@needed_directories) {
+    unless (-d $needed_directory) {
+        mkdir($needed_directory) or die("apt-mirror: can't create $needed_directory directory");
+    }
+}
 
 ######################################################################################
 ## Parse config
