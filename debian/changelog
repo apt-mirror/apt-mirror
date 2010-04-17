@@ -1,11 +1,12 @@
 apt-mirror (0.4.7-1) UNRELEASED; urgency=low
 
   * New Upstream Release
-  * all previous patches applied upstream 
+  * all patches applied upstream and fixes the following Debian bugs
     (Closes: #457714) (Closes: #484876) (Closes: #387595)
-    (Closes: #483100)
+    (Closes: #483100) (Closes: #570629) (Closes: #576141)
+    (Closes: #570632)
 
- -- Brandon Holtsclaw <imbrandon@ubuntu.com>  Sat, 17 Apr 2010 15:48:28 -0500
+ -- Brandon Holtsclaw <me@brandonholtsclaw.com>  Sat, 17 Apr 2010 15:48:28 -0500
 
 apt-mirror (0.4.6-0ubuntu4) lucid; urgency=low
 

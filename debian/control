@@ -1,10 +1,8 @@
 Source: apt-mirror
 Section: net
 Priority: optional
-Maintainer: Ubuntu Developers <ubuntu-devel-discuss@lists.ubuntu.com>
-XSBC-Original-Maintainer: Brandon Holtsclaw <me@brandonholtsclaw.com>
+Maintainer: Brandon Holtsclaw <me@brandonholtsclaw.com>
 Dm-Upload-Allowed: yes
-Uploaders: Rudy Godoy <rudy@debian.org>
 Homepage: http://apt-mirror.sourceforge.net/
 Build-Depends: cdbs, debhelper (>= 5)
 Build-Depends-Indep: lsb-release
