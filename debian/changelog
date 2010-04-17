@@ -1,6 +1,7 @@
-apt-mirror (0.4.7) upstream; urgency=low
+apt-mirror (0.4.7-0) upstream; urgency=low
 
   * New Upstream Release
+  * Updated debian/watch file
   * all patches applied upstream and fixes the following Debian bugs
     (Closes: #457714) (Closes: #484876) (Closes: #387595)
     (Closes: #483100) (Closes: #570629) (Closes: #576141)
