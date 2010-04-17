@@ -1,5 +1,9 @@
 0.4.7
-  
+  * Lots of typos fixed
+  * apt-mirror will now try to create needed directorys if they do not exist
+  * applied patch for closedir() errors
+  * added mirroring examples of multiple architectures to the debian mirror.list  
+  * fixed manpage description of mirror.list
 
 0.4.6
 
