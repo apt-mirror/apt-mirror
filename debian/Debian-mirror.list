@@ -17,5 +17,19 @@ set _tilde 0
 deb http://ftp.us.debian.org/debian unstable main contrib non-free
 deb-src http://ftp.us.debian.org/debian unstable main contrib non-free
 
+# mirror additional architectures
+#deb-alpha http://ftp.us.debian.org/debian unstable main contrib non-free
+#deb-amd64 http://ftp.us.debian.org/debian unstable main contrib non-free
+#deb-armel http://ftp.us.debian.org/debian unstable main contrib non-free
+#deb-hppa http://ftp.us.debian.org/debian unstable main contrib non-free
+#deb-i386 http://ftp.us.debian.org/debian unstable main contrib non-free
+#deb-ia64 http://ftp.us.debian.org/debian unstable main contrib non-free
+#deb-m68k http://ftp.us.debian.org/debian unstable main contrib non-free
+#deb-mips http://ftp.us.debian.org/debian unstable main contrib non-free
+#deb-mipsel http://ftp.us.debian.org/debian unstable main contrib non-free
+#deb-powerpc http://ftp.us.debian.org/debian unstable main contrib non-free
+#deb-s390 http://ftp.us.debian.org/debian unstable main contrib non-free
+#deb-sparc http://ftp.us.debian.org/debian unstable main contrib non-free
+
 clean http://ftp.us.debian.org/debian
 

@@ -25,5 +25,5 @@ Description: APT sources mirroring tool
   * It can automatically remove unneeded files
   * It works well on overloaded channel to internet
   * It never produces an inconsistent mirror including while mirroring
-  * It works on all POSIX complied systems with perl and wget
+  * It works on all POSIX compliant systems with perl and wget
 

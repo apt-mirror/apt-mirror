@@ -1,7 +1,9 @@
 apt-mirror (0.4.7-1) UNRELEASED; urgency=low
 
+  * New Upstream Release
   * all previous patches applied upstream 
-    (Closes: #457714) and (Closes: #484876)
+    (Closes: #457714) (Closes: #484876) (Closes: #387595)
+    (Closes: #483100)
 
  -- Brandon Holtsclaw <imbrandon@ubuntu.com>  Sat, 17 Apr 2010 15:48:28 -0500
 
