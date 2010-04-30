@@ -216,12 +216,7 @@ sub download_urls {
 	die("apt-mirror: can't do fork in download_urls") if $pid < 0;
 	
 	if($pid == 0) {
-#	    print " * Running wget $i...\n";
-	    exec 'wget', '--limit-rate='.get_variable("limit_rate"), '-t', '0', '-r', '-N', '-l', 'inf', '-o', get_variable("var_path") . "/$stage-log.$i", '-i', get_variable("var_path") . "/$stage-urls.$i";
-#	    print " * Can't exec $i...\n";
-#	    unlink get_variable("var_path") . "/URLS.$i";
-#	    unlink get_variable("var_path") . "/wget-log.$i";
-#	    exit 1;
+	    exec 'wget', '--limit-rate='.get_variable("limit_rate"), '-t', '5', '-r', '-N', '-l', 'inf', '-o', get_variable("var_path") . "/$stage-log.$i", '-i', get_variable("var_path") . "/$stage-urls.$i";
 	}
 	
 	push @childrens, $pid;
