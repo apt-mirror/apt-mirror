@@ -312,7 +312,6 @@ lock_aptmirror();
 
 my %urls_to_download = ();
 my ($url, $arch);
-$distribution = "";
 
 sub remove_double_slashes {
     local $_ = shift;
@@ -454,6 +453,7 @@ sub proceed_index_gz {
 	chomp $package;
 	my (undef, %lines) = split(/^([\w\-]+:)/m, $package);
 
+	$lines{"Directory:"} = "" unless defined $lines{"Directory:"};
 	chomp(%lines);
 	remove_spaces(\%lines);
 
