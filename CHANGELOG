@@ -2,6 +2,8 @@
   * Fix for superfluous errors when mirroring a Flat repo
   * Fixed support for repositories with no components.
   * Reduced the number of tries wget will try before it fails to 5
+  * Fixed loop if wget was not installed, would not die()
+  * fix stale wget caching due to bad proxy configs 
 
 0.4.7
   * Lots of typos fixed

@@ -75,7 +75,7 @@ deb-src http://example.com/debian stable main contrib non-free
 
 Dmitry N. Hramtsov E<lt>hdn@nsu.ruE<gt>
 
-=head1 MAINTAINERS
+=head1 CURRENT AUTHORS
 
 Dmitry N. Hramtsov E<lt>hdn@nsu.ruE<gt>
 Brandon Holtsclaw E<lt>me@brandonholtsclaw.comE<gt>
@@ -216,7 +216,9 @@ sub download_urls {
 	die("apt-mirror: can't do fork in download_urls") if $pid < 0;
 	
 	if($pid == 0) {
-	    exec 'wget', '--limit-rate='.get_variable("limit_rate"), '-t', '5', '-r', '-N', '-l', 'inf', '-o', get_variable("var_path") . "/$stage-log.$i", '-i', get_variable("var_path") . "/$stage-urls.$i";
+	    exec 'wget', '--no-cache', '--limit-rate='.get_variable("limit_rate"), '-t', '5', '-r', '-N', '-l', 'inf', '-o', get_variable("var_path") . "/$stage-log.$i", '-i', get_variable("var_path") . "/$stage-urls.$i";
+	    # shouldn't reach this unless exec fails
+	    die("\n\nCould not run wget, please make sure its installed and in your path\n\n");
 	}
 	
 	push @childrens, $pid;
