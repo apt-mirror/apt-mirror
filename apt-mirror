@@ -312,6 +312,7 @@ lock_aptmirror();
 
 my %urls_to_download = ();
 my ($url, $arch);
+$distribution = "";
 
 sub remove_double_slashes {
     local $_ = shift;

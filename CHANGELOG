@@ -1,3 +1,6 @@
+0.4.8
+  * Fix for superfluous errors when mirroring a Flat repo
+
 0.4.7
   * Lots of typos fixed
   * apt-mirror will now try to create needed directorys if they do not exist
