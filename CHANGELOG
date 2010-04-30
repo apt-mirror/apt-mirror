@@ -1,5 +1,6 @@
-0.4.8
+0.4.8 - UNRELEASED
   * Fix for superfluous errors when mirroring a Flat repo
+  * Fixed support for repositories with no components.
 
 0.4.7
   * Lots of typos fixed
