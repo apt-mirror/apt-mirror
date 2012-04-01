@@ -300,6 +300,7 @@ check_lock();
 $SIG{INT} = "unlock_aptmirror";
 $SIG{HUP} = "unlock_aptmirror";
 $SIG{TERM} = "unlock_aptmirror";
+$SIG{__DIE__} = "unlock_aptmirror";
 
 lock_aptmirror();
 
