@@ -68,6 +68,15 @@ deb-powerpc http://example.com/debian stable main contrib non-free
 HTTP and FTP Auth or non-standard port:
 deb http://user:pass@example.com:8080/debian stable main contrib non-free
 
+HTTPS with sending Basic HTTP authentication information (plaintext username and password) for all requests:
+(this was default behaviour of Wget 1.10.2 and prior and is needed for some servers with new version of Wget)
+set auth_no_challenge 1
+deb https://user:pass@example.com:443/debian stable main contrib non-free
+
+HTTPS without checking certificate:
+set no_check_certificate 1
+deb https://example.com:443/debian stable main contrib non-free
+
 Source Mirroring:
 deb-src http://example.com/debian stable main contrib non-free
 
@@ -86,6 +95,7 @@ use strict;
 use File::Copy;
 use File::Path;
 use File::Basename;
+use Fcntl qw(:flock);
 
 my $config_file;
 
@@ -102,6 +112,8 @@ my %config_variables = (
     "_tilde"	  => 0,
     "limit_rate"  => '100m',
     "run_postmirror" => 1,
+    "auth_no_challenge" => 0,
+    "no_check_certificate" => 0,
     "postmirror_script" => '$var_path/postmirror.sh'
 );
 
@@ -178,17 +190,16 @@ sub get_variable {
 }
 
 sub lock_aptmirror {
-	system ("touch " . get_variable("var_path") . "/apt-mirror.lock");
-}
-
-sub check_lock {
-	if(-e get_variable("var_path") . "/apt-mirror.lock")
+	open (LOCK_FILE, '>', get_variable("var_path") . "/apt-mirror.lock");
+	my $lock = flock(LOCK_FILE, LOCK_EX | LOCK_NB);
+	if (!$lock)
 	{
 		die("apt-mirror is already running, exiting");
 	}
 }
 
 sub unlock_aptmirror {
+	close(LOCK_FILE);
 	unlink(get_variable("var_path") . "/apt-mirror.lock");
 }
 
@@ -198,10 +209,14 @@ sub download_urls {
     my $i = 0;
     my $pid;
     my $nthreads = get_variable("nthreads");
+    my @args = ();
     local $| = 1;
 
     @urls = @_;
     $nthreads = @urls if @urls < $nthreads;
+
+    if(get_variable("auth_no_challenge") == 1) { push(@args, "--auth-no-challenge"); }
+    if(get_variable("no_check_certificate") == 1) { push(@args, "--no-check-certificate"); }
 
     print "Downloading " . scalar(@urls) . " $stage files using $nthreads threads...\n";
     
@@ -216,7 +231,7 @@ sub download_urls {
 	die("apt-mirror: can't do fork in download_urls") if $pid < 0;
 	
 	if($pid == 0) {
-	    exec 'wget', '--no-cache', '--limit-rate='.get_variable("limit_rate"), '-t', '5', '-r', '-N', '-l', 'inf', '-o', get_variable("var_path") . "/$stage-log.$i", '-i', get_variable("var_path") . "/$stage-urls.$i";
+	    exec 'wget', '--no-cache', '--limit-rate='.get_variable("limit_rate"), '-t', '5', '-r', '-N', '-l', 'inf', '-o', get_variable("var_path") . "/$stage-log.$i", '-i', get_variable("var_path") . "/$stage-urls.$i", @args;
 	    # shouldn't reach this unless exec fails
 	    die("\n\nCould not run wget, please make sure its installed and in your path\n\n");
 	}
@@ -234,16 +249,6 @@ sub download_urls {
     print "\nEnd time: " . localtime() . "\n\n";
 }
 
-######################################################################################
-## Create the 3 needed directories if they don't exist yet
-my @needed_directories = (get_variable("mirror_path"), get_variable("skel_path"), get_variable("var_path"));
-foreach my $needed_directory (@needed_directories) {
-    unless (-d $needed_directory) {
-        mkdir($needed_directory) or die("apt-mirror: can't create $needed_directory directory");
-    }
-}
-
-######################################################################################
 ## Parse config
 
 open CONFIG, "<$config_file" or die("apt-mirror: can't open config file ($config_file)");
@@ -263,7 +268,7 @@ while(<CONFIG>) {
 	next;
     }
 
-    if($config_line =~ /deb-(alpha|amd64|armel|arm|hppa|hurd-i386|i386|ia64|lpia|m68k|mipsel|mips|powerpc|s390|sh|sparc)/) {
+    if($config_line =~ /^deb-(alpha|amd64|armel|arm|armhf|hppa|hurd-i386|i386|ia64|kfreebsd-i386|kfreebsd-amd64|lpia|m68k|mipsel|mips|powerpc|s390|s390x|sh|sparc)$/) {
 	push @config_binaries, [$1, @config_line];
 	next;
     }
@@ -295,11 +300,16 @@ close CONFIG;
 
 die("Please explicitly specify 'defaultarch' in mirror.list") unless get_variable("defaultarch");
 
-check_lock();
-
-$SIG{INT} = "unlock_aptmirror";
-$SIG{HUP} = "unlock_aptmirror";
-$SIG{TERM} = "unlock_aptmirror";
+######################################################################################
+## Create the 3 needed directories if they don't exist yet
+my @needed_directories = (get_variable("mirror_path"), get_variable("skel_path"), get_variable("var_path"));
+foreach my $needed_directory (@needed_directories) {
+    unless (-d $needed_directory) {
+        mkdir($needed_directory) or die("apt-mirror: can't create $needed_directory directory");
+    }
+}
+#
+#######################################################################################
 
 lock_aptmirror();
 
@@ -361,6 +371,12 @@ foreach (@config_binaries) {
 	    add_url_to_download($url . $_ . "/binary-" . $arch . "/Release");
 	    add_url_to_download($url . $_ . "/binary-" . $arch . "/Packages.gz");
 	    add_url_to_download($url . $_ . "/binary-" . $arch . "/Packages.bz2");
+            my $lang;
+            foreach $lang ("ast", "bg", "bs", "ca", "cs", "da", "de", "el", "en", "en_AU", "en_CA", "en_GB", "eo", "es", "eu", "fa", "fi", "fr", "fr_FR", "gl", "hr", "hu", "id", "is", "it", "ja", "ka", "km", "ko", "lt", "ms", "my", "nb", "nl", "no_NB", "oc", "pl", "pt", "pt_BR", "ro", "ru", "si", "sk", "sl", "sq", "sr", "sv", "th", "tr", "uk", "vi", "zh_CN", "zh_HK", "zh_TW") {
+	        add_url_to_download($url . $_ . "/i18n/Translation-" . $lang);
+	        add_url_to_download($url . $_ . "/i18n/Translation-" . $lang . ".gz");
+	        add_url_to_download($url . $_ . "/i18n/Translation-" . $lang . ".bz2");
+            }
 	}
     } else {
 	add_url_to_download($uri . "/$distribution/Release");
@@ -625,6 +641,7 @@ if(get_variable("_autoclean")) {
     print "$size_output in $total files and " . scalar(@rm_dirs) . " directories can be freed.\n";
     print "Run " . get_variable("cleanscript") . " for this purpose.\n\n";
 
+    print CLEAN "#!/bin/sh\n\n";
     print CLEAN "cd " . get_variable("mirror_path") . " || exit 1\n\n";
     print CLEAN "echo 'Removing $total unnecessary files [$unnecessary_bytes bytes]...'\n";
     foreach (@rm_files) {
