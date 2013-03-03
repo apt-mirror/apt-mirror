@@ -12,7 +12,8 @@ sudo cp mirror.list /etc/apt/;
 
 echo "Installing apt-mirror manual ...";
 sudo mkdir -p /usr/share/man/man1/
-sudo pod2man apt-mirror > /usr/share/man/man1/apt-mirror.1;
+sudo pod2man apt-mirror > apt-mirror.1;
+sudo mv apt-mirror.1 /usr/share/man/man1/;
 
 echo "Creating base mirror structure ...";
 sudo mkdir -p ${BASE_PATH}
