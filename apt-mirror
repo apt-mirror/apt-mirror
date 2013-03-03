@@ -80,11 +80,7 @@ deb https://example.com:443/debian stable main contrib non-free
 Source Mirroring:
 deb-src http://example.com/debian stable main contrib non-free
 
-=head1 ORIGINAL AUTHOR
-
-Dmitry N. Hramtsov E<lt>hdn@nsu.ruE<gt>
-
-=head1 CURRENT AUTHORS
+=head1 AUTHORS
 
 Dmitry N. Hramtsov E<lt>hdn@nsu.ruE<gt>
 Brandon Holtsclaw E<lt>me@brandonholtsclaw.comE<gt>
