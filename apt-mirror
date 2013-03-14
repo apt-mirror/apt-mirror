@@ -283,15 +283,15 @@ while (<CONFIG>)
         next;
     }
 
-    if ( $config_line =~ /^deb-(alpha|amd64|armel|arm|armhf|hppa|hurd-i386|i386|ia64|kfreebsd-i386|kfreebsd-amd64|lpia|m68k|mipsel|mips|powerpc|s390|s390x|sh|sparc)$/ )
-    {
-        push @config_binaries, [ $1, @config_line ];
-        next;
-    }
-
     if ( $config_line eq "deb-src" )
     {
         push @config_sources, [@config_line];
+        next;
+    }
+
+    if($config_line =~ /deb-([\w\-]+)/)
+    {
+        push @config_binaries, [ $1, @config_line ];
         next;
     }
 
