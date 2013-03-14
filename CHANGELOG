@@ -1,3 +1,11 @@
+0.5.0 - UNRELEASED
+  * Removed restrictions when parsing deb-$arch
+    new arch's no longer need to be manually added
+    via an apt-mirror source change.
+  * Code cleaned up with perltidy and a .perltidyrc added
+  * Changed to warn() instead of die() when sources go missing
+    so mirroring of other sources continues.
+
 0.4.9
   * Added support for downloading of i18n files.
   * Fix regex problem: arm overrides armhf. Thanks to hawken.
@@ -9,31 +17,31 @@
   * Support armhf, kfreebsd-* and s390x arch. Thanks Benjamin Drung
   * Fix braindead build environments. Thanks Jeremy T. Bouse
   * Add a shebang line to clean.sh. Thanks Benjamin Drung
-  * debian/postrm: Clean-up auto-generated files on purge. Thanks 
+  * debian/postrm: Clean-up auto-generated files on purge. Thanks
     Jeremy T. Bouse
 
-0.4.8 
+0.4.8
   * Fix for superfluous errors when mirroring a Flat repo
   * Fixed support for repositories with no components.
   * Reduced the number of tries wget will try before it fails to 5
   * Fixed loop if wget was not installed, would not die()
-  * fix stale wget caching due to bad proxy configs 
+  * fix stale wget caching due to bad proxy configs
 
 0.4.7
   * Lots of typos fixed
   * apt-mirror will now try to create needed directorys if they do not exist
   * applied patch for closedir() errors
-  * added mirroring examples of multiple architectures to the debian mirror.list  
+  * added mirroring examples of multiple architectures to the debian mirror.list
   * fixed manpage description of mirror.list
 
 0.4.6
 
   * minor cleanup to the documentation
-  * applied patch from Steve Kowalik ( stevenk@ubuntu.com ) to 
-    allow user:pass@host ( http and ftp authenticated ) 
+  * applied patch from Steve Kowalik ( stevenk@ubuntu.com ) to
+    allow user:pass@host ( http and ftp authenticated )
     and port numbers in the url host:8080 etc
-  * Added ability to run a shell script after apt-mirror completes the 
-    mirroring confg values "run_postmirror" 0/1 
+  * Added ability to run a shell script after apt-mirror completes the
+    mirroring confg values "run_postmirror" 0/1
     and "postmirror_script" /path/to/script.sh
   * added rate_limit option ( closes sf.net bug #1729402 )
     a value of 25 is equal to 25 Bytes/Second
