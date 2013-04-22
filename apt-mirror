@@ -409,6 +409,7 @@ foreach (@config_binaries)
                 add_url_to_download( $url . $_ . "/i18n/Translation-" . $lang . ".gz" );
                 add_url_to_download( $url . $_ . "/i18n/Translation-" . $lang . ".bz2" );
             }
+        add_url_to_download( $url . $_ . "/i18n/Index" );
         }
     }
     else
