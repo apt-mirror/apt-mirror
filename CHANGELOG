@@ -1,5 +1,27 @@
-0.4.8-5.1
+0.5.1
   * Added support for downloading installer sections of repo    
+
+0.5.0 - UNRELEASED
+  * Removed restrictions when parsing deb-$arch
+    new arch's no longer need to be manually added
+    via an apt-mirror source change.
+  * Code cleaned up with perltidy and a .perltidyrc added
+  * Changed to warn() instead of die() when sources go missing
+    so mirroring of other sources continues.
+
+0.4.9
+  * Added support for downloading of i18n files.
+  * Fix regex problem: arm overrides armhf. Thanks to hawken.
+  * Add support for HTTPS with basic HTTP authentication. Thanks to Pali
+  * Improve lock file handling to avoid false "apt-mirror is already running"
+    messages. Thanks to Ivan Borzenkov <ivan1986@list.ru>
+  * Create directories after config is parsed.
+    Thanks to Rob Verduijn
+  * Support armhf, kfreebsd-* and s390x arch. Thanks Benjamin Drung
+  * Fix braindead build environments. Thanks Jeremy T. Bouse
+  * Add a shebang line to clean.sh. Thanks Benjamin Drung
+  * debian/postrm: Clean-up auto-generated files on purge. Thanks
+    Jeremy T. Bouse
 
 0.4.8
   * Fix for superfluous errors when mirroring a Flat repo
