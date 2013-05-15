@@ -685,12 +685,12 @@ chdir get_variable("mirror_path") or die("apt-mirror: can't chdir to mirror");
 my $need_bytes = 0;
 foreach ( values %urls_to_download )
 {
-    $need_bytes += $_;
+    $need_bytes += $_ if (defined $_);
 }
 
 my $size_output = format_bytes($need_bytes);
 
-print "$size_output will be downloaded into archive.\n";
+print "$size_output will be downloaded into archive (not including install media).\n";
 
 download_urls( "archive", sort keys %urls_to_download );
 
