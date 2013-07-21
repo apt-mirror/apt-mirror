@@ -1,22 +1,32 @@
-set base_path         /var/spool/apt-mirror
-set mirror_path       $base_path/mirror
-set skel_path         $base_path/skel
-set var_path          $base_path/var
-set postmirror_script $var_path/postmirror.sh
-set defaultarch       i386
+# Based on apt-mirror package in Ubuntu 12.04, for x86_64
+############# config ##################
+#
+# set base_path    /var/spool/apt-mirror
+#
+# set mirror_path  $base_path/mirror
+# set skel_path    $base_path/skel
+# set var_path     $base_path/var
+# set cleanscript $var_path/clean.sh
+# set defaultarch  <running host architecture>
+# set postmirror_script $var_path/postmirror.sh
 set run_postmirror    0
 set nthreads          20
 set _tilde            0
+#
+############# end config ##############
 
-deb http://archive.ubuntu.com/ubuntu precise main restricted universe multiverse
-deb http://archive.ubuntu.com/ubuntu precise-security main restricted universe multiverse
-deb http://archive.ubuntu.com/ubuntu precise-updates main restricted universe multiverse
-deb http://archive.ubuntu.com/ubuntu precise-backports main restricted universe multiverse
+deb-amd64 http://archive.ubuntu.com/ubuntu precise main restricted universe multiverse
+deb-amd64 http://archive.ubuntu.com/ubuntu precise-security main restricted universe multiverse
+deb-amd64 http://archive.ubuntu.com/ubuntu precise-updates main restricted universe multiverse
+deb-amd64 http://archive.ubuntu.com/ubuntu precise-proposed main restricted universe multiverse
+deb-amd64 http://archive.ubuntu.com/ubuntu precise-backports main restricted universe multiverse
+deb-installer-amd64 http://archive.ubuntu.com/ubuntu precise netboot cdrom
+deb-installer-amd64 http://archive.ubuntu.com/ubuntu precise-updates netboot cdrom quantal-netboot quantal-cdrom
 
 #deb-src http://archive.ubuntu.com/ubuntu precise main restricted universe multiverse
 #deb-src http://archive.ubuntu.com/ubuntu precise-security main restricted universe multiverse
 #deb-src http://archive.ubuntu.com/ubuntu precise-updates main restricted universe multiverse
+#deb-src http://archive.ubuntu.com/ubuntu precise-proposed main restricted universe multiverse
 #deb-src http://archive.ubuntu.com/ubuntu precise-backports main restricted universe multiverse
 
 clean http://archive.ubuntu.com/ubuntu
-

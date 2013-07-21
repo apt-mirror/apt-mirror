@@ -435,7 +435,7 @@ foreach (@config_binaries)
 
 foreach (@config_installers) {
     my ($arch, $uri, $distribution) = @{$_};
-    
+    add_url_to_download($uri . "/dists/${distribution}/main/debian-installer/binary-${arch}/Packages.gz");
     add_url_to_download($uri . "/dists/${distribution}/main/installer-${arch}/current/images/MD5SUMS");
 }
 
@@ -659,13 +659,16 @@ foreach (@config_installers) {
     my ($arch, $uri, $distribution, @components) = @{$_};
     print "I";
     my $install_uri = $uri . "/dists/$distribution/main/installer-$arch/current/images";
+    proceed_index_gz( $uri, "/dists/$distribution/main/debian-installer/binary-$arch/Packages.gz" );
     if(@components) {
-      my $component;
-      foreach $component (@components) {
-        process_digest($install_uri, "/MD5SUMS", $component);
-      }
-    } else {
-      process_digest($install_uri, "/MD5SUMS");
+        my $component;
+        foreach $component (@components) {
+          process_digest($install_uri, "/MD5SUMS", $component);
+        }
+    } 
+    else
+    {
+        process_digest($install_uri, "/MD5SUMS");
     }
 }
 
