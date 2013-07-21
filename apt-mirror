@@ -434,9 +434,9 @@ foreach (@config_binaries)
 }
 
 foreach (@config_installers) {
-    my ($arch, $uri) = @{$_};
+    my ($arch, $uri, $distribution) = @{$_};
     
-    add_url_to_download($uri . "/dists/precise/main/installer-${arch}/current/images/MD5SUMS");
+    add_url_to_download($uri . "/dists/${distribution}/main/installer-${arch}/current/images/MD5SUMS");
 }
 
 chdir get_variable("skel_path") or die("apt-mirror: can't chdir to skel");
@@ -660,12 +660,12 @@ foreach (@config_installers) {
     print "I";
     my $install_uri = $uri . "/dists/$distribution/main/installer-$arch/current/images";
     if(@components) {
-	my $component;
-	foreach $component (@components) {
-	    process_digest($install_uri, "/MD5SUMS", $component);
-	}
+      my $component;
+      foreach $component (@components) {
+        process_digest($install_uri, "/MD5SUMS", $component);
+      }
     } else {
-	process_digest($install_uri, "/MD5SUMS");
+      process_digest($install_uri, "/MD5SUMS");
     }
 }
 
@@ -736,6 +736,7 @@ sub process_file
     my $file = shift;
     $file =~ s[~][%7E]g if get_variable("_tilde");
     return 1 if $skipclean{$file};
+    return 1 if $file =~ /installer/;
     push @rm_files, sanitise_uri($file);
     my ( undef, undef, undef, undef, undef, undef, undef, $size, undef, undef, undef, undef, $blocks ) = stat($file);
     $unnecessary_bytes += $blocks * 512;
@@ -747,6 +748,7 @@ sub process_directory
     my $dir       = shift;
     my $is_needed = 0;
     return 1 if $skipclean{$dir};
+    return 1 if $dir =~ /installer/;
     opendir( my $dir_h, $dir ) or die "apt-mirror: can't opendir $dir: $!";
     foreach ( grep { !/^\.$/ && !/^\.\.$/ } readdir($dir_h) )
     {
