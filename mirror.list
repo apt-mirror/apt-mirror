@@ -10,7 +10,7 @@
 # set defaultarch  <running host architecture>
 # set postmirror_script $var_path/postmirror.sh
 set run_postmirror    0
-set nthreads          100
+set nthreads          20
 set _tilde            0
 #
 ############# end config ##############
