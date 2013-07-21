@@ -10,10 +10,17 @@
 # set defaultarch  <running host architecture>
 # set postmirror_script $var_path/postmirror.sh
 set run_postmirror    0
-set nthreads          20
+set nthreads          100
 set _tilde            0
 #
 ############# end config ##############
+deb-i386 http://archive.ubuntu.com/ubuntu precise main restricted universe multiverse
+deb-i386 http://archive.ubuntu.com/ubuntu precise-security main restricted universe multiverse
+deb-i386 http://archive.ubuntu.com/ubuntu precise-updates main restricted universe multiverse
+deb-i386 http://archive.ubuntu.com/ubuntu precise-proposed main restricted universe multiverse
+deb-i386 http://archive.ubuntu.com/ubuntu precise-backports main restricted universe multiverse
+deb-installer-i386 http://archive.ubuntu.com/ubuntu precise netboot cdrom
+deb-installer-i386 http://archive.ubuntu.com/ubuntu precise-updates netboot cdrom quantal-netboot quantal-cdrom
 
 deb-amd64 http://archive.ubuntu.com/ubuntu precise main restricted universe multiverse
 deb-amd64 http://archive.ubuntu.com/ubuntu precise-security main restricted universe multiverse
