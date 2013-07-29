@@ -801,7 +801,7 @@ else
     print CLEAN "echo 'Removing $total unnecessary files [$unnecessary_bytes bytes]...'\n";
     foreach (@rm_files)
     {
-        next if $_ =~ /\.gpg$/
+        next if $_ =~ /\.gpg$/;
         print CLEAN "rm -f '$_'\n";
         print CLEAN "echo -n '[" . int( 100 * $i / $total ) . "\%]'\n" unless $i % 500;
         print CLEAN "echo -n .\n" unless $i % 10;
