@@ -37,7 +37,7 @@
 
 0.4.7
   * Lots of typos fixed
-  * apt-mirror will now try to create needed directorys if they do not exist
+  * apt-mirror will now try to create needed directories if they do not exist
   * applied patch for closedir() errors
   * added mirroring examples of multiple architectures to the debian mirror.list
   * fixed manpage description of mirror.list
@@ -49,7 +49,7 @@
     allow user:pass@host ( http and ftp authenticated )
     and port numbers in the url host:8080 etc
   * Added ability to run a shell script after apt-mirror completes the
-    mirroring confg values "run_postmirror" 0/1
+    mirroring config values "run_postmirror" 0/1
     and "postmirror_script" /path/to/script.sh
   * added rate_limit option ( closes sf.net bug #1729402 )
     a value of 25 is equal to 25 Bytes/Second
