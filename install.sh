@@ -26,9 +26,9 @@ sudo mkdir -p ${BASE_PATH}/skel
 sudo mkdir -p ${BASE_PATH}/var
 
 echo "Installing postmirror script example ...";
-if [ -f ${BASE_PATH/var/postmirror.sh ]; then
+if [ -f ${BASE_PATH}/var/postmirror.sh ]; then
   sudo cp postmirror.sh ${BASE_PATH}/var/postmirror.sh.dpkg-dist
 else
-  sudo cp postmirror.sh ${BASE_PATH/var/postmirror.sh
+  sudo cp postmirror.sh ${BASE_PATH}/var/postmirror.sh
 fi
 
