@@ -110,6 +110,7 @@ my %config_variables = (
     "run_postmirror"       => 1,
     "auth_no_challenge"    => 0,
     "no_check_certificate" => 0,
+    "unlink"      => 0,
     "postmirror_script"    => '$var_path/postmirror.sh'
 );
 
@@ -224,6 +225,7 @@ sub download_urls
 
     if ( get_variable("auth_no_challenge") == 1 )    { push( @args, "--auth-no-challenge" ); }
     if ( get_variable("no_check_certificate") == 1 ) { push( @args, "--no-check-certificate" ); }
+    if ( get_variable("unlink") == 1 ) { push( @args, "--unlink" ); }
 
     print "Downloading " . scalar(@urls) . " $stage files using $nthreads threads...\n";
 
