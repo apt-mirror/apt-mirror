@@ -89,6 +89,7 @@ Brandon Holtsclaw E<lt>me@brandonholtsclaw.comE<gt>
 
 use strict;
 use File::Copy;
+use File::Compare;
 use File::Path;
 use File::Basename;
 use Fcntl qw(:flock);
@@ -627,6 +628,10 @@ sub copy_file
     my $dir = dirname($to);
     return unless -f $from;
     mkpath($dir) unless -d $dir;
+    if ( get_variable("unlink") == 1 )
+    {
+        if (compare( $from, $to ) != 0) { unlink($to); }
+    }
     unless ( copy( $from, $to ) )
     {
         warn("apt-mirror: can't copy $from to $to");
