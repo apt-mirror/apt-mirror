@@ -186,12 +186,19 @@ sub format_bytes
 sub get_variable
 {
     my $value = $config_variables{ shift @_ };
-    my $count = 16;
-    while ( $value =~ s/\$(\w+)/$config_variables{$1}/xg )
+    if (defined $value)
     {
-        die("apt-mirror: too many substitution while evaluating variable") if ( $count-- ) < 0;
+        my $count = 16;
+        while ( $value =~ s/\$(\w+)/$config_variables{$1}/xg )
+        {
+            die("apt-mirror: too many substitution while evaluating variable") if ( $count-- ) < 0;
+        }
+        return $value;
     }
-    return $value;
+    else
+    {
+        return "";
+    }
 }
 
 sub lock_aptmirror
