@@ -22,6 +22,9 @@ deb-i386 http://archive.ubuntu.com/ubuntu precise-backports main restricted univ
 deb-installer-i386 http://archive.ubuntu.com/ubuntu precise netboot cdrom
 deb-installer-i386 http://archive.ubuntu.com/ubuntu precise-updates netboot cdrom quantal-netboot quantal-cdrom
 
+# Use --unlink with wget (for use with hardlinked directories)
+set unlink            1
+
 deb-amd64 http://archive.ubuntu.com/ubuntu precise main restricted universe multiverse
 deb-amd64 http://archive.ubuntu.com/ubuntu precise-security main restricted universe multiverse
 deb-amd64 http://archive.ubuntu.com/ubuntu precise-updates main restricted universe multiverse
