@@ -404,6 +404,10 @@ foreach (@config_binaries)
             add_url_to_download( $url . $_ . "/binary-" . $arch . "/Release" );
             add_url_to_download( $url . $_ . "/binary-" . $arch . "/Packages.gz" );
             add_url_to_download( $url . $_ . "/binary-" . $arch . "/Packages.bz2" );
+            add_url_to_download( $url . $_ . "/i18n/Index" );
+
+            # TODO: Generate the list of translation files from content of the
+            # i18n/Index file instead of hard-coding the possible languages.
             my $lang;
             foreach $lang (
                 "ad",    "ae",    "af",       "ag",    "ai",    "al",    "am",    "ao",    "aq",    "ar",    "ar_AE", "ar_BH", "ar_DZ", "ar_EG", "ar_IQ", "ar_JO", "ar_KW", "ar_LB", "ar_LY", "ar_MA", "ar_OM", "ar_QA", "ar_SA", "ar_SD", "ar_SY", "ar_TN",    "ar_YE", "as",    "at",    "au",    "aw",    "ax",    "az",    "ba",    "bb",       "bd",    "be",    "be_BY",
@@ -422,7 +426,6 @@ foreach (@config_binaries)
                 add_url_to_download( $url . $_ . "/i18n/Translation-" . $lang . ".gz" );
                 add_url_to_download( $url . $_ . "/i18n/Translation-" . $lang . ".bz2" );
             }
-            add_url_to_download( $url . $_ . "/i18n/Index" );
         }
     }
     else
