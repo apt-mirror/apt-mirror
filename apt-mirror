@@ -291,7 +291,7 @@ while (<CONFIG>)
         next;
     }
 
-    if($config_line =~ /deb-([\w\-]+)/)
+    if ( $config_line =~ /deb-([\w\-]+)/ )
     {
         push @config_binaries, [ $1, @config_line ];
         next;
@@ -405,13 +405,24 @@ foreach (@config_binaries)
             add_url_to_download( $url . $_ . "/binary-" . $arch . "/Packages.gz" );
             add_url_to_download( $url . $_ . "/binary-" . $arch . "/Packages.bz2" );
             my $lang;
-            foreach $lang ( "ad", "ae", "af", "ag", "ai", "al", "am", "ao", "aq", "ar", "ar_AE", "ar_BH", "ar_DZ", "ar_EG", "ar_IQ", "ar_JO", "ar_KW", "ar_LB", "ar_LY", "ar_MA", "ar_OM", "ar_QA", "ar_SA", "ar_SD", "ar_SY", "ar_TN", "ar_YE", "as", "at", "au", "aw", "ax", "az", "ba", "bb", "bd", "be", "be_BY", "bf", "bg", "bg_BG", "bh", "bi", "bj", "bl", "bm", "bn", "bo", "bq", "br", "bs", "bt", "bv", "bw", "by", "bz", "ca", "ca_ES", "cc", "cd", "cf", "cg", "ch", "ci", "ck", "cl", "cm", "cn", "co", "cr", "cs", "cs_CZ", "cu", "cv", "cw", "cx", "cy", "cz", "da", "da_DK", "de", "de_AT", "de_CH", "de_DE", "de_LU", "dj", "dk", "dm", "do", "dz", "ec", "ee", "eg", "eh", "el", "el_CY", "el_GR", "en", "en_AU", "en_CA", "en_GB", "en_IE", "en_IN", "en_MT", "en_NZ", "en_PH", "en_SG", "en_US", "en_ZA", "er", "es", "es_AR", "es_BO", "es_CL", "es_CO", "es_CR", "es_DO", "es_EC", "es_ES", "es_GT", "es_HN", "es_MX", "es_NI", "es_PA", "es_PE", "es_PR", "es_PY", "es_SV", "es_US", "es_UY", "es_VE", "et", "et_EE", "fi", "fi_FI", "fj", "fk", "fm", "fo", "fr", "fr_BE", "fr_CA", "fr_CH", "fr_FR", "fr_LU", "ga", "ga_IE", "gb", "gd", "ge", "gf", "gg", "gh", "gi", "gl", "gm", "gn", "gp", "gq", "gr", "gs", "gt", "gu", "gw", "gy", "hi_IN", "hk", "hm", "hn", "hr", "hr_HR", "ht", "hu", "hu_HU", "id", "ie", "il", "im", "in", "in_ID", "io", "iq", "ir", "is", "is_IS", "it", "it_CH", "it_IT", "iw", "iw_IL", "ja", "ja_JP", "ja_JP_JP", "je", "jm", "jo", "jp", "ke", "kg", "kh", "ki", "km", "kn", "ko", "ko_KR", "kp", "kr", "kw", "ky", "kz", "la", "lb", "lc", "li", "lk", "lr", "ls", "lt", "lt_LT", "lu", "lv", "lv_LV", "ly", "ma", "mc", "md", "me", "mf", "mg", "mh", "mk", "mk_MK", "ml", "mm", "mn", "mo", "mp", "mq", "mr", "ms", "ms_MY", "mt", "mt_MT", "mu", "mv", "mw", "mx", "my", "mz", "na", "nb", "nb_NO", "nc", "ne", "nf", "ng", "ni", "nl", "nl_BE", "nl_NL", "no", "no_NO", "no_NO_NY", "np", "nr", "nu", "nz", "om", "pa", "pe", "pf", "pg", "ph", "pk", "pl", "pl_PL", "pm", "pn", "pr", "ps", "pt", "pt_BR", "pt_PT", "pw", "py", "qa", "re", "ro", "ro_RO", "rs", "ru", "ru_RU", "rw", "sa", "sb", "sc", "sd", "se", "sg", "sh", "si", "sj", "sk", "sk_SK", "sl", "sl_SI", "sm", "sn", "so", "sq", "sq_AL", "sr", "sr_BA", "sr_CS", "sr_ME", "sr_RS", "ss", "st", "sv", "sv_SE", "sx", "sy", "sz", "tc", "td", "tf", "tg", "th", "th_TH", "th_TH_TH", "tj", "tk", "tl", "tm", "tn", "to", "tr", "tr_TR", "tt", "tv", "tw", "tz", "ua", "ug", "uk", "uk_UA", "um", "us", "uy", "uz", "va", "vc", "ve", "vg", "vi", "vi_VN", "vn", "vu", "wf", "ws", "ye", "yt", "za", "zh", "zh_CN", "zh_HK", "zh_SG", "zh_TW", "zm", "zw" )
+            foreach $lang (
+                "ad",    "ae",    "af",       "ag",    "ai",    "al",    "am",    "ao",    "aq",    "ar",    "ar_AE", "ar_BH", "ar_DZ", "ar_EG", "ar_IQ", "ar_JO", "ar_KW", "ar_LB", "ar_LY", "ar_MA", "ar_OM", "ar_QA", "ar_SA", "ar_SD", "ar_SY", "ar_TN",    "ar_YE", "as",    "at",    "au",    "aw",    "ax",    "az",    "ba",    "bb",       "bd",    "be",    "be_BY",
+                "bf",    "bg",    "bg_BG",    "bh",    "bi",    "bj",    "bl",    "bm",    "bn",    "bo",    "bq",    "br",    "bs",    "bt",    "bv",    "bw",    "by",    "bz",    "ca",    "ca_ES", "cc",    "cd",    "cf",    "cg",    "ch",    "ci",       "ck",    "cl",    "cm",    "cn",    "co",    "cr",    "cs",    "cs_CZ", "cu",       "cv",    "cw",    "cx",
+                "cy",    "cz",    "da",       "da_DK", "de",    "de_AT", "de_CH", "de_DE", "de_LU", "dj",    "dk",    "dm",    "do",    "dz",    "ec",    "ee",    "eg",    "eh",    "el",    "el_CY", "el_GR", "en",    "en_AU", "en_CA", "en_GB", "en_IE",    "en_IN", "en_MT", "en_NZ", "en_PH", "en_SG", "en_US", "en_ZA", "er",    "es",       "es_AR", "es_BO", "es_CL",
+                "es_CO", "es_CR", "es_DO",    "es_EC", "es_ES", "es_GT", "es_HN", "es_MX", "es_NI", "es_PA", "es_PE", "es_PR", "es_PY", "es_SV", "es_US", "es_UY", "es_VE", "et",    "et_EE", "fi",    "fi_FI", "fj",    "fk",    "fm",    "fo",    "fr",       "fr_BE", "fr_CA", "fr_CH", "fr_FR", "fr_LU", "ga",    "ga_IE", "gb",    "gd",       "ge",    "gf",    "gg",
+                "gh",    "gi",    "gl",       "gm",    "gn",    "gp",    "gq",    "gr",    "gs",    "gt",    "gu",    "gw",    "gy",    "hi_IN", "hk",    "hm",    "hn",    "hr",    "hr_HR", "ht",    "hu",    "hu_HU", "id",    "ie",    "il",    "im",       "in",    "in_ID", "io",    "iq",    "ir",    "is",    "is_IS", "it",    "it_CH",    "it_IT", "iw",    "iw_IL",
+                "ja",    "ja_JP", "ja_JP_JP", "je",    "jm",    "jo",    "jp",    "ke",    "kg",    "kh",    "ki",    "km",    "kn",    "ko",    "ko_KR", "kp",    "kr",    "kw",    "ky",    "kz",    "la",    "lb",    "lc",    "li",    "lk",    "lr",       "ls",    "lt",    "lt_LT", "lu",    "lv",    "lv_LV", "ly",    "ma",    "mc",       "md",    "me",    "mf",
+                "mg",    "mh",    "mk",       "mk_MK", "ml",    "mm",    "mn",    "mo",    "mp",    "mq",    "mr",    "ms",    "ms_MY", "mt",    "mt_MT", "mu",    "mv",    "mw",    "mx",    "my",    "mz",    "na",    "nb",    "nb_NO", "nc",    "ne",       "nf",    "ng",    "ni",    "nl",    "nl_BE", "nl_NL", "no",    "no_NO", "no_NO_NY", "np",    "nr",    "nu",
+                "nz",    "om",    "pa",       "pe",    "pf",    "pg",    "ph",    "pk",    "pl",    "pl_PL", "pm",    "pn",    "pr",    "ps",    "pt",    "pt_BR", "pt_PT", "pw",    "py",    "qa",    "re",    "ro",    "ro_RO", "rs",    "ru",    "ru_RU",    "rw",    "sa",    "sb",    "sc",    "sd",    "se",    "sg",    "sh",    "si",       "sj",    "sk",    "sk_SK",
+                "sl",    "sl_SI", "sm",       "sn",    "so",    "sq",    "sq_AL", "sr",    "sr_BA", "sr_CS", "sr_ME", "sr_RS", "ss",    "st",    "sv",    "sv_SE", "sx",    "sy",    "sz",    "tc",    "td",    "tf",    "tg",    "th",    "th_TH", "th_TH_TH", "tj",    "tk",    "tl",    "tm",    "tn",    "to",    "tr",    "tr_TR", "tt",       "tv",    "tw",    "tz",
+                "ua",    "ug",    "uk",       "uk_UA", "um",    "us",    "uy",    "uz",    "va",    "vc",    "ve",    "vg",    "vi",    "vi_VN", "vn",    "vu",    "wf",    "ws",    "ye",    "yt",    "za",    "zh",    "zh_CN", "zh_HK", "zh_SG", "zh_TW",    "zm",    "zw"
+              )
             {
                 add_url_to_download( $url . $_ . "/i18n/Translation-" . $lang );
                 add_url_to_download( $url . $_ . "/i18n/Translation-" . $lang . ".gz" );
                 add_url_to_download( $url . $_ . "/i18n/Translation-" . $lang . ".bz2" );
             }
-        add_url_to_download( $url . $_ . "/i18n/Index" );
+            add_url_to_download( $url . $_ . "/i18n/Index" );
         }
     }
     else
@@ -490,7 +501,7 @@ sub sanitise_uri
     my $uri = shift;
     $uri =~ s[^(\w+)://][];
     $uri =~ s/^([^@]+)?@?// if $uri =~ /@/;
-    $uri =~ s&:\d+/&/&;    # and port information
+    $uri =~ s&:\d+/&/&;                       # and port information
     $uri =~ s/~/\%7E/g if get_variable("_tilde");
     return $uri;
 }
