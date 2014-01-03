@@ -401,6 +401,11 @@ foreach (@config_binaries)
         }
         foreach (@components)
         {
+            if ( get_variable("_contents") )
+            {
+                add_url_to_download( $url . $_ . "/Contents-" . $arch . ".gz" );
+                add_url_to_download( $url . $_ . "/Contents-" . $arch . ".bz2" );
+            }
             add_url_to_download( $url . $_ . "/binary-" . $arch . "/Release" );
             add_url_to_download( $url . $_ . "/binary-" . $arch . "/Packages.gz" );
             add_url_to_download( $url . $_ . "/binary-" . $arch . "/Packages.bz2" );
