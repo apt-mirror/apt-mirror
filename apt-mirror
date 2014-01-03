@@ -21,9 +21,9 @@ Main features:
  * It supports multithreaded downloading
  * It supports multiple architectures at the same time
  * It can automatically remove unneeded files
- * It works well on overloaded channel to internet
+ * It works well on overloaded channel to Internet
  * It never produces an inconsistent mirror including while mirroring
- * It works on all POSIX compliant systems with perl and wget
+ * It works on all POSIX compliant systems with Perl and wget
 
 =head1 COMMENTS
 
@@ -52,11 +52,11 @@ F</var/spool/apt-mirror/skel>
         Place for temporarily downloaded indexes
 
 F</var/spool/apt-mirror/var>
-        Log files placed here. URLs and MD5 summs also here.
+        Log files placed here. URLs and MD5 sums also here.
 
 =head1 CONFIGURATION EXAMPLES
 
-The mirror.list configuration supports many options, the file is well commented explinging each option.
+The mirror.list configuration supports many options, the file is well commented explaining each option.
 here are some sample mirror configuration lines showing the various supported ways :
 
 Normal:
@@ -585,7 +585,7 @@ foreach ( keys %urls_to_download )
 }
 
 ######################################################################################
-## Main download prepair
+## Main download preparation
 
 %urls_to_download = ();
 
