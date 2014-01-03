@@ -172,6 +172,7 @@ sub format_bytes
                 $size_name = 'GiB';
             }
         }
+        $bytes_out = round_number($bytes_out);
     }
     else
     {
@@ -179,7 +180,6 @@ sub format_bytes
         $size_name = 'bytes';
     }
 
-    $bytes_out = round_number($bytes_out);
     return "$bytes_out $size_name";
 }
 
