@@ -852,8 +852,9 @@ else
     print "$size_output in $total files and " . scalar(@rm_dirs) . " directories can be freed.\n";
     print "Run " . get_variable("cleanscript") . " for this purpose.\n\n";
 
-    print CLEAN "#!/bin/sh\n\n";
-    print CLEAN "cd " . get_variable("mirror_path") . " || exit 1\n\n";
+    print CLEAN "#!/bin/sh\n";
+    print CLEAN "set -e\n\n";
+    print CLEAN "cd " . get_variable("mirror_path") . "\n\n";
     print CLEAN "echo 'Removing $total unnecessary files [$unnecessary_bytes bytes]...'\n";
     foreach (@rm_files)
     {
