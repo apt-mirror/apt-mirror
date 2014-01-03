@@ -654,7 +654,11 @@ sub proceed_index_gz
         system("gunzip < $path/$index.gz > $path/$index");
     }
 
-    open STREAM, "<$path/$index" or warn("apt-mirror: can't open index in proceed_index_gz");
+    unless ( open STREAM, "<$path/$index" )
+    {
+        warn("apt-mirror: can't open index in proceed_index_gz");
+        return;
+    }
 
     while ( $package = <STREAM> )
     {
