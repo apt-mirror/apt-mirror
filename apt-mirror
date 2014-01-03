@@ -392,6 +392,7 @@ foreach (@config_binaries)
     {
         $url = $uri . "/dists/" . $distribution . "/";
 
+        add_url_to_download( $url . "InRelease" );
         add_url_to_download( $url . "Release" );
         add_url_to_download( $url . "Release.gpg" );
         if ( get_variable("_contents") )
