@@ -895,8 +895,8 @@ else
 }
 
 # Make clean script executable
-my $perm = (stat get_variable("cleanscript"))[2] & 07777;
-chmod($perm | 0111, get_variable("cleanscript"));
+my $perm = ( stat get_variable("cleanscript") )[2] & 07777;
+chmod( $perm | 0111, get_variable("cleanscript") );
 
 if ( get_variable("run_postmirror") )
 {
