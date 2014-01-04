@@ -866,7 +866,7 @@ else
     print CLEAN "#!/bin/sh\n";
     print CLEAN "set -e\n\n";
     print CLEAN "cd " . get_variable("mirror_path") . "\n\n";
-    print CLEAN "echo 'Removing $total unnecessary files [$unnecessary_bytes bytes]...'\n";
+    print CLEAN "echo 'Removing $total unnecessary files [$size_output]...'\n";
     foreach (@rm_files)
     {
         print CLEAN "rm -f '$_'\n";
