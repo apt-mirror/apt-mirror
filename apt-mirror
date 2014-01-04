@@ -882,7 +882,7 @@ else
     print CLEAN "echo 'Removing $total unnecessary directories...'\n";
     foreach (@rm_dirs)
     {
-        print CLEAN "rmdir '$_'\n";
+        print CLEAN "if test -d '$_'; then rmdir '$_'; fi\n";
         print CLEAN "echo -n '[" . int( 100 * $i / $total ) . "\%]'\n" unless $i % 50;
         print CLEAN "echo -n .\n";
         $i++;
