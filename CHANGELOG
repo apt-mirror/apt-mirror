@@ -1,10 +1,15 @@
 0.5.0 - UNRELEASED
-  * Removed restrictions when parsing deb-$arch
+  * Removed restrictions when parsing deb-$arch (Launchpad bug #913837)
     new arch's no longer need to be manually added
     via an apt-mirror source change.
   * Code cleaned up with perltidy and a .perltidyrc added
   * Changed to warn() instead of die() when sources go missing
     so mirroring of other sources continues.
+  * Download all provided translation files instead of trying to download
+    translation files based on a hard-coded language list. (Debian bug #725762)
+  * Fix typos (e.g. Launchpad bug #1211097).
+  * Mirror Contents-*.gz for each component. (Debian bug #647301)
+  * Mirror InRelease files (fixes #3).
 
 0.4.9
   * Added support for downloading of i18n files.
