@@ -7,7 +7,7 @@
     so mirroring of other sources continues.
   * Download all provided translation files instead of trying to download
     translation files based on a hard-coded language list. (Debian bug #725762)
-  * Fix typos (e.g. Launchpad bug #1211097).
+  * Fix typos (e.g. Debian bug #736904 and Launchpad bug #1211097).
   * Mirror Contents-*.gz for each component. (Debian bug #647301)
   * Mirror InRelease files (fixes #3).
 
