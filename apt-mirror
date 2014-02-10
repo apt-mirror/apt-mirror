@@ -16,14 +16,14 @@ A small and efficient tool that lets you mirror a part of or
 the whole Debian GNU/Linux distribution or any other apt sources.
 
 Main features:
- * It uses a config similar to apts F<sources.list>
- * It's fully pool comply
+ * It uses a config similar to APT's F<sources.list>
+ * It's fully pool compliant
  * It supports multithreaded downloading
  * It supports multiple architectures at the same time
  * It can automatically remove unneeded files
- * It works well on overloaded channel to internet
+ * It works well on an overloaded Internet connection
  * It never produces an inconsistent mirror including while mirroring
- * It works on all POSIX compliant systems with perl and wget
+ * It works on all POSIX compliant systems with Perl and wget
 
 =head1 COMMENTS
 
@@ -35,7 +35,7 @@ After you setup the configuration file you may run as root:
 
     # su - apt-mirror -c apt-mirror
 
-Or uncomment line in F</etc/cron.d/apt-mirror> to enable daily mirror updates.
+Or uncomment the line in F</etc/cron.d/apt-mirror> to enable daily mirror updates.
 
 =head1 FILES
 
@@ -52,17 +52,17 @@ F</var/spool/apt-mirror/skel>
         Place for temporarily downloaded indexes
 
 F</var/spool/apt-mirror/var>
-        Log files placed here. URLs and MD5 summs also here.
+        Log files placed here. URLs and MD5 checksums also here.
 
 =head1 CONFIGURATION EXAMPLES
 
 The mirror.list configuration supports many options, the file is well commented explaining each option.
-here are some sample mirror configuration lines showing the various supported ways :
+Here are some sample mirror configuration lines showing the various supported ways:
 
 Normal:
 deb http://example.com/debian stable main contrib non-free
 
-Arch Specific: ( many other arch's are supported )
+Arch Specific: (many other architectures are supported)
 deb-powerpc http://example.com/debian stable main contrib non-free
 
 HTTP and FTP Auth or non-standard port:
@@ -177,6 +177,7 @@ sub format_bytes
                 $size_name = 'GiB';
             }
         }
+        $bytes_out = round_number($bytes_out);
     }
     else
     {
@@ -184,7 +185,6 @@ sub format_bytes
         $size_name = 'bytes';
     }
 
-    $bytes_out = round_number($bytes_out);
     return "$bytes_out $size_name";
 }
 
@@ -297,13 +297,12 @@ while (<CONFIG>)
     }
 
     # Must be before check for deb- below
-    if($config_line =~ /deb-installer-([\w\-]+)/)
+    if ( $config_line =~ /deb-installer-([\w\-]+)/)
     {
         push @config_installers, [ $1, @config_line ];
         next;
     }
-
-    if($config_line =~ /deb-([\w\-]+)/)
+    if ( $config_line =~ /deb-([\w\-]+)/ )
     {
         push @config_binaries, [ $1, @config_line ];
         next;
@@ -378,6 +377,7 @@ foreach (@config_sources)
     {
         $url = $uri . "/dists/" . $distribution . "/";
 
+        add_url_to_download( $url . "InRelease" );
         add_url_to_download( $url . "Release" );
         add_url_to_download( $url . "Release.gpg" );
         foreach (@components)
@@ -404,6 +404,7 @@ foreach (@config_binaries)
     {
         $url = $uri . "/dists/" . $distribution . "/";
 
+        add_url_to_download( $url . "InRelease" );
         add_url_to_download( $url . "Release" );
         add_url_to_download( $url . "Release.gpg" );
         if ( get_variable("_contents") )
@@ -413,17 +414,15 @@ foreach (@config_binaries)
         }
         foreach (@components)
         {
+            if ( get_variable("_contents") )
+            {
+                add_url_to_download( $url . $_ . "/Contents-" . $arch . ".gz" );
+                add_url_to_download( $url . $_ . "/Contents-" . $arch . ".bz2" );
+            }
             add_url_to_download( $url . $_ . "/binary-" . $arch . "/Release" );
             add_url_to_download( $url . $_ . "/binary-" . $arch . "/Packages.gz" );
             add_url_to_download( $url . $_ . "/binary-" . $arch . "/Packages.bz2" );
-            my $lang;
-            foreach $lang ( "ast", "bg", "bs", "ca", "cs", "da", "de", "el", "en", "en_AU", "en_CA", "en_GB", "eo", "es", "eu", "fa", "fi", "fr", "fr_FR", "gl", "hr", "hu", "id", "is", "it", "ja", "ka", "km", "ko", "lt", "ms", "my", "nb", "nl", "no_NB", "oc", "pl", "pt", "pt_BR", "ro", "ru", "si", "sk", "sl", "sq", "sr", "sv", "th", "tr", "uk", "vi", "zh_CN", "zh_HK", "zh_TW" )
-            {
-                add_url_to_download( $url . $_ . "/i18n/Translation-" . $lang );
-                add_url_to_download( $url . $_ . "/i18n/Translation-" . $lang . ".gz" );
-                add_url_to_download( $url . $_ . "/i18n/Translation-" . $lang . ".bz2" );
-            }
-        add_url_to_download( $url . $_ . "/i18n/Index" );
+            add_url_to_download( $url . $_ . "/i18n/Index" );
         }
     }
     else
@@ -456,7 +455,162 @@ foreach ( keys %urls_to_download )
 }
 
 ######################################################################################
-## Main download prepare
+## Translation index download
+
+%urls_to_download = ();
+
+sub sanitise_uri
+{
+    my $uri = shift;
+    $uri =~ s[^(\w+)://][];
+    $uri =~ s/^([^@]+)?@?// if $uri =~ /@/;
+    $uri =~ s&:\d+/&/&;                       # and port information
+    $uri =~ s/~/\%7E/g if get_variable("_tilde");
+    return $uri;
+}
+
+sub find_translation_files_in_release
+{
+    # Look in the dists/$DIST/Release file for the translation files that belong
+    # to the given component.
+
+    my $dist_uri  = shift;
+    my $component = shift;
+    my ( $release_uri, $release_path, $line ) = '';
+
+    $release_uri  = $dist_uri . "Release";
+    $release_path = get_variable("mirror_path") . "/" . sanitise_uri($release_uri);
+
+    unless ( open STREAM, "<$release_path" )
+    {
+        warn( "Failed to open Release file from " . $release_uri );
+        return;
+    }
+
+    my $checksums = 0;
+    while ( $line = <STREAM> )
+    {
+        chomp $line;
+        if ($checksums)
+        {
+            if ( $line =~ /^ +(.*)$/ )
+            {
+                my @parts = split( / +/, $1 );
+                if ( @parts == 3 )
+                {
+                    my ( $sha1, $size, $filename ) = @parts;
+                    if ( $filename =~ m{^$component/i18n/Translation-[^./]*\.bz2$} )
+                    {
+                        add_url_to_download( $dist_uri . $filename, $size );
+                    }
+                }
+                else
+                {
+                    warn("Malformed checksum line \"$1\" in $release_uri");
+                }
+            }
+            else
+            {
+                $checksums = 0;
+            }
+        }
+        if ( not $checksums )
+        {
+            if ( $line eq "SHA256:" )
+            {
+                $checksums = 1;
+            }
+        }
+    }
+}
+
+sub process_translation_index
+{
+    # Extract all translation files from the dists/$DIST/$COMPONENT/i18n/Index
+    # file. Fall back to parsing dists/$DIST/Release if i18n/Index is not found.
+
+    my $dist_uri  = remove_double_slashes(shift);
+    my $component = shift;
+    my ( $base_uri, $index_uri, $index_path, $line ) = '';
+
+    $base_uri   = $dist_uri . $component . "/i18n/";
+    $index_uri  = $base_uri . "Index";
+    $index_path = get_variable("mirror_path") . "/" . sanitise_uri($index_uri);
+
+    unless ( open STREAM, "<$index_path" )
+    {
+        find_translation_files_in_release( $dist_uri, $component );
+        return;
+    }
+
+    my $checksums = 0;
+    while ( $line = <STREAM> )
+    {
+        chomp $line;
+        if ($checksums)
+        {
+            if ( $line =~ /^ +(.*)$/ )
+            {
+                my @parts = split( / +/, $1 );
+                if ( @parts == 3 )
+                {
+                    my ( $sha1, $size, $filename ) = @parts;
+                    add_url_to_download( $base_uri . $filename, $size );
+                }
+                else
+                {
+                    warn("Malformed checksum line \"$1\" in $index_uri");
+                }
+            }
+            else
+            {
+                $checksums = 0;
+            }
+        }
+        if ( not $checksums )
+        {
+            if ( $line eq "SHA256:" or $line eq "SHA1:" or $line eq "MD5Sum:" )
+            {
+                $checksums = 1;
+            }
+        }
+    }
+
+    close STREAM;
+}
+
+print "Processing tranlation indexes: [";
+
+foreach (@config_binaries)
+{
+    my ( $arch, $uri, $distribution, @components ) = @{$_};
+    print "T";
+    if (@components)
+    {
+        $url = $uri . "/dists/" . $distribution . "/";
+
+        my $component;
+        foreach $component (@components)
+        {
+            process_translation_index( $url, $component );
+        }
+    }
+}
+
+print "]\n\n";
+
+push( @index_urls, sort keys %urls_to_download );
+download_urls( "translation", sort keys %urls_to_download );
+
+foreach ( keys %urls_to_download )
+{
+    s[^(\w+)://][];
+    s[~][%7E]g if get_variable("_tilde");
+    $skipclean{$_} = 1;
+}
+
+######################################################################################
+## Main download preparations
 
 %urls_to_download = ();
 
@@ -520,17 +674,7 @@ sub remove_spaces($)
     }
 }
 
-sub sanitise_uri
-{
-    my $uri = shift;
-    $uri =~ s[^(\w+)://][];
-    $uri =~ s/^([^@]+)?@?// if $uri =~ /@/;
-    $uri =~ s&:\d+/&/&;    # and port information
-    $uri =~ s/~/\%7E/g if get_variable("_tilde");
-    return $uri;
-}
-
-sub proceed_index_gz
+sub process_index_gz
 {
     my $uri   = shift;
     my $index = shift;
@@ -545,7 +689,11 @@ sub proceed_index_gz
         system("gunzip < $path/$index.gz > $path/$index");
     }
 
-    open STREAM, "<$path/$index" or warn("apt-mirror: can't open index in proceed_index_gz");
+    unless ( open STREAM, "<$path/$index" )
+    {
+        warn("apt-mirror: can't open index in process_index_gz");
+        return;
+    }
 
     while ( $package = <STREAM> )
     {
@@ -604,22 +752,20 @@ sub process_digest {
 
     while(my $line = <STREAM>) {
         chomp $line;
-	local $/ = "\n";
-	(my $hash, my $install_file) = split(/\s+/, $line);
+        local $/ = "\n";
+        (my $hash, my $install_file) = split(/\s+/, $line);
         if (defined $component) {
-	  next if $install_file !~ /\.\/\Q$component/;
-	}
-	if(need_update_by_hash($path . "/" . $install_file, $hash)) {
-	  print FILES_NEW remove_double_slashes($uri . "/" . $install_file) . "\n";
-	  add_url_to_download($uri . "/" . $install_file);
+          next if $install_file !~ /\.\/\Q$component/;
+        }
+        if(need_update_by_hash($path . "/" . $install_file, $hash)) {
+          print FILES_NEW remove_double_slashes($uri . "/" . $install_file) . "\n";
+          add_url_to_download($uri . "/" . $install_file);
         }
     }
 
     close STREAM;
 }
-
-
-print "Proceed indexes: [";
+print "Processing indexes: [";
 
 foreach (@config_sources)
 {
@@ -630,12 +776,12 @@ foreach (@config_sources)
         my $component;
         foreach $component (@components)
         {
-            proceed_index_gz( $uri, "/dists/$distribution/$component/source/Sources.gz" );
+            process_index_gz( $uri, "/dists/$distribution/$component/source/Sources.gz" );
         }
     }
     else
     {
-        proceed_index_gz( $uri, "/$distribution/Sources.gz" );
+        process_index_gz( $uri, "/$distribution/Sources.gz" );
     }
 }
 
@@ -648,12 +794,12 @@ foreach (@config_binaries)
         my $component;
         foreach $component (@components)
         {
-            proceed_index_gz( $uri, "/dists/$distribution/$component/binary-$arch/Packages.gz" );
+            process_index_gz( $uri, "/dists/$distribution/$component/binary-$arch/Packages.gz" );
         }
     }
     else
     {
-        proceed_index_gz( $uri, "/$distribution/Packages.gz" );
+        process_index_gz( $uri, "/$distribution/Packages.gz" );
     }
 }
 
@@ -798,9 +944,10 @@ else
     print "$size_output in $total files and " . scalar(@rm_dirs) . " directories can be freed.\n";
     print "Run " . get_variable("cleanscript") . " for this purpose.\n\n";
 
-    print CLEAN "#!/bin/sh\n\n";
-    print CLEAN "cd " . get_variable("mirror_path") . " || exit 1\n\n";
-    print CLEAN "echo 'Removing $total unnecessary files [$unnecessary_bytes bytes]...'\n";
+    print CLEAN "#!/bin/sh\n";
+    print CLEAN "set -e\n\n";
+    print CLEAN "cd " . get_variable("mirror_path") . "\n\n";
+    print CLEAN "echo 'Removing $total unnecessary files [$size_output]...'\n";
     foreach (@rm_files)
     {
         next if $_ =~ /\.gpg$/;
@@ -817,7 +964,7 @@ else
     print CLEAN "echo 'Removing $total unnecessary directories...'\n";
     foreach (@rm_dirs)
     {
-        print CLEAN "rmdir '$_'\n";
+        print CLEAN "if test -d '$_'; then rmdir '$_'; fi\n";
         print CLEAN "echo -n '[" . int( 100 * $i / $total ) . "\%]'\n" unless $i % 50;
         print CLEAN "echo -n .\n";
         $i++;
@@ -828,6 +975,10 @@ else
     close CLEAN;
 
 }
+
+# Make clean script executable
+my $perm = ( stat get_variable("cleanscript") )[2] & 07777;
+chmod( $perm | 0111, get_variable("cleanscript") );
 
 if ( get_variable("run_postmirror") )
 {
