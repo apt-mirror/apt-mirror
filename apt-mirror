@@ -808,7 +808,7 @@ foreach (@config_installers) {
     my ($arch, $uri, $distribution, @components) = @{$_};
     print "I";
     my $install_uri = $uri . "/dists/$distribution/main/installer-$arch/current/images";
-    proceed_index_gz( $uri, "/dists/$distribution/main/debian-installer/binary-$arch/Packages.gz" );
+    process_index_gz( $uri, "/dists/$distribution/main/debian-installer/binary-$arch/Packages.gz" );
     if(@components) {
         my $component;
         foreach $component (@components) {
