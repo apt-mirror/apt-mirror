@@ -1,4 +1,4 @@
-#!/usr/bin/perl -w
+#!/usr/bin/perl
 
 =pod
 
@@ -87,6 +87,7 @@ Brandon Holtsclaw E<lt>me@brandonholtsclaw.comE<gt>
 
 =cut
 
+use warnings;
 use strict;
 use File::Copy;
 use File::Path;
