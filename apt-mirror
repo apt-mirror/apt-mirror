@@ -462,7 +462,7 @@ sub find_translation_files_in_release
     my ( $release_uri, $release_path, $line ) = '';
 
     $release_uri  = $dist_uri . "Release";
-    $release_path = get_variable("mirror_path") . "/" . sanitise_uri($release_uri);
+    $release_path = get_variable("skel_path") . "/" . sanitise_uri($release_uri);
 
     unless ( open STREAM, "<$release_path" )
     {
@@ -518,7 +518,7 @@ sub process_translation_index
 
     $base_uri   = $dist_uri . $component . "/i18n/";
     $index_uri  = $base_uri . "Index";
-    $index_path = get_variable("mirror_path") . "/" . sanitise_uri($index_uri);
+    $index_path = get_variable("skel_path") . "/" . sanitise_uri($index_uri);
 
     unless ( open STREAM, "<$index_path" )
     {
