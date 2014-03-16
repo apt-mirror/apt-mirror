@@ -780,7 +780,7 @@ sub copy_file
     mkpath($dir) unless -d $dir;
     if ( get_variable("unlink") == 1 )
     {
-        if (compare( $from, $to ) != 0) { unlink($to); }
+        if ( compare( $from, $to ) != 0 ) { unlink($to); }
     }
     unless ( copy( $from, $to ) )
     {
