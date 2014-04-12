@@ -383,6 +383,7 @@ foreach (@config_sources)
             add_url_to_download( $url . $_ . "/source/Release" );
             add_url_to_download( $url . $_ . "/source/Sources.gz" );
             add_url_to_download( $url . $_ . "/source/Sources.bz2" );
+            add_url_to_download( $url . $_ . "/source/Sources.xz" );
         }
     }
     else
@@ -391,6 +392,7 @@ foreach (@config_sources)
         add_url_to_download( $uri . "/$distribution/Release.gpg" );
         add_url_to_download( $uri . "/$distribution/Sources.gz" );
         add_url_to_download( $uri . "/$distribution/Sources.bz2" );
+        add_url_to_download( $uri . "/$distribution/Sources.xz" );
     }
 }
 
@@ -409,6 +411,7 @@ foreach (@config_binaries)
         {
             add_url_to_download( $url . "Contents-" . $arch . ".gz" );
             add_url_to_download( $url . "Contents-" . $arch . ".bz2" );
+            add_url_to_download( $url . "Contents-" . $arch . ".xz" );
         }
         foreach (@components)
         {
@@ -416,10 +419,12 @@ foreach (@config_binaries)
             {
                 add_url_to_download( $url . $_ . "/Contents-" . $arch . ".gz" );
                 add_url_to_download( $url . $_ . "/Contents-" . $arch . ".bz2" );
+                add_url_to_download( $url . $_ . "/Contents-" . $arch . ".xz" );
             }
             add_url_to_download( $url . $_ . "/binary-" . $arch . "/Release" );
             add_url_to_download( $url . $_ . "/binary-" . $arch . "/Packages.gz" );
             add_url_to_download( $url . $_ . "/binary-" . $arch . "/Packages.bz2" );
+            add_url_to_download( $url . $_ . "/binary-" . $arch . "/Packages.xz" );
             add_url_to_download( $url . $_ . "/i18n/Index" );
         }
     }
@@ -429,6 +434,7 @@ foreach (@config_binaries)
         add_url_to_download( $uri . "/$distribution/Release.gpg" );
         add_url_to_download( $uri . "/$distribution/Packages.gz" );
         add_url_to_download( $uri . "/$distribution/Packages.bz2" );
+        add_url_to_download( $uri . "/$distribution/Packages.xz" );
     }
 }
 
@@ -443,6 +449,7 @@ foreach ( keys %urls_to_download )
     $skipclean{$_} = 1;
     $skipclean{$_} = 1 if s[\.gz$][];
     $skipclean{$_} = 1 if s[\.bz2$][];
+    $skipclean{$_} = 1 if s[\.xz$][];
 }
 
 ######################################################################################
@@ -804,6 +811,7 @@ foreach (@index_urls)
     copy_file( get_variable("skel_path") . "/" . sanitise_uri("$_"), get_variable("mirror_path") . "/" . sanitise_uri("$_") );
     copy_file( get_variable("skel_path") . "/" . sanitise_uri("$_"), get_variable("mirror_path") . "/" . sanitise_uri("$_") ) if (s/\.gz$//);
     copy_file( get_variable("skel_path") . "/" . sanitise_uri("$_"), get_variable("mirror_path") . "/" . sanitise_uri("$_") ) if (s/\.bz2$//);
+    copy_file( get_variable("skel_path") . "/" . sanitise_uri("$_"), get_variable("mirror_path") . "/" . sanitise_uri("$_") ) if (s/\.xz$//);
 }
 
 ######################################################################################
