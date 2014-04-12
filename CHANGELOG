@@ -1,3 +1,9 @@
+0.5.1 (2014-04-12)
+  * Fix find-translation-files bug.
+  * Fix skel (indexes) updates in a hardlinked mirror
+  * Added proxy support
+  * Also mirror xz compressed files (fixes #25).
+
 0.5.0 (2014-02-22)
   * Removed restrictions when parsing deb-$arch (Launchpad bug #913837)
     new arch's no longer need to be manually added
