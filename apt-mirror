@@ -579,7 +579,7 @@ sub process_translation_index
     close STREAM;
 }
 
-print "Processing tranlation indexes: [";
+print "Processing translation indexes: [";
 
 foreach (@config_binaries)
 {
