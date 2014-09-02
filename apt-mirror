@@ -437,6 +437,7 @@ foreach (@config_binaries)
 foreach (@config_installers) {
     my ($arch, $uri, $distribution) = @{$_};
     add_url_to_download($uri . "/dists/${distribution}/main/debian-installer/binary-${arch}/Packages.gz");
+    add_url_to_download($uri . "/dists/${distribution}/restricted/debian-installer/binary-${arch}/Packages.gz");
     add_url_to_download($uri . "/dists/${distribution}/main/installer-${arch}/current/images/MD5SUMS");
     add_url_to_download($uri . "/dists/${distribution}/main/installer-${arch}/current/images/MANIFEST");
 }
