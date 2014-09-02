@@ -24,6 +24,10 @@ deb-installer-i386 http://archive.ubuntu.com/ubuntu precise-updates netboot cdro
 
 # Use --unlink with wget (for use with hardlinked directories)
 set unlink            1
+set use_proxy         off
+set http_proxy        127.0.0.1:3128
+set proxy_user        user
+set proxy_password    password
 
 deb-amd64 http://archive.ubuntu.com/ubuntu precise main restricted universe multiverse
 deb-amd64 http://archive.ubuntu.com/ubuntu precise-security main restricted universe multiverse

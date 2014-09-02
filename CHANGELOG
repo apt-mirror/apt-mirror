@@ -1,12 +1,16 @@
+
 0.5.2
   * Added support for downloading debian-installer .udeb packages.
   * Added support for distribution in debian-installer, e.g. installer images in precise-updates can be retrieved.
   * Fix cleanup script generation: excluding installer files and directories.
 
-0.5.1
-  * Added support for downloading installer sections of repo    
+0.5.1 (2014-04-12)
+  * Fix find-translation-files bug.
+  * Fix skel (indexes) updates in a hardlinked mirror
+  * Added proxy support
+  * Also mirror xz compressed files (fixes #25).
 
-0.5.0 - UNRELEASED
+0.5.0 (2014-02-22)
   * Removed restrictions when parsing deb-$arch (Launchpad bug #913837)
     new arch's no longer need to be manually added
     via an apt-mirror source change.
@@ -54,12 +58,12 @@
     allow user:pass@host ( http and ftp authenticated )
     and port numbers in the url host:8080 etc
   * Added ability to run a shell script after apt-mirror completes the
-    mirroring config values "run_postmirror" 0/1
+    mirroring configuration values "run_postmirror" 0/1
     and "postmirror_script" /path/to/script.sh
   * added rate_limit option ( closes sf.net bug #1729402 )
     a value of 25 is equal to 25 Bytes/Second
-    a value of 25k is equal to 25 KiloBytes/Second
-    a value of 25m is equal to 25 MegaBytes/Second
+    a value of 25k is equal to 25 Kilobytes/Second
+    a value of 25m is equal to 25 Megabyte/Second
 
 0.4.5
 

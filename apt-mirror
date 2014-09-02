@@ -1,4 +1,4 @@
-#!/usr/bin/perl -w
+#!/usr/bin/perl
 
 =pod
 
@@ -91,8 +91,10 @@ Guy Matz E<lt>gmatz@matz.orgE<gt>
 
 =cut
 
+use warnings;
 use strict;
 use File::Copy;
+use File::Compare;
 use File::Path;
 use File::Basename;
 use Fcntl qw(:flock);
@@ -115,7 +117,11 @@ my %config_variables = (
     "auth_no_challenge"    => 0,
     "no_check_certificate" => 0,
     "unlink"               => 0,
-    "postmirror_script"    => '$var_path/postmirror.sh'
+    "postmirror_script"    => '$var_path/postmirror.sh',
+    "use_proxy"            => 'off',
+    "http_proxy"           => '',
+    "proxy_user"           => '',
+    "proxy_password"       => ''
 );
 
 my @config_binaries = ();
@@ -231,7 +237,12 @@ sub download_urls
     if ( get_variable("auth_no_challenge") == 1 )    { push( @args, "--auth-no-challenge" ); }
     if ( get_variable("no_check_certificate") == 1 ) { push( @args, "--no-check-certificate" ); }
     if ( get_variable("unlink") == 1 )               { push( @args, "--unlink" ); }
-
+    if ( length( get_variable("use_proxy") ) && ( get_variable("use_proxy") eq 'yes' || get_variable("use_proxy") eq 'on' ) )
+    {
+        if ( length( get_variable("http_proxy") ) ) { push( @args, "-e use_proxy=yes" ); push( @args, "-e http_proxy=" . get_variable("http_proxy") ); }
+        if ( length( get_variable("proxy_user") ) ) { push( @args, "-e proxy_user=" . get_variable("proxy_user") ); }
+        if ( length( get_variable("proxy_password") ) ) { push( @args, "-e proxy_password=" . get_variable("proxy_password") ); }
+    }
     print "Downloading " . scalar(@urls) . " $stage files using $nthreads threads...\n";
 
     while ( scalar @urls )
@@ -385,6 +396,7 @@ foreach (@config_sources)
             add_url_to_download( $url . $_ . "/source/Release" );
             add_url_to_download( $url . $_ . "/source/Sources.gz" );
             add_url_to_download( $url . $_ . "/source/Sources.bz2" );
+            add_url_to_download( $url . $_ . "/source/Sources.xz" );
         }
     }
     else
@@ -393,6 +405,7 @@ foreach (@config_sources)
         add_url_to_download( $uri . "/$distribution/Release.gpg" );
         add_url_to_download( $uri . "/$distribution/Sources.gz" );
         add_url_to_download( $uri . "/$distribution/Sources.bz2" );
+        add_url_to_download( $uri . "/$distribution/Sources.xz" );
     }
 }
 
@@ -411,6 +424,7 @@ foreach (@config_binaries)
         {
             add_url_to_download( $url . "Contents-" . $arch . ".gz" );
             add_url_to_download( $url . "Contents-" . $arch . ".bz2" );
+            add_url_to_download( $url . "Contents-" . $arch . ".xz" );
         }
         foreach (@components)
         {
@@ -418,10 +432,12 @@ foreach (@config_binaries)
             {
                 add_url_to_download( $url . $_ . "/Contents-" . $arch . ".gz" );
                 add_url_to_download( $url . $_ . "/Contents-" . $arch . ".bz2" );
+                add_url_to_download( $url . $_ . "/Contents-" . $arch . ".xz" );
             }
             add_url_to_download( $url . $_ . "/binary-" . $arch . "/Release" );
             add_url_to_download( $url . $_ . "/binary-" . $arch . "/Packages.gz" );
             add_url_to_download( $url . $_ . "/binary-" . $arch . "/Packages.bz2" );
+            add_url_to_download( $url . $_ . "/binary-" . $arch . "/Packages.xz" );
             add_url_to_download( $url . $_ . "/i18n/Index" );
         }
     }
@@ -431,6 +447,7 @@ foreach (@config_binaries)
         add_url_to_download( $uri . "/$distribution/Release.gpg" );
         add_url_to_download( $uri . "/$distribution/Packages.gz" );
         add_url_to_download( $uri . "/$distribution/Packages.bz2" );
+        add_url_to_download( $uri . "/$distribution/Packages.xz" );
     }
 }
 
@@ -453,6 +470,7 @@ foreach ( keys %urls_to_download )
     $skipclean{$_} = 1;
     $skipclean{$_} = 1 if s[\.gz$][];
     $skipclean{$_} = 1 if s[\.bz2$][];
+    $skipclean{$_} = 1 if s[\.xz$][];
 }
 
 ######################################################################################
@@ -480,7 +498,7 @@ sub find_translation_files_in_release
     my ( $release_uri, $release_path, $line ) = '';
 
     $release_uri  = $dist_uri . "Release";
-    $release_path = get_variable("mirror_path") . "/" . sanitise_uri($release_uri);
+    $release_path = get_variable("skel_path") . "/" . sanitise_uri($release_uri);
 
     unless ( open STREAM, "<$release_path" )
     {
@@ -536,7 +554,7 @@ sub process_translation_index
 
     $base_uri   = $dist_uri . $component . "/i18n/";
     $index_uri  = $base_uri . "Index";
-    $index_path = get_variable("mirror_path") . "/" . sanitise_uri($index_uri);
+    $index_path = get_variable("skel_path") . "/" . sanitise_uri($index_uri);
 
     unless ( open STREAM, "<$index_path" )
     {
@@ -580,7 +598,7 @@ sub process_translation_index
     close STREAM;
 }
 
-print "Processing tranlation indexes: [";
+print "Processing translation indexes: [";
 
 foreach (@config_binaries)
 {
@@ -856,6 +874,10 @@ sub copy_file
     my $dir = dirname($to);
     return unless -f $from;
     mkpath($dir) unless -d $dir;
+    if ( get_variable("unlink") == 1 )
+    {
+        if ( compare( $from, $to ) != 0 ) { unlink($to); }
+    }
     unless ( copy( $from, $to ) )
     {
         warn("apt-mirror: can't copy $from to $to");
@@ -871,6 +893,7 @@ foreach (@index_urls)
     copy_file( get_variable("skel_path") . "/" . sanitise_uri("$_"), get_variable("mirror_path") . "/" . sanitise_uri("$_") );
     copy_file( get_variable("skel_path") . "/" . sanitise_uri("$_"), get_variable("mirror_path") . "/" . sanitise_uri("$_") ) if (s/\.gz$//);
     copy_file( get_variable("skel_path") . "/" . sanitise_uri("$_"), get_variable("mirror_path") . "/" . sanitise_uri("$_") ) if (s/\.bz2$//);
+    copy_file( get_variable("skel_path") . "/" . sanitise_uri("$_"), get_variable("mirror_path") . "/" . sanitise_uri("$_") ) if (s/\.xz$//);
 }
 
 ######################################################################################
