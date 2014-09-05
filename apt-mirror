@@ -234,6 +234,8 @@ sub download_urls
     if ( get_variable("auth_no_challenge") == 1 )    { push( @args, "--auth-no-challenge" ); }
     if ( get_variable("no_check_certificate") == 1 ) { push( @args, "--no-check-certificate" ); }
     if ( get_variable("unlink") == 1 )               { push( @args, "--unlink" ); }
+    if ( get_variable("continue") == 1 )             { push( @args, "--continue" ) ; }
+
     if ( length( get_variable("use_proxy") ) && ( get_variable("use_proxy") eq 'yes' || get_variable("use_proxy") eq 'on' ) )
     {
         if ( length( get_variable("http_proxy") ) ) { push( @args, "-e use_proxy=yes" ); push( @args, "-e http_proxy=" . get_variable("http_proxy") ); }
