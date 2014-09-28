@@ -249,7 +249,7 @@ sub download_urls
 
         $pid = fork();
 
-        die("apt-mirror: can't do fork in download_urls") if $pid < 0;
+        die("apt-mirror: can't do fork in download_urls") if !defined($pid);
 
         if ( $pid == 0 )
         {
