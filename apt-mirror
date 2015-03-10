@@ -617,6 +617,8 @@ foreach ( keys %urls_to_download )
 open FILES_ALL, ">" . get_variable("var_path") . "/ALL" or die("apt-mirror: can't write to intermediate file (ALL)");
 open FILES_NEW, ">" . get_variable("var_path") . "/NEW" or die("apt-mirror: can't write to intermediate file (NEW)");
 open FILES_MD5, ">" . get_variable("var_path") . "/MD5" or die("apt-mirror: can't write to intermediate file (MD5)");
+open FILES_SKIPPED, ">" . get_variable("var_path") . "/SKIP" or die("apt-mirror: can't write to intermediate file (SKIP)");
+open FILES_SKIP_EXCEPTION, ">" . get_variable("var_path") . "/EXCEPTION" or die("apt-mirror: can't write to intermediate file (EXCEPTION)");
 
 my %stat_cache = ();
 
@@ -658,6 +660,90 @@ sub remove_spaces($)
     }
 }
 
+sub is_exception_granted_to_package
+{
+    #Lookup the package name and try to do a 100% match i.e. including version
+    my $pkg_name = shift;
+    if ( ($pkg_name =~ /git/) || ($pkg_name =~ /3.16.0-31/) || ($pkg_name =~ /gcc/) )
+    {
+        print FILES_SKIP_EXCEPTION "Download exception granted for $pkg_name\n";
+        return 1;
+    }
+    return 0;
+}
+
+sub should_process
+{
+    my $pkg_name = shift;
+    my $section_name = shift;
+    my $pkg_size = shift;
+    #Skip packages based on configuration
+    if ( $section_name !~ /game/ )
+    {
+        if ( $pkg_size < 10000000 )
+        {
+            if ( $pkg_name =~ /dbg/)
+            {
+                if( is_exception_granted_to_package( $pkg_name ) )
+                {
+                    return 1;
+                }
+                else
+                {
+                    print FILES_SKIPPED "Skipping $pkg_name because it is a debug package\n";
+                    return 0;
+                }
+            }
+            if ( ($pkg_name =~ /linux-image/) || ($pkg_name =~ /linux-headers/) || ($pkg_name =~ /linux-backports/) || ($pkg_name =~ /linux-tools/) || ($pkg_name =~ /cloud/) || ($pkg_name =~ /linux-generic/) || ($pkg_name =~ /linux-lts-trusty-tools/) )
+            {
+                if( is_exception_granted_to_package( $pkg_name ) )
+                {
+                    return 1;
+                }
+                else
+                {
+                    print FILES_SKIPPED "Skipping $pkg_name because it is a kernel package\n";
+                    return 0;
+                }
+            }
+            if( ($pkg_name =~ /locale/) )
+            {
+                if($pkg_name !~ /locale-en/)
+                {
+                    if( is_exception_granted_to_package( $pkg_name ) )
+                    {
+                        return 1;
+                    }
+                    else
+                    {
+                        print FILES_SKIPPED "Skipping $pkg_name because it is a non english locale package\n";
+                        return 0;
+                    }
+                }
+                return 1;
+            }
+            return 1;
+        }
+        else
+        {
+            if( is_exception_granted_to_package( $pkg_name ) )
+            {
+                return 1;
+            }
+            else
+            {
+                print FILES_SKIPPED "Skipping $pkg_name because it is more than 10MB($pkg_size)\n";
+                return 0;
+            }
+        }
+    }
+    else
+    {
+        print FILES_SKIPPED "Skipping $pkg_name because it is a game package\n";
+    }
+    return 0;
+}
+
 sub process_index_gz
 {
     my $uri   = shift;
@@ -697,7 +783,10 @@ sub process_index_gz
             if ( need_update( $mirror . "/" . $lines{"Filename:"}, $lines{"Size:"} ) )
             {
                 print FILES_NEW remove_double_slashes( $uri . "/" . $lines{"Filename:"} ) . "\n";
-                add_url_to_download( $uri . "/" . $lines{"Filename:"}, $lines{"Size:"} );
+                if( should_process( $lines{"Package:"}, $lines{"Section:"}, $lines{"Size:"} ) )
+                {
+                    add_url_to_download( $uri . "/" . $lines{"Filename:"}, $lines{"Size:"} );
+                }
             }
         }
         else
@@ -713,7 +802,10 @@ sub process_index_gz
                 if ( need_update( $mirror . "/" . $lines{"Directory:"} . "/" . $file[2], $file[1] ) )
                 {
                     print FILES_NEW remove_double_slashes( $uri . "/" . $lines{"Directory:"} . "/" . $file[2] ) . "\n";
-                    add_url_to_download( $uri . "/" . $lines{"Directory:"} . "/" . $file[2], $file[1] );
+                    if( should_process( $lines{"Package:"}, $lines{"Section:"}, $lines{"Size:"} ) )
+                    {
+                        add_url_to_download( $uri . "/" . $lines{"Filename:"}, $lines{"Size:"} );
+                    }
                 }
             }
         }
