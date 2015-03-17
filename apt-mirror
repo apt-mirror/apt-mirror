@@ -127,6 +127,8 @@ my @index_urls;
 my @childrens       = ();
 my %skipclean       = ();
 my %clean_directory = ();
+my @skip_configuration = ();
+my @exception_configuration = ();
 
 ######################################################################################
 ## Setting up $config_file variable
@@ -323,6 +325,18 @@ while (<CONFIG>)
         $config_line[0] =~ s[/$][];
         $config_line[0] =~ s[~][%7E]g if get_variable("_tilde");
         $clean_directory{ $config_line[0] } = 1;
+        next;
+    }
+
+    if ( $config_line eq "skip" )
+    {
+        push ( @skip_configuration, [@config_line] );
+        next;
+    }
+
+    if ( $config_line eq "exception" )
+    {
+        push ( @exception_configuration, [@config_line] );
         next;
     }
 
