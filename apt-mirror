@@ -368,6 +368,30 @@ while (<CONFIG>)
                 die("apt-mirror: invalid config file specified size_more_than must be followed by a size value and a reason");
             }
         }
+        else
+        {
+            if ( $config_line[0] eq "section" )
+            {
+                if ( $#config_line < 1 )
+                {
+                    die("apt-mirror: invalid config file specified section must be followed by a section name and a reason");
+                }
+                else
+                {
+                    if ( $#config_line < 2 || ($config_line[2] ne "reason") )
+                    {
+                        die("apt-mirror: invalid config file specified reason missing for skipping section ($.: $config_line ...)");
+                    }
+                    else
+                    {
+                        if ( $#config_line < 3 )
+                        {
+                            die("apt-mirror: invalid config file specified reason text missing for skipping section ($.: $config_line ...)");
+                        }
+                    }
+                }
+            }
+        }
         push ( @skip_configuration, [@config_line] );
         next;
     }
