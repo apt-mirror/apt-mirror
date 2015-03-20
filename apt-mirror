@@ -391,6 +391,34 @@ while (<CONFIG>)
                     }
                 }
             }
+            else
+            {
+                if ( $config_line[0] eq "if_name_contains" )
+                {
+                    if ( $#config_line < 1 )
+                    {
+                        die("apt-mirror: invalid config file specified if_name_contains must be followed by a string to match");
+                    }
+                    else
+                    {
+                        if ( $#config_line < 2 || ($config_line[2] ne "reason") )
+                        {
+                            die("apt-mirror: invalid config file specified reason missing for if_name_contains ($.: $config_line ...)");
+                        }
+                        else
+                        {
+                            if ( $#config_line < 3 )
+                            {
+                                die("apt-mirror: invalid config file specified reason text missing for if_name_contains ($.: $config_line ...)");
+                            }
+                        }
+                    }
+                }
+                else
+                {
+                    die("apt-mirror: invalid config file specified not sure what to do with this line ($.: $config_line ...)");
+                }
+            }
         }
         push ( @skip_configuration, [@config_line] );
         next;
