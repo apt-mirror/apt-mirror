@@ -94,6 +94,7 @@ use File::Compare;
 use File::Path;
 use File::Basename;
 use Fcntl qw(:flock);
+use Scalar::Util qw(looks_like_number);
 
 my $config_file;
 
@@ -277,7 +278,8 @@ sub download_urls
 }
 
 ## Parse config
-
+my $counter;
+my $length;
 open CONFIG, "<$config_file" or die("apt-mirror: can't open config file ($config_file)");
 while (<CONFIG>)
 {
@@ -330,6 +332,39 @@ while (<CONFIG>)
 
     if ( $config_line eq "skip" )
     {
+        $counter = 0;
+        $length = $#config_line;
+        if ( $config_line[0] eq "size_more_than" )
+        {
+            $counter++;
+            if ($counter <= $length)
+            {
+                if (looks_like_number($config_line[$counter]))
+                {
+                    $counter++;
+                    if ( $config_line[$counter] eq "reason" )
+                    {
+                        $counter++;
+                        if ($counter > $length)
+                        {
+                            die("apt-mirror: invalid config file specified size_more_than must be followed by a size value and a reason");
+                        }
+                    }
+                    else
+                    {
+                        die("apt-mirror: invalid config file specified size_more_than must be followed by a size value and a reason");
+                    }
+                }
+                else
+                {
+                    die("apt-mirror: invalid config file specified size_more_than must be followed by a size value which must be a number value");
+                }
+            }
+            else
+            {
+                die("apt-mirror: invalid config file specified size_more_than must be followed by a size value and a reason");
+            }
+        }
         push ( @skip_configuration, [@config_line] );
         next;
     }
