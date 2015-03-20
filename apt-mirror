@@ -95,6 +95,7 @@ use File::Path;
 use File::Basename;
 use Fcntl qw(:flock);
 use Scalar::Util qw(looks_like_number);
+use Text::ParseWords;
 
 my $config_file;
 
@@ -285,7 +286,9 @@ while (<CONFIG>)
 {
     next if /^\s*#/;
     next unless /\S/;
-    my @config_line = split;
+    my $line = $_;
+    $line =~ s/^\s+|\s+$//g;
+    my @config_line = parse_line('\s+', 0, $line);
     my $config_line = shift @config_line;
 
     if ( $config_line eq "set" )
