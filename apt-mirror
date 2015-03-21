@@ -414,6 +414,40 @@ while (<CONFIG>)
 
     if ( $config_line eq "exception" )
     {
+        $length = $#config_line;
+        if ( ( $config_line[0] eq "size_more_than" ) || ( $config_line[0] eq "section" ) || ( $config_line[0] eq "if_name_contains" ) )
+        {
+            if ( $length < 1 )
+            {
+                die("apt-mirror: invalid config file specified $config_line[0] must be followed by a value and a reason ($.: $config_line ...)");
+            }
+            if ( $config_line[0] eq "size_more_than" )
+            {
+                if ( !looks_like_number ( $config_line[1] ) )
+                {
+                    die("apt-mirror: invalid config file specified size_more_than must be followed by a size value which must be a number value ($.: $config_line ...)");
+                }
+            }
+            if ( $length < 2 )
+            {
+                die("apt-mirror: invalid config file specified reason missing for skipping section ($.: $config_line ...)");
+            }
+            if ( $config_line[2] eq "reason" )
+            {
+                if ( $length < 3 )
+                {
+                    die("apt-mirror: invalid config file specified missing reason text ($.: $config_line ...)");
+                }
+            }
+            else
+            {
+                die("apt-mirror: invalid config file specified expected a reason here instead found $config_line[$counter] ($.: $config_line ...)");
+            }
+        }
+        else
+        {
+            die("apt-mirror: invalid config file specified not sure what to do with this line ($.: $config_line ...)");
+        }
         push ( @exception_configuration, [@config_line] );
         next;
     }
