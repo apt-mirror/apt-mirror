@@ -335,90 +335,78 @@ while (<CONFIG>)
 
     if ( $config_line eq "skip" )
     {
-        $counter = 0;
         $length = $#config_line;
-        if ( $config_line[0] eq "size_more_than" )
+        if ( ( $config_line[0] eq "size_more_than" ) || ( $config_line[0] eq "section" ) || ( $config_line[0] eq "if_name_contains" ) )
         {
-            $counter++;
-            if ($counter <= $length)
+            if ( $length < 1 )
             {
-                if (looks_like_number($config_line[$counter]))
+                die("apt-mirror: invalid config file specified $config_line[0] must be followed by a value and a reason ($.: $config_line ...)");
+            }
+            if ( $config_line[0] eq "size_more_than" )
+            {
+                if ( !looks_like_number ( $config_line[1] ) )
+                {
+                    die("apt-mirror: invalid config file specified size_more_than must be followed by a size value which must be a number value ($.: $config_line ...)");
+                }
+            }
+            if ( $length < 2 )
+            {
+                die("apt-mirror: invalid config file specified reason missing for skipping section ($.: $config_line ...)");
+            }
+            else
+            {
+                ##Expecting an optional sequence of exception cases or a reason
+                $counter = 2;
+                while ( ( $counter <= $length) && ( $config_line[$counter] eq "except" ) )
                 {
                     $counter++;
-                    if ( $config_line[$counter] eq "reason" )
+                    if ( $counter > $length )
+                    {
+                        die("apt-mirror: invalid config file exception clause ($.: $config_line ...)");
+                    }
+                    if ( $config_line[$counter] eq "size_more_than" )
                     {
                         $counter++;
-                        if ($counter > $length)
+                        if ( $counter > $length )
                         {
-                            die("apt-mirror: invalid config file specified size_more_than must be followed by a size value and a reason");
+                            die("apt-mirror: invalid config file exception clause ($.: $config_line ...)");
+                        }
+                        if ( !looks_like_number ( $config_line[$counter] ) )
+                        {
+                            die("apt-mirror: invalid config file specified size_more_than must be followed by a size value which must be a number value ($.: $config_line ...)");
                         }
                     }
                     else
                     {
-                        die("apt-mirror: invalid config file specified size_more_than must be followed by a size value and a reason");
+                        $counter++;
+                    }
+                    if ( $counter > $length )
+                    {
+                        die("apt-mirror: invalid config file exception clause ($.: $config_line ...)");
+                    }
+                    $counter++;
+                }
+                if ( $counter > $length )
+                {
+                    die("apt-mirror: invalid config file reason not specified for skipping ($.: $config_line ...)");
+                }
+                if ( $config_line[$counter] eq "reason" )
+                {
+                    $counter++;
+                    if ($counter > $length)
+                    {
+                        die("apt-mirror: invalid config file specified missing reason text ($.: $config_line ...)");
                     }
                 }
                 else
                 {
-                    die("apt-mirror: invalid config file specified size_more_than must be followed by a size value which must be a number value");
+                    die("apt-mirror: invalid config file specified expected a reason here instead found $config_line[$counter] ($.: $config_line ...)");
                 }
-            }
-            else
-            {
-                die("apt-mirror: invalid config file specified size_more_than must be followed by a size value and a reason");
             }
         }
         else
         {
-            if ( $config_line[0] eq "section" )
-            {
-                if ( $#config_line < 1 )
-                {
-                    die("apt-mirror: invalid config file specified section must be followed by a section name and a reason");
-                }
-                else
-                {
-                    if ( $#config_line < 2 || ($config_line[2] ne "reason") )
-                    {
-                        die("apt-mirror: invalid config file specified reason missing for skipping section ($.: $config_line ...)");
-                    }
-                    else
-                    {
-                        if ( $#config_line < 3 )
-                        {
-                            die("apt-mirror: invalid config file specified reason text missing for skipping section ($.: $config_line ...)");
-                        }
-                    }
-                }
-            }
-            else
-            {
-                if ( $config_line[0] eq "if_name_contains" )
-                {
-                    if ( $#config_line < 1 )
-                    {
-                        die("apt-mirror: invalid config file specified if_name_contains must be followed by a string to match");
-                    }
-                    else
-                    {
-                        if ( $#config_line < 2 || ($config_line[2] ne "reason") )
-                        {
-                            die("apt-mirror: invalid config file specified reason missing for if_name_contains ($.: $config_line ...)");
-                        }
-                        else
-                        {
-                            if ( $#config_line < 3 )
-                            {
-                                die("apt-mirror: invalid config file specified reason text missing for if_name_contains ($.: $config_line ...)");
-                            }
-                        }
-                    }
-                }
-                else
-                {
-                    die("apt-mirror: invalid config file specified not sure what to do with this line ($.: $config_line ...)");
-                }
-            }
+            die("apt-mirror: invalid config file specified not sure what to do with this line ($.: $config_line ...)");
         }
         push ( @skip_configuration, [@config_line] );
         next;
@@ -868,7 +856,6 @@ sub process_index_gz
         warn("apt-mirror: can't open index in process_index_gz");
         return;
     }
-
     while ( $package = <STREAM> )
     {
         local $/ = "\n";
