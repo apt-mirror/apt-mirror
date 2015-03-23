@@ -920,6 +920,29 @@ sub handle_except_clause
         return 0;
     }
 }
+sub handle_primary_criteria_match
+{
+    my ($pkg_name, $section_name, $pkg_size, $array_ref) = @_;
+    my @params = @$array_ref;
+    ##Continue to check if an exception applies
+    if( $params[2] eq "except" )
+    {
+        return handle_except_clause(2, $pkg_name, $section_name, $pkg_size, \@params);
+    }
+    else
+    {
+        ##The only other thing that can be present is a reason.
+        if( is_exception_granted_to_package( $pkg_name, $section_name, $pkg_size ) )
+        {
+            return 1;
+        }
+        else
+        {
+            print FILES_SKIPPED "Skipping $pkg_name $params[3]\n";
+            return 0;
+        }
+    }
+}
 sub should_process
 {
     my $pkg_name = shift;
@@ -937,24 +960,7 @@ sub should_process
             $max_size = $params[1];
             if( $pkg_size > $max_size )
             {
-                ##Continue to check if an exception applies
-                if( $params[2] eq "except" )
-                {
-                    return handle_except_clause(2, $pkg_name, $section_name, $pkg_size, \@params);
-                }
-                else
-                {
-                    ##The only other thing that can be present is a reason.
-                    if( is_exception_granted_to_package( $pkg_name, $section_name, $pkg_size ) )
-                    {
-                        return 1;
-                    }
-                    else
-                    {
-                        print FILES_SKIPPED "Skipping $pkg_name $params[3]\n";
-                        return 0;
-                    }
-                }
+                return handle_primary_criteria_match($pkg_name, $section_name, $pkg_size, \@params);
             }
             else
             {
@@ -967,23 +973,7 @@ sub should_process
             {
                 if ($section_name eq $params[1])
                 {
-                    if( $params[2] eq "except" )
-                    {
-                        return handle_except_clause(2, $pkg_name, $section_name, $pkg_size, \@params);
-                    }
-                    else
-                    {
-                        ##The only other thing that can be present is a reason.
-                        if( is_exception_granted_to_package( $pkg_name, $section_name, $pkg_size ) )
-                        {
-                            return 1;
-                        }
-                        else
-                        {
-                            print FILES_SKIPPED "Skipping $pkg_name $params[3]\n";
-                            return 0;
-                        }
-                    }
+                    return handle_primary_criteria_match($pkg_name, $section_name, $pkg_size, \@params);
                 }
                 else
                 {
@@ -996,23 +986,7 @@ sub should_process
                 {
                     if ( index($pkg_name, $params[1]) != -1 )
                     {
-                        if( $params[2] eq "except" )
-                        {
-                            return handle_except_clause(2, $pkg_name, $section_name, $pkg_size, \@params);
-                        }
-                        else
-                        {
-                            ##The only other thing that can be present is a reason.
-                            if( is_exception_granted_to_package( $pkg_name, $section_name, $pkg_size ) )
-                            {
-                                return 1;
-                            }
-                            else
-                            {
-                                print FILES_SKIPPED "Skipping $pkg_name $params[3]\n";
-                                return 0;
-                            }
-                        }
+                        return handle_primary_criteria_match($pkg_name, $section_name, $pkg_size, \@params);
                     }
                     else
                     {
@@ -1025,23 +999,7 @@ sub should_process
                     {
                         if ( index($pkg_name, $params[1]) == length($pkg_name)-length($params[1]) )
                         {
-                            if( $params[2] eq "except" )
-                            {
-                                return handle_except_clause(2, $pkg_name, $section_name, $pkg_size, \@params);
-                            }
-                            else
-                            {
-                                ##The only other thing that can be present is a reason.
-                                if( is_exception_granted_to_package( $pkg_name, $section_name, $pkg_size ) )
-                                {
-                                    return 1;
-                                }
-                                else
-                                {
-                                    print FILES_SKIPPED "Skipping $pkg_name $params[3]\n";
-                                    return 0;
-                                }
-                            }
+                            return handle_primary_criteria_match($pkg_name, $section_name, $pkg_size, \@params);
                         }
                         else
                         {
