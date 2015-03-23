@@ -131,6 +131,8 @@ my %skipclean       = ();
 my %clean_directory = ();
 my @skip_configuration = ();
 my @exception_configuration = ();
+my $skip_size = 0;
+my $exception_size = 0;
 
 ######################################################################################
 ## Setting up $config_file variable
@@ -804,6 +806,7 @@ sub is_exception_granted_to_package
             {
                 ##The only other thing that can be present is a reason.
                 print FILES_SKIP_EXCEPTION "Download exception granted for $pkg_name $params[3]\n";
+                $exception_size = $exception_size + $pkg_size;
                 return 1;
             }
         }
@@ -815,6 +818,7 @@ sub is_exception_granted_to_package
                 {
                     ##The only other thing that can be present is a reason.
                     print FILES_SKIP_EXCEPTION "Download exception granted for $pkg_name $params[3]\n";
+                    $exception_size = $exception_size + $pkg_size;
                     return 1;
                 }
             }
@@ -826,6 +830,7 @@ sub is_exception_granted_to_package
                     {
                         ##The only other thing that can be present is a reason.
                         print FILES_SKIP_EXCEPTION "Download exception granted for $pkg_name $params[3]\n";
+                        $exception_size = $exception_size + $pkg_size;
                         return 1;
                     }
                 }
@@ -837,6 +842,7 @@ sub is_exception_granted_to_package
                         {
                             ##The only other thing that can be present is a reason.
                             print FILES_SKIP_EXCEPTION "Download exception granted for $pkg_name $params[3]\n";
+                            $exception_size = $exception_size + $pkg_size;
                             return 1;
                         }
                     }
@@ -917,6 +923,7 @@ sub handle_except_clause
     {
         $counter++;
         print FILES_SKIPPED "Skipping $package_name $params[$counter]\n";
+        $skip_size = $skip_size + $pkg_size;
         return 0;
     }
 }
@@ -939,6 +946,7 @@ sub handle_primary_criteria_match
         else
         {
             print FILES_SKIPPED "Skipping $pkg_name $params[3]\n";
+            $skip_size = $skip_size + $pkg_size;
             return 0;
         }
     }
@@ -1142,6 +1150,17 @@ my $need_bytes = 0;
 foreach ( values %urls_to_download )
 {
     $need_bytes += $_;
+}
+
+if( $skip_size != 0 )
+{
+    my $temp_size_output = format_bytes($skip_size);
+    print "$temp_size_output will be skipped because of the current skip configuration. See SKIP log file for details of packages skipped.\n";
+    if ( $exception_size != 0 )
+    {
+        $temp_size_output = format_bytes($exception_size);
+        print "$temp_size_output will be downloaded because of the current exception configuration. See EXCEPTION log file for details of packages which have been granted download exception.\n";
+    }
 }
 
 my $size_output = format_bytes($need_bytes);
