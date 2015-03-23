@@ -37,6 +37,44 @@ After you setup the configuration file you may run as root:
 
 Or uncomment the line in F</etc/cron.d/apt-mirror> to enable daily mirror updates.
 
+While mirroring if one needs to skip a certain set of packages, this
+can be configured in the config file, by using skip and exception configuration.
+A skip configuration line look like
+
+    skip <criteria> {except <criteria>} reason <some text explaining the intent of this skip for logging>
+
+An exception configuration line look like
+
+    exception <criteria> reason <some text explaining the intent of this exception for logging>
+
+The following criteria are valid:
+    * size_more_than <size in bytes> e.g. size_more_than 10000000 : This means size more than 10M
+    * section <section name such as Games or Accessories> e.g. section Games
+    * if_name_contains <any text> e.g. if_name_contains cloud : Match packages with the text cloud in their names (case sensitive)
+    * if_name_ends_with <any text> e.g. if_name_ends_with locale-en : Match packages with the text locale-en at the end of their names (case sensitive) e.g. firefox-locale-en
+
+If spaces are given as input text then the text must be quoted using "(double quotes).
+e.g. exception if_name_contains git reason "because we like git"
+
+The reason is mandatory. The reason gets logged when a rule matches the given skip or exception criteria.
+e.g.
+        * Download exception granted for git because we like git
+        * Skipping clamav-dbg because it is more than 10MB
+
+The skip configuration can be used to skip packages based on any of the criteria definitions.
+Multiple such configurations can be specified on separate lines.
+To handle cases where the skip configuration matches a desired package or packages the except clause
+may be used with similar criteria as a part of the skip config line itself.
+If more than one rules cause a package to be skipped, the exception config line must be used.
+e.g. One might like sudoku package in games section. So the skip config might say that we do not
+wish to download any games and another config line might say skip any packages larger than 10MB.
+To prevent adding an except config to each of these skip config one can add a single exception config line.
+This will also safeguard it against future additions of skip config lines which could potentially cause
+a desirable package to be excluded.
+
+The files {base_path}/var/SKIP and {base_path}/var/EXCEPTION contain the results of the skip and exception config rules.
+Using these the user can get to know why a certain package was skipped or downloaded.
+
 =head1 FILES
 
 F</etc/apt/mirror.list>
@@ -84,6 +122,7 @@ deb-src http://example.com/debian stable main contrib non-free
 
 Dmitry N. Hramtsov E<lt>hdn@nsu.ruE<gt>
 Brandon Holtsclaw E<lt>me@brandonholtsclaw.comE<gt>
+Sunny Narula E<lt>sunny@iandothers.orgE<gt>
 
 =cut
 
