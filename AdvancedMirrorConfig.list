@@ -1,0 +1,55 @@
+############# config ##################
+#
+ set base_path    /media/sunny/PartB/UbuntuRepo
+#
+ set mirror_path  $base_path/mirror
+ set skel_path    $base_path/skel
+ set var_path     $base_path/var
+# set cleanscript $var_path/clean.sh
+# set defaultarch  <running host architecture>
+# set postmirror_script $var_path/postmirror.sh
+# set run_postmirror 0
+set nthreads     20
+set _tilde 0
+skip size_more_than 10000000 reason "because it is more than 10MB"
+skip section games reason "because it is a game package"
+skip if_name_contains dbg reason "because it is a debug package"
+skip if_name_contains "linux-image" reason "because it is a kernel package"
+skip if_name_contains "linux-headers" reason "because it is a kernel package"
+skip if_name_contains "linux-backports" reason "because it is a kernel package"
+skip if_name_contains "cloud" reason "because it is a kernel package"
+skip if_name_contains "linux-generic" reason "because it is a kernel package"
+skip if_name_contains "linux-lts-trusty-tools" reason "because it is a kernel package"
+skip if_name_contains locale except if_name_contains "locale-en" except if_name_ends_with locale reason "because it is a non english locale package"
+
+exception if_name_contains git reason "because we like git"
+exception if_name_contains "3.16.0-31" reason "because we want this kernel package version 3.16.0-31"
+exception if_name_contains gcc reason "because we like gcc"
+
+#
+############# end config ##############
+
+
+deb http://ppa.launchpad.net/git-core/ppa/ubuntu precise main
+deb-i386 http://ppa.launchpad.net/git-core/ppa/ubuntu precise main
+
+deb http://www.bchemnet.com/suldr/ debian extra
+deb-i386 http://www.bchemnet.com/suldr/ debian extra
+
+## Ubuntu Precise (12.04)
+deb http://archive.ubuntu.com/ubuntu precise main restricted universe
+deb http://archive.ubuntu.com/ubuntu precise-security main restricted universe
+deb http://archive.ubuntu.com/ubuntu precise-updates main restricted universe
+
+deb-i386 http://archive.ubuntu.com/ubuntu precise main restricted universe
+deb-i386 http://archive.ubuntu.com/ubuntu precise-security main restricted universe
+deb-i386 http://archive.ubuntu.com/ubuntu precise-updates main restricted universe
+
+## Ubuntu trusty (14.04)
+deb http://archive.ubuntu.com/ubuntu trusty main restricted universe
+deb http://archive.ubuntu.com/ubuntu trusty-security main restricted universe
+deb http://archive.ubuntu.com/ubuntu trusty-updates main restricted universe
+
+deb-i386 http://archive.ubuntu.com/ubuntu trusty main restricted universe
+deb-i386 http://archive.ubuntu.com/ubuntu trusty-security main restricted universe
+deb-i386 http://archive.ubuntu.com/ubuntu trusty-updates main restricted universe
