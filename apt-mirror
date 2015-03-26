@@ -786,6 +786,7 @@ open FILES_NEW, ">" . get_variable("var_path") . "/NEW" or die("apt-mirror: can'
 open FILES_MD5, ">" . get_variable("var_path") . "/MD5" or die("apt-mirror: can't write to intermediate file (MD5)");
 open FILES_SKIPPED, ">" . get_variable("var_path") . "/SKIP" or die("apt-mirror: can't write to intermediate file (SKIP)");
 open FILES_SKIP_EXCEPTION, ">" . get_variable("var_path") . "/EXCEPTION" or die("apt-mirror: can't write to intermediate file (EXCEPTION)");
+open FILES_SECTION , ">" . get_variable("var_path") . "/SECTION" or die("apt-mirror: can't write to intermediate file (SECTION)");
 
 my %stat_cache = ();
 
@@ -999,6 +1000,7 @@ sub should_process
     my $a_skip_config;
     my @params;
     my $max_size;
+    print FILES_SECTION "Package $pkg_name from section $section_name\n";
     for $a_skip_config (@skip_configuration)
     {
         @params = @$a_skip_config;
