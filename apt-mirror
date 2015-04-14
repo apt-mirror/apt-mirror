@@ -286,7 +286,7 @@ while (<CONFIG>)
 
     if ( $config_line eq "set" )
     {
-        $config_variables{ $config_line[0] } = $config_line[1];
+        $config_variables{ $config_line[0] } = join(' ', @config_line[1..$#config_line]);
         next;
     }
 
