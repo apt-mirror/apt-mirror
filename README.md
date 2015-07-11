@@ -6,7 +6,6 @@ Our apt-mirror variant
 =================
 This variant of the apt-mirror, allows for setting a size limit for a package to be downloaded.
 It also allows setting up exclusion rules for packages based on the section they belong to or their name patterns.
-At the moment the script only allows configuration via changing the script itself, we hope to change to using the configuration file for this purpose.
 
 The origin of the idea came from the blog page of Tyler Oderkirk
 http://unsyncopated.com/blog/index.php/2009/11/04/creating-a-local-mirror-of-ubuntus-most-popular-packages/
@@ -85,7 +84,3 @@ Meaning: This relates to the other half of the skip configuration where we would
 Why would you need a distribution of your own?
 =====================================
 To save on internet bandwidth by avoiding downloading the same content over and over again for each device/pc/os instance. This especially helps if one is interested in switiching between versions of packages frequently.
-
-Got suggestions/tips for a perl noob
-============================
-All the help and suggestions are most welcome.
