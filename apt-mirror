@@ -291,8 +291,8 @@ while (<CONFIG>)
 
         chomp;
         s/^\s+//;
-        my ($verb, $var, $value) = split (/\s+/, $_, 3);
-        $config_variables{ $var } = $value;
+        my ( $verb, $var, $value ) = split( /\s+/, $_, 3 );
+        $config_variables{$var} = $value;
         next;
     }
 
