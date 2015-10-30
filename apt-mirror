@@ -286,7 +286,13 @@ while (<CONFIG>)
 
     if ( $config_line eq "set" )
     {
-        $config_variables{ $config_line[0] } = $config_line[1];
+        # all set commands are 3 items on a line "set, variable, value", where the variable name may
+        # NOT contain whitespace but the value CAN - this allows file paths to contain whitespace
+
+        chomp;
+        s/^\s+//;
+        my ($verb, $var, $value) = split (/\s+/, $_, 3);
+        $config_variables{ $var } = $value;
         next;
     }
 
@@ -674,7 +680,7 @@ sub process_index_gz
 
     if ( $index =~ s/\.gz$// )
     {
-        system("gunzip < $path/$index.gz > $path/$index");
+        system(qq(gunzip < "$path/$index.gz" > "$path/$index"));
     }
 
     unless ( open STREAM, "<$path/$index" )
