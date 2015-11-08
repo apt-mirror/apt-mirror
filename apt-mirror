@@ -98,7 +98,7 @@ use Fcntl qw(:flock);
 my $config_file;
 
 my %config_variables = (
-    "defaultarch" => `dpkg --print-installation-architecture 2>/dev/null` || 'i386',
+    "defaultarch" => `dpkg --print-architecture 2>/dev/null` || 'i386',
     "nthreads"    => 20,
     "base_path"   => '/var/spool/apt-mirror',
     "mirror_path" => '$base_path/mirror',
@@ -621,7 +621,7 @@ sub process_translation_index
     close STREAM;
 }
 
-print "Processing tranlation indexes: [";
+print "Processing translation indexes: [";
 
 foreach (@config_binaries)
 {
@@ -794,6 +794,7 @@ foreach (@config_binaries)
         foreach $component (@components)
         {
             process_index_gz( $uri, "/dists/$distribution/$component/binary-$arch/Packages.gz" );
+            process_index_gz( $uri, "/dists/$distribution/$component/debian-installer/binary-$arch/Packages.gz" );:w
         }
     }
     else
