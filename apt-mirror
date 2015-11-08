@@ -840,34 +840,28 @@ sub get_diff_files
 
     while(my $wget_line = <WGET>)
     {
-
         if($wget_line=~/^ /)
         {
-			my $file_name=(split(/\s+/,$wget_line))[-1];
+            my $file_name=(split(/\s+/,$wget_line))[-1];
 
             if(!(grep(/$file_name/,@diff_files)))
             {
                 push(@diff_files,$diff_dir . "/" . $file_name . ".gz");
             }
-
         }
-
     } 
 
     close(WGET);
 
     if((@diff_files)>0)
     {
-
         add_url_to_download($diff_url);
 
         foreach my $diff (@diff_files)
         {
             add_url_to_download($diff);
         }
-
     }
-
 }
 ######################################################################################
 ## Copy skel to main archive
