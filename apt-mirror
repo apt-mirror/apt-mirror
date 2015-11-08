@@ -240,13 +240,12 @@ sub download_urls
     my $i = 0;
     my $pid;
     my $nthreads = get_variable("nthreads");
-#    my @args     = ();
     local $| = 1;
 
     @urls = @_;
     $nthreads = @urls if @urls < $nthreads;
 
-	my @args = wget_args();
+    my @args = wget_args();
 
     print "Downloading " . scalar(@urls) . " $stage files using $nthreads threads...\n";
 
@@ -259,7 +258,7 @@ sub download_urls
 
         $pid = fork();
 
-        die("apt-mirror: can't do fork in download_urls") if $pid < 0;
+        die("apt-mirror: can't do fork in download_urls") if !defined($pid);
 
         if ( $pid == 0 )
         {
@@ -794,7 +793,7 @@ foreach (@config_binaries)
         foreach $component (@components)
         {
             process_index_gz( $uri, "/dists/$distribution/$component/binary-$arch/Packages.gz" );
-            process_index_gz( $uri, "/dists/$distribution/$component/debian-installer/binary-$arch/Packages.gz" );:w
+            process_index_gz( $uri, "/dists/$distribution/$component/debian-installer/binary-$arch/Packages.gz" );
         }
     }
     else
