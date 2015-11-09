@@ -404,7 +404,6 @@ sub add_url_to_download_if_exists
             }
         }
     }
-
 }
 
 foreach (@config_sources)
@@ -468,6 +467,10 @@ foreach (@config_binaries)
             add_url_to_download_if_exists( $url . $_ . "/binary-" . $arch . "/Packages.xz" );
             get_diff_files($url . $_ . "/binary-" . $arch . ".diff" );
             add_url_to_download_if_exists( $url . $_ . "/binary-" . $arch . ".diff/Index" );
+            add_url_to_download_if_exists( $url . $_ . "/debian-installer/binary-" . $arch . "/Release" );
+            add_url_to_download_if_exists( $url . $_ . "/debian-installer/binary-" . $arch . "/Packages.gz" );
+            add_url_to_download_if_exists( $url . $_ . "/debian-installer/binary-" . $arch . "/Packages.bz2" );
+            add_url_to_download_if_exists( $url . $_ . "/debian-installer/binary-" . $arch . "/Packages.xz" );
             add_url_to_download_if_exists( $url . $_ . "/i18n/Index" );
         }
     }
@@ -793,7 +796,18 @@ foreach (@config_binaries)
         foreach $component (@components)
         {
             process_index_gz( $uri, "/dists/$distribution/$component/binary-$arch/Packages.gz" );
-            process_index_gz( $uri, "/dists/$distribution/$component/debian-installer/binary-$arch/Packages.gz" );
+
+            # Just adding a debian-installer process_index_gz is bad if main/debian-installer is specified in the mirror.list
+            # Also, not every repo has a debian-installer subdir (see deb-multimedia.org)
+            if ( ! ($component =~ /debian-installer/ ) )
+            {
+                my $debian_installer = "/dists/$distribution/$component/debian-installer/binary-$arch/Packages.gz";
+                my $gz_path = get_variable("mirror_path") . $debian_installer;
+                if ( -e $gz_path )
+                {
+                    process_index_gz( $uri, $debian_installer );
+                }
+            }
         }
     }
     else
