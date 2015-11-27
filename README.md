@@ -10,5 +10,5 @@ replacement.
 Fixes include:
 - NetBSD style `install` invocation in Makefile
 - Updated filepaths for interpreter and configs
-
+- Envirnoment-independent; falls back on `uname -m` when dpkg not available to get arch
 
