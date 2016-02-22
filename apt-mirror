@@ -621,10 +621,11 @@ foreach ( keys %urls_to_download )
 sub find_dep11_files_in_release
 {
     # Look in the dists/$DIST/Release file for the DEP-11 files that belong
-    # to the given component.
+    # to the given component and architecture.
 
     my $dist_uri  = shift;
     my $component = shift;
+    my $arch      = shift;
     my ( $release_uri, $release_path, $line ) = '';
 
     $release_uri  = $dist_uri . "Release";
@@ -648,7 +649,7 @@ sub find_dep11_files_in_release
                 if ( @parts == 3 )
                 {
                     my ( $sha1, $size, $filename ) = @parts;
-                    if ( $filename =~ m{^$component/dep11/(Components-[^./]+\.yml|icons-[^./]+\.tar)\.gz$} )
+                    if ( $filename =~ m{^$component/dep11/(Components-${arch}\.yml|icons-[^./]+\.tar)\.gz$} )
                     {
                         add_url_to_download( $dist_uri . $filename, $size );
                     }
@@ -686,7 +687,7 @@ foreach (@config_binaries)
         my $component;
         foreach $component (@components)
         {
-            find_dep11_files_in_release( $url, $component );
+            find_dep11_files_in_release( $url, $component, $arch );
         }
     }
 }
