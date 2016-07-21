@@ -116,6 +116,7 @@ my %config_variables = (
     "postmirror_script"    => '$var_path/postmirror.sh',
     "use_proxy"            => 'off',
     "http_proxy"           => '',
+    "https_proxy"          => '',
     "proxy_user"           => '',
     "proxy_password"       => ''
 );
@@ -234,7 +235,9 @@ sub download_urls
     if ( get_variable("unlink") == 1 )               { push( @args, "--unlink" ); }
     if ( length( get_variable("use_proxy") ) && ( get_variable("use_proxy") eq 'yes' || get_variable("use_proxy") eq 'on' ) )
     {
-        if ( length( get_variable("http_proxy") ) ) { push( @args, "-e use_proxy=yes" ); push( @args, "-e http_proxy=" . get_variable("http_proxy") ); }
+        if ( length( get_variable("http_proxy") ) || length( get_variable("https_proxy") ) ) { push( @args, "-e use_proxy=yes" ); }
+        if ( length( get_variable("http_proxy") ) ) { push( @args, "-e http_proxy=" . get_variable("http_proxy") ); }
+        if ( length( get_variable("https_proxy") ) ) { push( @args, "-e https_proxy=" . get_variable("https_proxy") ); }
         if ( length( get_variable("proxy_user") ) ) { push( @args, "-e proxy_user=" . get_variable("proxy_user") ); }
         if ( length( get_variable("proxy_password") ) ) { push( @args, "-e proxy_password=" . get_variable("proxy_password") ); }
     }
