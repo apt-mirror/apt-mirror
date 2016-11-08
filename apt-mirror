@@ -430,10 +430,6 @@ foreach (@config_binaries)
             add_url_to_download( $url . $_ . "/binary-" . $arch . "/Packages.gz" );
             add_url_to_download( $url . $_ . "/binary-" . $arch . "/Packages.bz2" );
             add_url_to_download( $url . $_ . "/binary-" . $arch . "/Packages.xz" );
-            add_url_to_download( $url . $_ . "/debian-installer/binary-" . $arch . "/Release" );
-            add_url_to_download( $url . $_ . "/debian-installer/binary-" . $arch . "/Packages.gz" );
-            add_url_to_download( $url . $_ . "/debian-installer/binary-" . $arch . "/Packages.bz2" );
-            add_url_to_download( $url . $_ . "/debian-installer/binary-" . $arch . "/Packages.xz" );
             add_url_to_download( $url . $_ . "/i18n/Index" );
         }
     }
@@ -850,7 +846,6 @@ foreach (@config_binaries)
         foreach $component (@components)
         {
             process_index_gz( $uri, "/dists/$distribution/$component/binary-$arch/Packages.gz" );
-            process_index_gz( $uri, "/dists/$distribution/$component/debian-installer/binary-$arch/Packages.gz" );
         }
     }
     else
