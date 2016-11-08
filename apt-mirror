@@ -217,18 +217,9 @@ sub unlock_aptmirror
     unlink( get_variable("var_path") . "/apt-mirror.lock" );
 }
 
-sub download_urls
+sub wget_args
 {
-    my $stage = shift;
-    my @urls;
-    my $i = 0;
-    my $pid;
-    my $nthreads = get_variable("nthreads");
     my @args     = ();
-    local $| = 1;
-
-    @urls = @_;
-    $nthreads = @urls if @urls < $nthreads;
 
     if ( get_variable("auth_no_challenge") == 1 )    { push( @args, "--auth-no-challenge" ); }
     if ( get_variable("no_check_certificate") == 1 ) { push( @args, "--no-check-certificate" ); }
@@ -241,6 +232,24 @@ sub download_urls
         if ( length( get_variable("proxy_user") ) ) { push( @args, "-e proxy_user=" . get_variable("proxy_user") ); }
         if ( length( get_variable("proxy_password") ) ) { push( @args, "-e proxy_password=" . get_variable("proxy_password") ); }
     }
+
+	return @args;
+}
+
+sub download_urls
+{
+    my $stage = shift;
+    my @urls;
+    my $i = 0;
+    my $pid;
+    my $nthreads = get_variable("nthreads");
+    local $| = 1;
+
+    @urls = @_;
+    $nthreads = @urls if @urls < $nthreads;
+
+    my @args = wget_args();
+
     print "Downloading " . scalar(@urls) . " $stage files using $nthreads threads...\n";
 
     while ( scalar @urls )
@@ -276,6 +285,8 @@ sub download_urls
     }
     print "\nEnd time: " . localtime() . "\n\n";
 }
+
+
 
 ## Parse config
 
@@ -372,6 +383,32 @@ sub add_url_to_download
     $urls_to_download{$url} = shift;
 }
 
+sub add_url_to_download_if_exists
+{
+    my $url = shift;
+    open(WGET, "wget --spider --no-cache $url 2>&1 |") or die "Can't exec: $!\n";
+    my @wget_output = <WGET>;
+    close(WGET);
+
+	if(grep(/Remote file exists/,@wget_output))
+    {
+        add_url_to_download($url);
+    }
+    else
+    # We didn't find this on the mirror, so check we don't have a stale local copy
+    {
+        my $path = sanitise_uri($url);
+        foreach my $type ((qw(mirror_path skel_path)))
+        {
+            my $type_path = get_variable($type) . "/" . $path;
+			if ( -e $type_path )
+            {
+                unlink($type_path);
+            }
+        }
+    }
+}
+
 foreach (@config_sources)
 {
     my ( $uri, $distribution, @components ) = @{$_};
@@ -380,24 +417,24 @@ foreach (@config_sources)
     {
         $url = $uri . "/dists/" . $distribution . "/";
 
-        add_url_to_download( $url . "InRelease" );
-        add_url_to_download( $url . "Release" );
-        add_url_to_download( $url . "Release.gpg" );
+        add_url_to_download_if_exists( $url . "InRelease" );
+        add_url_to_download_if_exists( $url . "Release" );
+        add_url_to_download_if_exists( $url . "Release.gpg" );
         foreach (@components)
         {
-            add_url_to_download( $url . $_ . "/source/Release" );
-            add_url_to_download( $url . $_ . "/source/Sources.gz" );
-            add_url_to_download( $url . $_ . "/source/Sources.bz2" );
-            add_url_to_download( $url . $_ . "/source/Sources.xz" );
+            add_url_to_download_if_exists( $url . $_ . "/source/Release" );
+            add_url_to_download_if_exists( $url . $_ . "/source/Sources.gz" );
+            add_url_to_download_if_exists( $url . $_ . "/source/Sources.bz2" );
+            add_url_to_download_if_exists( $url . $_ . "/source/Sources.xz" );
         }
     }
     else
     {
-        add_url_to_download( $uri . "/$distribution/Release" );
-        add_url_to_download( $uri . "/$distribution/Release.gpg" );
-        add_url_to_download( $uri . "/$distribution/Sources.gz" );
-        add_url_to_download( $uri . "/$distribution/Sources.bz2" );
-        add_url_to_download( $uri . "/$distribution/Sources.xz" );
+        add_url_to_download_if_exists( $uri . "/$distribution/Release" );
+        add_url_to_download_if_exists( $uri . "/$distribution/Release.gpg" );
+        add_url_to_download_if_exists( $uri . "/$distribution/Sources.gz" );
+        add_url_to_download_if_exists( $uri . "/$distribution/Sources.bz2" );
+        add_url_to_download_if_exists( $uri . "/$distribution/Sources.xz" );
     }
 }
 
@@ -409,41 +446,44 @@ foreach (@config_binaries)
     {
         $url = $uri . "/dists/" . $distribution . "/";
 
-        add_url_to_download( $url . "InRelease" );
-        add_url_to_download( $url . "Release" );
-        add_url_to_download( $url . "Release.gpg" );
+        add_url_to_download_if_exists( $url . "InRelease" );
+        add_url_to_download_if_exists( $url . "Release" );
+        add_url_to_download_if_exists( $url . "Release.gpg" );
         if ( get_variable("_contents") )
         {
-            add_url_to_download( $url . "Contents-" . $arch . ".gz" );
-            add_url_to_download( $url . "Contents-" . $arch . ".bz2" );
-            add_url_to_download( $url . "Contents-" . $arch . ".xz" );
+            add_url_to_download_if_exists( $url . "Contents-" . $arch . ".gz" );
+            add_url_to_download_if_exists( $url . "Contents-" . $arch . ".bz2" );
+            add_url_to_download_if_exists( $url . "Contents-" . $arch . ".xz" );
         }
         foreach (@components)
         {
             if ( get_variable("_contents") )
             {
-                add_url_to_download( $url . $_ . "/Contents-" . $arch . ".gz" );
-                add_url_to_download( $url . $_ . "/Contents-" . $arch . ".bz2" );
-                add_url_to_download( $url . $_ . "/Contents-" . $arch . ".xz" );
+                add_url_to_download_if_exists( $url . $_ . "/Contents-" . $arch . ".gz" );
+                add_url_to_download_if_exists( $url . $_ . "/Contents-" . $arch . ".bz2" );
+                add_url_to_download_if_exists( $url . $_ . "/Contents-" . $arch . ".xz" );
+                get_diff_files($url . $_ . "/Contents-" . $arch . ".diff" );
             }
-            add_url_to_download( $url . $_ . "/binary-" . $arch . "/Release" );
-            add_url_to_download( $url . $_ . "/binary-" . $arch . "/Packages.gz" );
-            add_url_to_download( $url . $_ . "/binary-" . $arch . "/Packages.bz2" );
-            add_url_to_download( $url . $_ . "/binary-" . $arch . "/Packages.xz" );
-            add_url_to_download( $url . $_ . "/debian-installer/binary-" . $arch . "/Release" );
-            add_url_to_download( $url . $_ . "/debian-installer/binary-" . $arch . "/Packages.gz" );
-            add_url_to_download( $url . $_ . "/debian-installer/binary-" . $arch . "/Packages.bz2" );
-            add_url_to_download( $url . $_ . "/debian-installer/binary-" . $arch . "/Packages.xz" );
-            add_url_to_download( $url . $_ . "/i18n/Index" );
+            add_url_to_download_if_exists( $url . $_ . "/binary-" . $arch . "/Release" );
+            add_url_to_download_if_exists( $url . $_ . "/binary-" . $arch . "/Packages.gz" );
+            add_url_to_download_if_exists( $url . $_ . "/binary-" . $arch . "/Packages.bz2" );
+            add_url_to_download_if_exists( $url . $_ . "/binary-" . $arch . "/Packages.xz" );
+            get_diff_files($url . $_ . "/binary-" . $arch . ".diff" );
+            add_url_to_download_if_exists( $url . $_ . "/binary-" . $arch . ".diff/Index" );
+            add_url_to_download_if_exists( $url . $_ . "/debian-installer/binary-" . $arch . "/Release" );
+            add_url_to_download_if_exists( $url . $_ . "/debian-installer/binary-" . $arch . "/Packages.gz" );
+            add_url_to_download_if_exists( $url . $_ . "/debian-installer/binary-" . $arch . "/Packages.bz2" );
+            add_url_to_download_if_exists( $url . $_ . "/debian-installer/binary-" . $arch . "/Packages.xz" );
+            add_url_to_download_if_exists( $url . $_ . "/i18n/Index" );
         }
     }
     else
     {
-        add_url_to_download( $uri . "/$distribution/Release" );
-        add_url_to_download( $uri . "/$distribution/Release.gpg" );
-        add_url_to_download( $uri . "/$distribution/Packages.gz" );
-        add_url_to_download( $uri . "/$distribution/Packages.bz2" );
-        add_url_to_download( $uri . "/$distribution/Packages.xz" );
+        add_url_to_download_if_exists( $uri . "/$distribution/Release" );
+        add_url_to_download_if_exists( $uri . "/$distribution/Release.gpg" );
+        add_url_to_download_if_exists( $uri . "/$distribution/Packages.gz" );
+        add_url_to_download_if_exists( $uri . "/$distribution/Packages.bz2" );
+        add_url_to_download_if_exists( $uri . "/$distribution/Packages.xz" );
     }
 }
 
@@ -850,7 +890,18 @@ foreach (@config_binaries)
         foreach $component (@components)
         {
             process_index_gz( $uri, "/dists/$distribution/$component/binary-$arch/Packages.gz" );
-            process_index_gz( $uri, "/dists/$distribution/$component/debian-installer/binary-$arch/Packages.gz" );
+
+            # Just adding a debian-installer process_index_gz is bad if main/debian-installer is specified in the mirror.list
+            # Also, not every repo has a debian-installer subdir (see deb-multimedia.org)
+            if ( ! ($component =~ /debian-installer/ ) )
+            {
+                my $debian_installer = "/dists/$distribution/$component/debian-installer/binary-$arch/Packages.gz";
+                my $gz_path = get_variable("mirror_path") . $debian_installer;
+                if ( -e $gz_path )
+                {
+                    process_index_gz( $uri, $debian_installer );
+                }
+            }
         }
     }
     else
@@ -884,6 +935,42 @@ print "$size_output will be downloaded into archive.\n";
 
 download_urls( "archive", sort keys %urls_to_download );
 
+######################################################################################
+## Process .diff directory
+
+sub get_diff_files
+{
+    my $diff_dir = shift;
+    my $diff_url = $diff_dir . "/Index";
+    my @diff_files= ();
+
+    open(WGET, '-|', 'wget', '--quiet', '--no-cache', '-O', '-', $diff_url) or die "Can't exec: $!\n";
+
+    while(my $wget_line = <WGET>)
+    {
+        if($wget_line=~/^ /)
+        {
+            my $file_name=(split(/\s+/,$wget_line))[-1];
+
+            if(!(grep(/$file_name/,@diff_files)))
+            {
+                push(@diff_files,$diff_dir . "/" . $file_name . ".gz");
+            }
+        }
+    } 
+
+    close(WGET);
+
+    if((@diff_files)>0)
+    {
+        add_url_to_download($diff_url);
+
+        foreach my $diff (@diff_files)
+        {
+            add_url_to_download($diff);
+        }
+    }
+}
 ######################################################################################
 ## Copy skel to main archive
 
