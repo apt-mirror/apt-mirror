@@ -37,6 +37,44 @@ After you setup the configuration file you may run as root:
 
 Or uncomment the line in F</etc/cron.d/apt-mirror> to enable daily mirror updates.
 
+While mirroring if one needs to skip a certain set of packages, this
+can be configured in the config file, by using skip and exception configuration.
+A skip configuration line look like
+
+    skip <criteria> {except <criteria>} reason <some text explaining the intent of this skip for logging>
+
+An exception configuration line look like
+
+    exception <criteria> reason <some text explaining the intent of this exception for logging>
+
+The following criteria are valid:
+    * size_more_than <size in bytes> e.g. size_more_than 10000000 : This means size more than 10M
+    * section <section name such as Games or Accessories> e.g. section Games
+    * if_name_contains <any text> e.g. if_name_contains cloud : Match packages with the text cloud in their names (case sensitive)
+    * if_name_ends_with <any text> e.g. if_name_ends_with locale-en : Match packages with the text locale-en at the end of their names (case sensitive) e.g. firefox-locale-en
+
+If spaces are given as input text then the text must be quoted using "(double quotes).
+e.g. exception if_name_contains git reason "because we like git"
+
+The reason is mandatory. The reason gets logged when a rule matches the given skip or exception criteria.
+e.g.
+        * Download exception granted for git because we like git
+        * Skipping clamav-dbg because it is more than 10MB
+
+The skip configuration can be used to skip packages based on any of the criteria definitions.
+Multiple such configurations can be specified on separate lines.
+To handle cases where the skip configuration matches a desired package or packages the except clause
+may be used with similar criteria as a part of the skip config line itself.
+If more than one rules cause a package to be skipped, the exception config line must be used.
+e.g. One might like sudoku package in games section. So the skip config might say that we do not
+wish to download any games and another config line might say skip any packages larger than 10MB.
+To prevent adding an except config to each of these skip config one can add a single exception config line.
+This will also safeguard it against future additions of skip config lines which could potentially cause
+a desirable package to be excluded.
+
+The files {base_path}/var/SKIP and {base_path}/var/EXCEPTION contain the results of the skip and exception config rules.
+Using these the user can get to know why a certain package was skipped or downloaded.
+
 =head1 FILES
 
 F</etc/apt/mirror.list>
@@ -84,6 +122,7 @@ deb-src http://example.com/debian stable main contrib non-free
 
 Dmitry N. Hramtsov E<lt>hdn@nsu.ruE<gt>
 Brandon Holtsclaw E<lt>me@brandonholtsclaw.comE<gt>
+Sunny Narula E<lt>sunny@iandothers.orgE<gt>
 
 =cut
 
@@ -94,6 +133,8 @@ use File::Compare;
 use File::Path;
 use File::Basename;
 use Fcntl qw(:flock);
+use Scalar::Util qw(looks_like_number);
+use Text::ParseWords;
 
 my $config_file;
 
@@ -128,6 +169,10 @@ my @index_urls;
 my @childrens       = ();
 my %skipclean       = ();
 my %clean_directory = ();
+my @skip_configuration = ();
+my @exception_configuration = ();
+my $skip_size = 0;
+my $exception_size = 0;
 
 ######################################################################################
 ## Setting up $config_file variable
@@ -278,13 +323,16 @@ sub download_urls
 }
 
 ## Parse config
-
+my $counter;
+my $length;
 open CONFIG, "<$config_file" or die("apt-mirror: can't open config file ($config_file)");
 while (<CONFIG>)
 {
     next if /^\s*#/;
     next unless /\S/;
-    my @config_line = split;
+    my $line = $_;
+    $line =~ s/^\s+|\s+$//g;
+    my @config_line = parse_line('\s+', 0, $line);
     my $config_line = shift @config_line;
 
     if ( $config_line eq "set" )
@@ -326,6 +374,125 @@ while (<CONFIG>)
         $config_line[0] =~ s[/$][];
         $config_line[0] =~ s[~][%7E]g if get_variable("_tilde");
         $clean_directory{ $config_line[0] } = 1;
+        next;
+    }
+
+    if ( $config_line eq "skip" )
+    {
+        $length = $#config_line;
+        if ( ( $config_line[0] eq "size_more_than" ) || ( $config_line[0] eq "section" ) || ( $config_line[0] eq "if_name_contains" )  || ( $config_line[0] eq "if_name_ends_with" ))
+        {
+            if ( $length < 1 )
+            {
+                die("apt-mirror: invalid config file specified $config_line[0] must be followed by a value and a reason ($.: $config_line ...)");
+            }
+            if ( $config_line[0] eq "size_more_than" )
+            {
+                if ( !looks_like_number ( $config_line[1] ) )
+                {
+                    die("apt-mirror: invalid config file specified size_more_than must be followed by a size value which must be a number value ($.: $config_line ...)");
+                }
+            }
+            if ( $length < 2 )
+            {
+                die("apt-mirror: invalid config file specified reason missing for skipping section ($.: $config_line ...)");
+            }
+            else
+            {
+                ##Expecting an optional sequence of exception cases or a reason
+                $counter = 2;
+                while ( ( $counter <= $length) && ( $config_line[$counter] eq "except" ) )
+                {
+                    $counter++;
+                    if ( $counter > $length )
+                    {
+                        die("apt-mirror: invalid config file exception clause ($.: $config_line ...)");
+                    }
+                    if ( $config_line[$counter] eq "size_more_than" )
+                    {
+                        $counter++;
+                        if ( $counter > $length )
+                        {
+                            die("apt-mirror: invalid config file exception clause ($.: $config_line ...)");
+                        }
+                        if ( !looks_like_number ( $config_line[$counter] ) )
+                        {
+                            die("apt-mirror: invalid config file specified size_more_than must be followed by a size value which must be a number value ($.: $config_line ...)");
+                        }
+                    }
+                    else
+                    {
+                        $counter++;
+                    }
+                    if ( $counter > $length )
+                    {
+                        die("apt-mirror: invalid config file exception clause ($.: $config_line ...)");
+                    }
+                    $counter++;
+                }
+                if ( $counter > $length )
+                {
+                    die("apt-mirror: invalid config file reason not specified for skipping ($.: $config_line ...)");
+                }
+                if ( $config_line[$counter] eq "reason" )
+                {
+                    $counter++;
+                    if ($counter > $length)
+                    {
+                        die("apt-mirror: invalid config file specified missing reason text ($.: $config_line ...)");
+                    }
+                }
+                else
+                {
+                    die("apt-mirror: invalid config file specified expected a reason here instead found $config_line[$counter] ($.: $config_line ...)");
+                }
+            }
+        }
+        else
+        {
+            die("apt-mirror: invalid config file specified not sure what to do with this line ($.: $config_line ...)");
+        }
+        push ( @skip_configuration, [@config_line] );
+        next;
+    }
+
+    if ( $config_line eq "exception" )
+    {
+        $length = $#config_line;
+        if ( ( $config_line[0] eq "size_more_than" ) || ( $config_line[0] eq "section" ) || ( $config_line[0] eq "if_name_contains" )  || ( $config_line[0] eq "if_name_ends_with" ) )
+        {
+            if ( $length < 1 )
+            {
+                die("apt-mirror: invalid config file specified $config_line[0] must be followed by a value and a reason ($.: $config_line ...)");
+            }
+            if ( $config_line[0] eq "size_more_than" )
+            {
+                if ( !looks_like_number ( $config_line[1] ) )
+                {
+                    die("apt-mirror: invalid config file specified size_more_than must be followed by a size value which must be a number value ($.: $config_line ...)");
+                }
+            }
+            if ( $length < 2 )
+            {
+                die("apt-mirror: invalid config file specified reason missing for skipping section ($.: $config_line ...)");
+            }
+            if ( $config_line[2] eq "reason" )
+            {
+                if ( $length < 3 )
+                {
+                    die("apt-mirror: invalid config file specified missing reason text ($.: $config_line ...)");
+                }
+            }
+            else
+            {
+                die("apt-mirror: invalid config file specified expected a reason here instead found $config_line[$counter] ($.: $config_line ...)");
+            }
+        }
+        else
+        {
+            die("apt-mirror: invalid config file specified not sure what to do with this line ($.: $config_line ...)");
+        }
+        push ( @exception_configuration, [@config_line] );
         next;
     }
 
@@ -711,6 +878,9 @@ foreach ( keys %urls_to_download )
 open FILES_ALL, ">" . get_variable("var_path") . "/ALL" or die("apt-mirror: can't write to intermediate file (ALL)");
 open FILES_NEW, ">" . get_variable("var_path") . "/NEW" or die("apt-mirror: can't write to intermediate file (NEW)");
 open FILES_MD5, ">" . get_variable("var_path") . "/MD5" or die("apt-mirror: can't write to intermediate file (MD5)");
+open FILES_SKIPPED, ">" . get_variable("var_path") . "/SKIP" or die("apt-mirror: can't write to intermediate file (SKIP)");
+open FILES_SKIP_EXCEPTION, ">" . get_variable("var_path") . "/EXCEPTION" or die("apt-mirror: can't write to intermediate file (EXCEPTION)");
+open FILES_SECTION , ">" . get_variable("var_path") . "/SECTION" or die("apt-mirror: can't write to intermediate file (SECTION)");
 
 my %stat_cache = ();
 
@@ -752,6 +922,245 @@ sub remove_spaces($)
     }
 }
 
+sub is_exception_granted_to_package
+{
+    my $pkg_name = shift;
+    my $section_name = shift;
+    my $pkg_size = shift;
+    my $max_size;
+    my $an_exception_config;
+    my @params;
+    for $an_exception_config (@exception_configuration)
+    {
+        @params = @$an_exception_config;
+        if( $params[0] eq "size_more_than" )
+        {
+            $max_size = $params[1];
+            if( $pkg_size > $max_size )
+            {
+                ##The only other thing that can be present is a reason.
+                print FILES_SKIP_EXCEPTION "Download exception granted for $pkg_name $params[3]\n";
+                $exception_size = $exception_size + $pkg_size;
+                return 1;
+            }
+        }
+        else
+        {
+            if( $params[0] eq "section" )
+            {
+                if ($section_name eq $params[1])
+                {
+                    ##The only other thing that can be present is a reason.
+                    print FILES_SKIP_EXCEPTION "Download exception granted for $pkg_name $params[3]\n";
+                    $exception_size = $exception_size + $pkg_size;
+                    return 1;
+                }
+            }
+            else
+            {
+                if( $params[0] eq "if_name_contains" )
+                {
+                    if ( index( $pkg_name, $params[1]) != -1 )
+                    {
+                        ##The only other thing that can be present is a reason.
+                        print FILES_SKIP_EXCEPTION "Download exception granted for $pkg_name $params[3]\n";
+                        $exception_size = $exception_size + $pkg_size;
+                        return 1;
+                    }
+                }
+                else
+                {
+                    if( $params[0] eq "if_name_ends_with" )
+                    {
+                        if ( index( $pkg_name, $params[1]) == length($pkg_name)-length($params[1]) )
+                        {
+                            ##The only other thing that can be present is a reason.
+                            print FILES_SKIP_EXCEPTION "Download exception granted for $pkg_name $params[3]\n";
+                            $exception_size = $exception_size + $pkg_size;
+                            return 1;
+                        }
+                    }
+                    else
+                    {
+                        die("apt-mirror: not sure what $params[$counter] means");
+                    }
+                }
+            }
+        }
+    }
+    return 0;
+}
+sub handle_except_clause
+{
+    ##Handle sequence of except clauses
+    my ($counter, $package_name, $section_name, $pkg_size, $array_ref) = @_;
+    my @params = @$array_ref;
+    $counter++;
+    if( $params[$counter] eq "size_more_than" )
+    {
+        $counter++;
+        my $max_size = $params[$counter];
+        if( $pkg_size > $max_size )
+        {
+            return 1;
+        }
+    }
+    else
+    {
+        if( ( $params[$counter] eq "section" ) )
+        {
+            $counter++;
+            if( $section_name eq $params[$counter] )
+            {
+                return 1;
+            }
+        }
+        else
+        {
+            if( ( $params[$counter] eq "if_name_contains" ) )
+            {
+                $counter++;
+                if( index($package_name, $params[$counter]) != -1 )
+                {
+                    return 1;
+                }
+            }
+            else
+            {
+                if( ( $params[$counter] eq "if_name_ends_with" ) )
+                {
+                    $counter++;
+                    if( index($package_name, $params[$counter]) == length($package_name)-length($params[$counter]) )
+                    {
+                        return 1;
+                    }
+                }
+                else
+                {
+                    die("apt-mirror: not sure what $params[$counter] means");
+                }
+            }
+        }
+    }
+    $counter++;
+    ##This except clause did not redeem the package, check if there is another one
+    if( $params[$counter] eq "except" )
+    {
+        return handle_except_clause($counter, $package_name, $section_name, $pkg_size, \@params);
+    }
+    ##The next word is obviously reason now check if a global exception redeems the package
+    if( is_exception_granted_to_package( $package_name, $section_name, $pkg_size ))
+    {
+        return 1;
+    }
+    else
+    {
+        $counter++;
+        print FILES_SKIPPED "Skipping $package_name $params[$counter]\n";
+        $skip_size = $skip_size + $pkg_size;
+        return 0;
+    }
+}
+sub handle_primary_criteria_match
+{
+    my ($pkg_name, $section_name, $pkg_size, $array_ref) = @_;
+    my @params = @$array_ref;
+    ##Continue to check if an exception applies
+    if( $params[2] eq "except" )
+    {
+        return handle_except_clause(2, $pkg_name, $section_name, $pkg_size, \@params);
+    }
+    else
+    {
+        ##The only other thing that can be present is a reason.
+        if( is_exception_granted_to_package( $pkg_name, $section_name, $pkg_size ) )
+        {
+            return 1;
+        }
+        else
+        {
+            print FILES_SKIPPED "Skipping $pkg_name $params[3]\n";
+            $skip_size = $skip_size + $pkg_size;
+            return 0;
+        }
+    }
+}
+sub should_process
+{
+    my $pkg_name = shift;
+    my $section_name = shift;
+    my $pkg_size = shift;
+    #Skip packages based on configuration
+    my $a_skip_config;
+    my @params;
+    my $max_size;
+    print FILES_SECTION "Package $pkg_name from section $section_name\n";
+    for $a_skip_config (@skip_configuration)
+    {
+        @params = @$a_skip_config;
+        if( $params[0] eq "size_more_than" )
+        {
+            $max_size = $params[1];
+            if( $pkg_size > $max_size )
+            {
+                return handle_primary_criteria_match($pkg_name, $section_name, $pkg_size, \@params);
+            }
+            else
+            {
+                next;
+            }
+        }
+        else
+        {
+            if( $params[0] eq "section" )
+            {
+                if ($section_name eq $params[1])
+                {
+                    return handle_primary_criteria_match($pkg_name, $section_name, $pkg_size, \@params);
+                }
+                else
+                {
+                    next;
+                }
+            }
+            else
+            {
+                if( $params[0] eq "if_name_contains" )
+                {
+                    if ( index($pkg_name, $params[1]) != -1 )
+                    {
+                        return handle_primary_criteria_match($pkg_name, $section_name, $pkg_size, \@params);
+                    }
+                    else
+                    {
+                        next;
+                    }
+                }
+                else
+                {
+                    if( $params[0] eq "if_name_ends_with" )
+                    {
+                        if ( index($pkg_name, $params[1]) == length($pkg_name)-length($params[1]) )
+                        {
+                            return handle_primary_criteria_match($pkg_name, $section_name, $pkg_size, \@params);
+                        }
+                        else
+                        {
+                            next;
+                        }
+                    }
+                    else
+                    {
+                        die("apt-mirror: not sure what $params[0] means");
+                    }
+                }
+            }
+        }
+    }
+    ##None of the rules apply so simply process the package
+    return 1;
+}
+
 sub process_index_gz
 {
     my $uri   = shift;
@@ -772,7 +1181,6 @@ sub process_index_gz
         warn("apt-mirror: can't open index in process_index_gz");
         return;
     }
-
     while ( $package = <STREAM> )
     {
         local $/ = "\n";
@@ -791,7 +1199,10 @@ sub process_index_gz
             if ( need_update( $mirror . "/" . $lines{"Filename:"}, $lines{"Size:"} ) )
             {
                 print FILES_NEW remove_double_slashes( $uri . "/" . $lines{"Filename:"} ) . "\n";
-                add_url_to_download( $uri . "/" . $lines{"Filename:"}, $lines{"Size:"} );
+                if( should_process( $lines{"Package:"}, $lines{"Section:"}, $lines{"Size:"} ) )
+                {
+                    add_url_to_download( $uri . "/" . $lines{"Filename:"}, $lines{"Size:"} );
+                }
             }
         }
         else
@@ -807,7 +1218,10 @@ sub process_index_gz
                 if ( need_update( $mirror . "/" . $lines{"Directory:"} . "/" . $file[2], $file[1] ) )
                 {
                     print FILES_NEW remove_double_slashes( $uri . "/" . $lines{"Directory:"} . "/" . $file[2] ) . "\n";
-                    add_url_to_download( $uri . "/" . $lines{"Directory:"} . "/" . $file[2], $file[1] );
+                    if( should_process( $lines{"Package:"}, $lines{"Section:"}, $lines{"Size:"} ) )
+                    {
+                        add_url_to_download( $uri . "/" . $lines{"Filename:"}, $lines{"Size:"} );
+                    }
                 }
             }
         }
@@ -871,6 +1285,17 @@ my $need_bytes = 0;
 foreach ( values %urls_to_download )
 {
     $need_bytes += $_;
+}
+
+if( $skip_size != 0 )
+{
+    my $temp_size_output = format_bytes($skip_size);
+    print "$temp_size_output will be skipped because of the current skip configuration. See SKIP log file for details of packages skipped.\n";
+    if ( $exception_size != 0 )
+    {
+        $temp_size_output = format_bytes($exception_size);
+        print "$temp_size_output will be downloaded because of the current exception configuration. See EXCEPTION log file for details of packages which have been granted download exception.\n";
+    }
 }
 
 my $size_output = format_bytes($need_bytes);
