@@ -752,7 +752,7 @@ sub remove_spaces($)
     }
 }
 
-sub process_index_gz
+sub process_index
 {
     my $uri   = shift;
     my $index = shift;
@@ -762,14 +762,22 @@ sub process_index_gz
     local $/ = "\n\n";
     $mirror = get_variable("mirror_path") . "/" . $path;
 
-    if ( $index =~ s/\.gz$// )
+    if (-e "$path/$index.gz" )
     {
         system("gunzip < $path/$index.gz > $path/$index");
+    }
+    elsif (-e "$path/$index.xz" )
+    {
+        system("xz -d < $path/$index.xz > $path/$index");
+    }
+    elsif (-e "$path/$index.bz2" )
+    {
+        system("bzip2 -d < $path/$index.bz2 > $path/$index");
     }
 
     unless ( open STREAM, "<$path/$index" )
     {
-        warn("apt-mirror: can't open index in process_index_gz");
+        warn("apt-mirror: can't open index $path/$index in process_index");
         return;
     }
 
@@ -827,12 +835,12 @@ foreach (@config_sources)
         my $component;
         foreach $component (@components)
         {
-            process_index_gz( $uri, "/dists/$distribution/$component/source/Sources.gz" );
+            process_index( $uri, "/dists/$distribution/$component/source/Sources" );
         }
     }
     else
     {
-        process_index_gz( $uri, "/$distribution/Sources.gz" );
+        process_index( $uri, "/$distribution/Sources" );
     }
 }
 
@@ -845,12 +853,12 @@ foreach (@config_binaries)
         my $component;
         foreach $component (@components)
         {
-            process_index_gz( $uri, "/dists/$distribution/$component/binary-$arch/Packages.gz" );
+            process_index( $uri, "/dists/$distribution/$component/binary-$arch/Packages" );
         }
     }
     else
     {
-        process_index_gz( $uri, "/$distribution/Packages.gz" );
+        process_index( $uri, "/$distribution/Packages" );
     }
 }
 
