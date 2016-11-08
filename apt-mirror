@@ -80,10 +80,14 @@ deb https://example.com:443/debian stable main contrib non-free
 Source Mirroring:
 deb-src http://example.com/debian stable main contrib non-free
 
+Installation media Mirroring:
+deb-installer-amd http://example.com/debian netboot cdrom
+
 =head1 AUTHORS
 
 Dmitry N. Hramtsov E<lt>hdn@nsu.ruE<gt>
 Brandon Holtsclaw E<lt>me@brandonholtsclaw.comE<gt>
+Guy Matz E<lt>gmatz@matz.orgE<gt>
 
 =cut
 
@@ -123,6 +127,7 @@ my %config_variables = (
 
 my @config_binaries = ();
 my @config_sources  = ();
+my @config_installers  = ();
 
 my @index_urls;
 my @childrens       = ();
@@ -305,6 +310,12 @@ while (<CONFIG>)
         next;
     }
 
+    # Must be before check for deb- below
+    if ( $config_line =~ /deb-installer-([\w\-]+)/)
+    {
+        push @config_installers, [ $1, @config_line ];
+        next;
+    }
     if ( $config_line =~ /deb-([\w\-]+)/ )
     {
         push @config_binaries, [ $1, @config_line ];
@@ -441,6 +452,14 @@ foreach (@config_binaries)
         add_url_to_download( $uri . "/$distribution/Packages.bz2" );
         add_url_to_download( $uri . "/$distribution/Packages.xz" );
     }
+}
+
+foreach (@config_installers) {
+    my ($arch, $uri, $distribution) = @{$_};
+    add_url_to_download($uri . "/dists/${distribution}/main/debian-installer/binary-${arch}/Packages.gz");
+    add_url_to_download($uri . "/dists/${distribution}/restricted/debian-installer/binary-${arch}/Packages.gz");
+    add_url_to_download($uri . "/dists/${distribution}/main/installer-${arch}/current/images/MD5SUMS");
+    add_url_to_download($uri . "/dists/${distribution}/main/installer-${arch}/current/images/MANIFEST");
 }
 
 chdir get_variable("skel_path") or die("apt-mirror: can't chdir to skel");
@@ -740,6 +759,22 @@ sub need_update
     return 1;
 }
 
+# metadata files for install media don't have much info in them, so we have to
+# check the md5sum of the files we have against the md5sum in the metadata file
+sub need_update_by_hash {
+    my $localfile = shift;
+    my $hash_on_server = shift;
+
+    my $mirror_file = get_variable("mirror_path") . "/" . $localfile;
+    return 1 if ! -f ($mirror_file);
+    my $md5_output = `md5sum $mirror_file`;
+    (my $local_hash, my $filename) = split(/\s+/, $md5_output);
+
+    return 1 unless($local_hash);
+    return 0 if $hash_on_server eq $local_hash;
+    return 1;
+}
+
 sub remove_spaces($)
 {
     my $hashref = shift;
@@ -816,6 +851,33 @@ sub process_index_gz
     close STREAM;
 }
 
+sub process_digest {
+    my $uri = shift;
+    my $index = shift;
+    my $component = shift;
+    my ($path, $package, $mirror, $files) = '';
+
+    $path = sanitise_uri($uri);
+    local $/ = "\n";
+    $mirror = get_variable("mirror_path") . "/" . $path;
+    
+    open STREAM, "<$path/$index" or die("apt-mirror: can't open index in process_digest");
+
+    while(my $line = <STREAM>) {
+        chomp $line;
+        local $/ = "\n";
+        (my $hash, my $install_file) = split(/\s+/, $line);
+        if (defined $component) {
+          next if $install_file !~ /\.\/\Q$component/;
+        }
+        if(need_update_by_hash($path . "/" . $install_file, $hash)) {
+          print FILES_NEW remove_double_slashes($uri . "/" . $install_file) . "\n";
+          add_url_to_download($uri . "/" . $install_file);
+        }
+    }
+
+    close STREAM;
+}
 print "Processing indexes: [";
 
 foreach (@config_sources)
@@ -854,6 +916,24 @@ foreach (@config_binaries)
     }
 }
 
+
+foreach (@config_installers) {
+    my ($arch, $uri, $distribution, @components) = @{$_};
+    print "I";
+    my $install_uri = $uri . "/dists/$distribution/main/installer-$arch/current/images";
+    process_index_gz( $uri, "/dists/$distribution/main/debian-installer/binary-$arch/Packages.gz" );
+    if(@components) {
+        my $component;
+        foreach $component (@components) {
+          process_digest($install_uri, "/MD5SUMS", $component);
+        }
+    } 
+    else
+    {
+        process_digest($install_uri, "/MD5SUMS");
+    }
+}
+
 clear_stat_cache();
 
 print "]\n\n";
@@ -870,12 +950,12 @@ chdir get_variable("mirror_path") or die("apt-mirror: can't chdir to mirror");
 my $need_bytes = 0;
 foreach ( values %urls_to_download )
 {
-    $need_bytes += $_;
+    $need_bytes += $_ if (defined $_);
 }
 
 my $size_output = format_bytes($need_bytes);
 
-print "$size_output will be downloaded into archive.\n";
+print "$size_output will be downloaded into archive (not including install media).\n";
 
 download_urls( "archive", sort keys %urls_to_download );
 
@@ -926,6 +1006,7 @@ sub process_file
     my $file = shift;
     $file =~ s[~][%7E]g if get_variable("_tilde");
     return 1 if $skipclean{$file};
+    return 1 if $file =~ /installer/;
     push @rm_files, sanitise_uri($file);
     my ( undef, undef, undef, undef, undef, undef, undef, $size, undef, undef, undef, undef, $blocks ) = stat($file);
     $unnecessary_bytes += $blocks * 512;
@@ -937,6 +1018,7 @@ sub process_directory
     my $dir       = shift;
     my $is_needed = 0;
     return 1 if $skipclean{$dir};
+    return 1 if $dir =~ /installer/;
     opendir( my $dir_h, $dir ) or die "apt-mirror: can't opendir $dir: $!";
     foreach ( grep { !/^\.$/ && !/^\.\.$/ } readdir($dir_h) )
     {
@@ -986,6 +1068,7 @@ else
     print CLEAN "echo 'Removing $total unnecessary files [$size_output]...'\n";
     foreach (@rm_files)
     {
+        next if $_ =~ /\.gpg$/;
         print CLEAN "rm -f '$_'\n";
         print CLEAN "echo -n '[" . int( 100 * $i / $total ) . "\%]'\n" unless $i % 500;
         print CLEAN "echo -n .\n" unless $i % 10;

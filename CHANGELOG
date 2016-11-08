@@ -1,3 +1,9 @@
+
+0.5.2
+  * Added support for downloading debian-installer .udeb packages.
+  * Added support for distribution in debian-installer, e.g. installer images in precise-updates can be retrieved.
+  * Fix cleanup script generation: excluding installer files and directories.
+
 0.5.1 (2014-04-12)
   * Fix find-translation-files bug.
   * Fix skel (indexes) updates in a hardlinked mirror
