@@ -135,7 +135,7 @@ my %clean_directory = ();
 $config_file = "/etc/apt/mirror.list";    # Default value
 if ( $_ = shift )
 {
-    die("apt-mirror: invalid config file specified") unless -f $_;
+    die("apt-mirror: invalid config file specified") unless -e $_;
     $config_file = $_;
 }
 
