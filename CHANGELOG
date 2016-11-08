@@ -1,3 +1,15 @@
+0.5.2 (2016-11-08)
+  * Fix typo tranlation -> translation (fixes #35, Debian bug #756035,
+    Launchpad bug #1455522)
+  * if fork() fails, it returns undef and not a negative number (merge #37)
+  * Replace obsolete dpkg option '--print-installation-architecture'
+    by '--print-architecture' (Debian bug #834106)
+  * Add support for https_proxy (fixes #60)
+  * Download DEP-11 files in component/dep11 directories (fixes #56,
+    Launchpad bug #1550852)
+  * Support non-existing .gz index files (fixes #30, Debian bug #819974)
+  * Just test that config file is readable (Debian bug #824493)
+
 0.5.1 (2014-04-12)
   * Fix find-translation-files bug.
   * Fix skel (indexes) updates in a hardlinked mirror
