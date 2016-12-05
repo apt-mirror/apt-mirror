@@ -279,57 +279,66 @@ sub download_urls
 
 ## Parse config
 
+sub parse_config_line
+{
+    my $pattern_deb_line = qr/^[\t ]*(?<type>deb-src|deb)(?:-(?<arch>[\w\-]+))?[\t ]+(?:\[(?<options>[^\]]+)\][\t ]+)?(?<uri>[^\s]+)[\t ]+(?<components>.+)$/;
+    my $line = $_;
+    my %config;
+    if ( $line =~ $pattern_deb_line ) {
+        $config{'type'} = $+{type};
+        $config{'arch'} = $+{arch};
+        $config{'options'} = $+{options};
+        $config{'uri'} = $+{uri};
+        $config{'components'} = $+{components};
+        if ( $config{'options'} =~ /arch=((?<arch>[\w\-]+)[,]*)/g ) {
+            $config{'arch'} = $+{arch};
+        }
+        $config{'components'} = [ split /\s+/, $config{'components'} ];
+    } elsif ( $line =~ /set[\t ]+(?<key>[^\s]+)[\t ]+(?<value>[^\s]+)/ ) {
+        $config{'type'} = 'set';
+        $config{'key'} = $+{key};
+        $config{'value'} = $+{value};
+    } elsif ( $line =~ /(?<type>clean|skip-clean)[\t ]+(?<uri>[^\s]+)/ ) {
+        $config{'type'} = $+{type};
+        $config{'uri'} = $+{uri};
+    }
+
+    return %config;
+}
+
 open CONFIG, "<$config_file" or die("apt-mirror: can't open config file ($config_file)");
 while (<CONFIG>)
 {
     next if /^\s*#/;
     next unless /\S/;
-    my @config_line = split;
-    my $config_line = shift @config_line;
+    my $line = $_;
+    my %config_line = parse_config_line;
 
-    if ( $config_line eq "set" )
-    {
-        $config_variables{ $config_line[0] } = $config_line[1];
+    if ( $config_line{'type'} eq "set" ) {
+        $config_variables{ $config_line{'key'} } = $config_line{'value'};
+        next;
+    } elsif ( $config_line{'type'} eq "deb" ) {
+        my $arch = $config_line{'arch'};
+        $arch = get_variable("defaultarch") if ! defined $config_line{'arch'};
+        push @config_binaries, [ $arch, $config_line{'uri'}, @{$config_line{'components'}} ];
+        next;
+    } elsif ( $config_line{'type'} eq "deb-src" ) {
+        push @config_sources, [ $config_line{'uri'}, @{$config_line{'components'}} ];
+        next;
+    } elsif ( $config_line{'type'} =~ /(skip-clean|clean)/ ) {
+        my $link = $config_line{'uri'};
+        $link =~ s[^(\w+)://][];
+        $link =~ s[/$][];
+        $link =~ s[~][%7E]g if get_variable("_tilde");
+        if ( $config_line{'type'} eq "skip-clean" ) {
+            $skipclean{ $link } = 1;
+        } elsif ( $config_line{'type'} eq "clean" ) {
+            $clean_directory{ $link } = 1;
+        }
         next;
     }
 
-    if ( $config_line eq "deb" )
-    {
-        push @config_binaries, [ get_variable("defaultarch"), @config_line ];
-        next;
-    }
-
-    if ( $config_line eq "deb-src" )
-    {
-        push @config_sources, [@config_line];
-        next;
-    }
-
-    if ( $config_line =~ /deb-([\w\-]+)/ )
-    {
-        push @config_binaries, [ $1, @config_line ];
-        next;
-    }
-
-    if ( $config_line eq "skip-clean" )
-    {
-        $config_line[0] =~ s[^(\w+)://][];
-        $config_line[0] =~ s[/$][];
-        $config_line[0] =~ s[~][%7E]g if get_variable("_tilde");
-        $skipclean{ $config_line[0] } = 1;
-        next;
-    }
-
-    if ( $config_line eq "clean" )
-    {
-        $config_line[0] =~ s[^(\w+)://][];
-        $config_line[0] =~ s[/$][];
-        $config_line[0] =~ s[~][%7E]g if get_variable("_tilde");
-        $clean_directory{ $config_line[0] } = 1;
-        next;
-    }
-
-    die("apt-mirror: invalid line in config file ($.: $config_line ...)");
+    die("apt-mirror: invalid line in config file ($.: $line ...)");
 }
 close CONFIG;
 
