@@ -91,7 +91,7 @@ use warnings;
 use strict;
 use File::Copy;
 use File::Compare;
-use File::Path;
+use File::Path qw(make_path);
 use File::Basename;
 use Fcntl qw(:flock);
 
@@ -351,7 +351,7 @@ foreach my $needed_directory (@needed_directories)
 {
     unless ( -d $needed_directory )
     {
-        mkdir($needed_directory) or die("apt-mirror: can't create $needed_directory directory");
+        make_path($needed_directory) or die("apt-mirror: can't create $needed_directory directory");
     }
 }
 #
@@ -904,7 +904,7 @@ sub copy_file
     my ( $from, $to ) = @_;
     my $dir = dirname($to);
     return unless -f $from;
-    mkpath($dir) unless -d $dir;
+    make_path($dir) unless -d $dir;
     if ( get_variable("unlink") == 1 )
     {
         if ( compare( $from, $to ) != 0 ) { unlink($to); }
