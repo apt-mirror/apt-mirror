@@ -91,7 +91,7 @@ use warnings;
 use strict;
 use File::Copy;
 use File::Compare;
-use File::Path;
+use File::Path qw(make_path);
 use File::Basename;
 use Fcntl qw(:flock);
 
@@ -201,6 +201,13 @@ sub get_variable
     return $value;
 }
 
+sub quoted_path
+{
+    my $path = shift;
+    $path =~ s/'/'\\''/g;
+    return "'" . $path . "'";
+}
+
 sub lock_aptmirror
 {
     open( LOCK_FILE, '>', get_variable("var_path") . "/apt-mirror.lock" );
@@ -290,14 +297,16 @@ sub parse_config_line
         $config{'options'} = $+{options};
         $config{'uri'} = $+{uri};
         $config{'components'} = $+{components};
-        if ( $config{'options'} =~ /arch=((?<arch>[\w\-]+)[,]*)/g ) {
+        if ( $config{'options'} =~ /arch\s*=\s*((?<arch>[\w\-]+)[,]*)/g ) {
             $config{'arch'} = $+{arch};
         }
         $config{'components'} = [ split /\s+/, $config{'components'} ];
-    } elsif ( $line =~ /set[\t ]+(?<key>[^\s]+)[\t ]+(?<value>[^\s]+)/ ) {
+    } elsif ( $line =~ /set[\t ]+(?<key>[^\s]+)[\t ]+(?<value>"[^"]+"|'[^']+'|[^\s]+)/ ) {
         $config{'type'} = 'set';
         $config{'key'} = $+{key};
         $config{'value'} = $+{value};
+        $config{'value'} =~ s/^'(.*)'$/$1/;
+        $config{'value'} =~ s/^"(.*)"$/$1/;
     } elsif ( $line =~ /(?<type>clean|skip-clean)[\t ]+(?<uri>[^\s]+)/ ) {
         $config{'type'} = $+{type};
         $config{'uri'} = $+{uri};
@@ -351,7 +360,7 @@ foreach my $needed_directory (@needed_directories)
 {
     unless ( -d $needed_directory )
     {
-        mkdir($needed_directory) or die("apt-mirror: can't create $needed_directory directory");
+        make_path($needed_directory) or die("apt-mirror: can't create $needed_directory directory");
     }
 }
 #
@@ -904,7 +913,7 @@ sub copy_file
     my ( $from, $to ) = @_;
     my $dir = dirname($to);
     return unless -f $from;
-    mkpath($dir) unless -d $dir;
+    make_path($dir) unless -d $dir;
     if ( get_variable("unlink") == 1 )
     {
         if ( compare( $from, $to ) != 0 ) { unlink($to); }
@@ -999,7 +1008,7 @@ else
 
     print CLEAN "#!/bin/sh\n";
     print CLEAN "set -e\n\n";
-    print CLEAN "cd " . get_variable("mirror_path") . "\n\n";
+    print CLEAN "cd " . quoted_path(get_variable("mirror_path")) . "\n\n";
     print CLEAN "echo 'Removing $total unnecessary files [$size_output]...'\n";
     foreach (@rm_files)
     {
@@ -1038,11 +1047,11 @@ if ( get_variable("run_postmirror") )
     print "(" . get_variable("postmirror_script") . ")\n\n";
     if ( -x get_variable("postmirror_script") )
     {
-        system( get_variable("postmirror_script") );
+        system( get_variable("postmirror_script"), '' );
     }
     else
     {
-        system( '/bin/sh ' . get_variable("postmirror_script") );
+        system( '/bin/sh', get_variable("postmirror_script") );
     }
     print "\nPost Mirror script has completed. See above output for any possible errors.\n\n";
 }
