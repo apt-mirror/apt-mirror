@@ -1,4 +1,4 @@
-VERSION := 0.5.2
+VERSION := 0.5.3
 DIST := apt-mirror CHANGELOG LICENSE Makefile mirror.list postmirror.sh README.md .perltidyrc
 BASE_PATH := /var/spool/apt-mirror
 PREFIX ?= /usr/local

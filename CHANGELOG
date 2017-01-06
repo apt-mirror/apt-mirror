@@ -1,3 +1,8 @@
+0.5.3 (2017-01-06)
+  * Add support for 'deb [arch=amd64] ...' format (fixes #32, #65)
+  * Create directories including their parents
+  * Add support for quoted variables with spaces (fixes #43, #67)
+
 0.5.2 (2016-11-08)
   * Fix typo tranlation -> translation (fixes #35, Debian bug #756035,
     Launchpad bug #1455522)
