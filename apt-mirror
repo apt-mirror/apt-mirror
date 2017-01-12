@@ -297,7 +297,7 @@ sub parse_config_line
         $config{'options'} = $+{options};
         $config{'uri'} = $+{uri};
         $config{'components'} = $+{components};
-        if ( $config{'options'} =~ /arch=((?<arch>[\w\-]+)[,]*)/g ) {
+        if ( $config{'options'} =~ /arch\s*=\s*((?<arch>[\w\-]+)[,]*)/g ) {
             $config{'arch'} = $+{arch};
         }
         $config{'components'} = [ split /\s+/, $config{'components'} ];
