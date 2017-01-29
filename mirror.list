@@ -6,6 +6,7 @@ set postmirror_script $var_path/postmirror.sh
 set defaultarch       i386
 set run_postmirror    0
 set nthreads          20
+set limit_rate        100m
 set _tilde            0
 # Use --unlink with wget (for use with hardlinked directories)
 set unlink            1
