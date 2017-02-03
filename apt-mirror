@@ -263,7 +263,7 @@ sub download_urls
 
         if ( $pid == 0 )
         {
-         if ( $stage eq "archive")
+         if ( $stage eq 'archive')
            {
              exec 'wget', '--no-cache', '--limit-rate=' . get_variable("limit_rate"), '-t', '5', '-r', '-c', '-l', 'inf', '-o', get_variable("var_path") . "/$stage-log.$i", '-i', get_variable("var_path") . "/$stage-urls.$i", @args;
            }
