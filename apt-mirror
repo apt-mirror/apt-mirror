@@ -294,7 +294,7 @@ sub parse_config_line
     if ( $line =~ $pattern_deb_line ) {
         $config{'type'} = $+{type};
         $config{'arch'} = $+{arch};
-        $config{'options'} = $+{options};
+        $config{'options'} = $+{options} ? $+{options} : "";
         $config{'uri'} = $+{uri};
         $config{'components'} = $+{components};
         if ( $config{'options'} =~ /arch=((?<arch>[\w\-]+)[,]*)/g ) {
