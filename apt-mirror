@@ -813,7 +813,7 @@ sub process_index
         {    # Packages index
             $skipclean{ remove_double_slashes( $path . "/" . $lines{"Filename:"} ) } = 1;
             print FILES_ALL remove_double_slashes( $path . "/" . $lines{"Filename:"} ) . "\n";
-            print FILES_MD5 $lines{"MD5sum:"} . "  " . remove_double_slashes( $path . "/" . $lines{"Filename:"} ) . "\n";
+            print FILES_MD5 $lines{"MD5sum:"} . "  " . remove_double_slashes( $path . "/" . $lines{"Filename:"} ) . "\n" if defined $lines{"MD5sum:"};
             if ( need_update( $mirror . "/" . $lines{"Filename:"}, $lines{"Size:"} ) )
             {
                 print FILES_NEW remove_double_slashes( $uri . "/" . $lines{"Filename:"} ) . "\n";
