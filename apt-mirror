@@ -729,6 +729,8 @@ foreach ( keys %urls_to_download )
 open FILES_ALL, ">" . get_variable("var_path") . "/ALL" or die("apt-mirror: can't write to intermediate file (ALL)");
 open FILES_NEW, ">" . get_variable("var_path") . "/NEW" or die("apt-mirror: can't write to intermediate file (NEW)");
 open FILES_MD5, ">" . get_variable("var_path") . "/MD5" or die("apt-mirror: can't write to intermediate file (MD5)");
+open FILES_SHA1, ">" . get_variable("var_path") . "/SHA1" or die("apt-mirror: can't write to intermediate file (SHA1)");
+open FILES_SHA256, ">" . get_variable("var_path") . "/SHA256" or die("apt-mirror: can't write to intermediate file (SHA256)");
 
 my %stat_cache = ();
 
@@ -814,6 +816,8 @@ sub process_index
             $skipclean{ remove_double_slashes( $path . "/" . $lines{"Filename:"} ) } = 1;
             print FILES_ALL remove_double_slashes( $path . "/" . $lines{"Filename:"} ) . "\n";
             print FILES_MD5 $lines{"MD5sum:"} . "  " . remove_double_slashes( $path . "/" . $lines{"Filename:"} ) . "\n" if defined $lines{"MD5sum:"};
+            print FILES_SHA1 $lines{"SHA1:"} . "  " . remove_double_slashes( $path . "/" . $lines{"Filename:"} ) . "\n" if defined $lines{"SHA1:"};
+            print FILES_SHA256 $lines{"SHA256:"} . "  " . remove_double_slashes( $path . "/" . $lines{"Filename:"} ) . "\n" if defined $lines{"SHA256:"};
             if ( need_update( $mirror . "/" . $lines{"Filename:"}, $lines{"Size:"} ) )
             {
                 print FILES_NEW remove_double_slashes( $uri . "/" . $lines{"Filename:"} ) . "\n";
@@ -887,6 +891,8 @@ print "]\n\n";
 close FILES_ALL;
 close FILES_NEW;
 close FILES_MD5;
+close FILES_SHA1;
+close FILES_SHA256;
 
 ######################################################################################
 ## Main download
