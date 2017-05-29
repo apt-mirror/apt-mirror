@@ -1,3 +1,11 @@
+0.5.4 (2017-05-29)
+  * Add limit_rate to example mirror.list (fixes #72)
+  * Fix use of uninitialized value $config{"options"} warning (fixes #68,
+    Debian bug #851979, #859601)
+  * Fix warning on repository without md5sum (fixes #66)
+  * Write SHA1 and SHA256 in addition to MD5
+  * Also download xz-compressed Components-$arch.yml.xz (fixes #69)
+
 0.5.3 (2017-01-06)
   * Add support for 'deb [arch=amd64] ...' format (fixes #32, #65)
   * Create directories including their parents
