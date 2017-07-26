@@ -1,4 +1,4 @@
-#!/usr/bin/perl
+#!/usr/pkg/bin/perl
 
 =pod
 
@@ -27,7 +27,7 @@ Main features:
 
 =head1 COMMENTS
 
-apt-mirror uses F</etc/apt/mirror.list> as a configuration file.
+apt-mirror uses F</usr/pkg/etc/apt/mirror.list> as a configuration file.
 By default it is tuned to official Debian or Ubuntu mirrors. Change
 it for your needs.
 
@@ -35,14 +35,14 @@ After you setup the configuration file you may run as root:
 
     # su - apt-mirror -c apt-mirror
 
-Or uncomment the line in F</etc/cron.d/apt-mirror> to enable daily mirror updates.
+Or uncomment the line in F</usr/pkg/etc/cron.d/apt-mirror> to enable daily mirror updates.
 
 =head1 FILES
 
-F</etc/apt/mirror.list>
+F</usr/pkg/etc/apt/mirror.list>
         Main configuration file
 
-F</etc/cron.d/apt-mirror>
+F</usr/pkg/etc/cron.d/apt-mirror>
         Cron configuration template
 
 F</var/spool/apt-mirror/mirror>
@@ -98,7 +98,7 @@ use Fcntl qw(:flock);
 my $config_file;
 
 my %config_variables = (
-    "defaultarch" => `dpkg --print-architecture 2>/dev/null` || 'i386',
+    "defaultarch" => `dpkg --print-architecture 2>/dev/null` || `uname -m 2>/dev/null` || 'i386',
     "nthreads"    => 20,
     "base_path"   => '/var/spool/apt-mirror',
     "mirror_path" => '$base_path/mirror',
@@ -132,7 +132,7 @@ my %clean_directory = ();
 ######################################################################################
 ## Setting up $config_file variable
 
-$config_file = "/etc/apt/mirror.list";    # Default value
+$config_file = "/usr/pkg/etc/apt/mirror.list";    # Default value
 if ( $_ = shift )
 {
     die("apt-mirror: invalid config file specified") unless -e $_;
