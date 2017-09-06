@@ -449,6 +449,11 @@ foreach (@config_binaries)
             add_url_to_download( $url . $_ . "/binary-" . $arch . "/Packages.bz2" );
             add_url_to_download( $url . $_ . "/binary-" . $arch . "/Packages.xz" );
             add_url_to_download( $url . $_ . "/i18n/Index" );
+
+            add_url_to_download( $url . $_ . "/binary-all/Release" );
+            add_url_to_download( $url . $_ . "/binary-all/Packages.gz" );
+            add_url_to_download( $url . $_ . "/binary-all/Packages.bz2" );
+            add_url_to_download( $url . $_ . "/binary-all/Packages.xz" );
         }
     }
     else
