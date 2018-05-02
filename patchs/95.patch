@@ -1,0 +1,32 @@
+From 827fb926f426d73105e76b2d564546c56a63b1c4 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Lars=20J=C3=B8rgen=20Solberg?= <supersolberg@gmail.com>
+Date: Mon, 26 Feb 2018 15:43:37 +0100
+Subject: [PATCH] fetch Packages even if it has no suffix
+
+At least one (GerritForge) public repo does not serve compressed Packages files. This commit
+adds the uncompressed Packages file to the list url to download so
+apt-mirror can mirror that repo.
+---
+ apt-mirror | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/apt-mirror b/apt-mirror
+index effac7e..700abb8 100755
+--- a/apt-mirror
++++ b/apt-mirror
+@@ -445,6 +445,7 @@ foreach (@config_binaries)
+                 add_url_to_download( $url . $_ . "/Contents-" . $arch . ".xz" );
+             }
+             add_url_to_download( $url . $_ . "/binary-" . $arch . "/Release" );
++            add_url_to_download( $url . $_ . "/binary-" . $arch . "/Packages" );
+             add_url_to_download( $url . $_ . "/binary-" . $arch . "/Packages.gz" );
+             add_url_to_download( $url . $_ . "/binary-" . $arch . "/Packages.bz2" );
+             add_url_to_download( $url . $_ . "/binary-" . $arch . "/Packages.xz" );
+@@ -455,6 +456,7 @@ foreach (@config_binaries)
+     {
+         add_url_to_download( $uri . "/$distribution/Release" );
+         add_url_to_download( $uri . "/$distribution/Release.gpg" );
++        add_url_to_download( $uri . "/$distribution/Packages" );
+         add_url_to_download( $uri . "/$distribution/Packages.gz" );
+         add_url_to_download( $uri . "/$distribution/Packages.bz2" );
+         add_url_to_download( $uri . "/$distribution/Packages.xz" );

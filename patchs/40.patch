@@ -1,0 +1,24 @@
+From fce8f19055691199a59b3826478a9f009a705608 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Fr=C3=A9d=C3=A9ric=20Verhoustraeten?= <vfrederix@gmail.com>
+Date: Thu, 9 Apr 2015 13:41:35 +0200
+Subject: [PATCH] Update Apt-mirror
+
+Behaves better when a repository is not available or with bad connections (previous version almost hangs for a while)
+---
+ apt-mirror | 3 +--
+ 1 file changed, 1 insertion(+), 2 deletions(-)
+
+diff --git a/apt-mirror b/apt-mirror
+index 5296c5a..d75966d 100755
+--- a/apt-mirror
++++ b/apt-mirror
+@@ -253,8 +253,7 @@ sub download_urls
+ 
+         if ( $pid == 0 )
+         {
+-            exec 'wget', '--no-cache', '--limit-rate=' . get_variable("limit_rate"), '-t', '5', '-r', '-N', '-l', 'inf', '-o', get_variable("var_path") . "/$stage-log.$i", '-i', get_variable("var_path") . "/$stage-urls.$i", @args;
+-
++            exec 'wget', '--no-cache', '--retry-connrefused', '--waitretry=2', '--read-timeout=12', '--dns-timeout=3', '--connect-timeout=3', '--tries=5', '--limit-rate=' . get_variable("limit_rate"), '-r', '-N', '-l', 'inf', '-o', get_variable("var_path") . "/$stage-log.$i", '-i', get_variable("var_path") . "/$stage-urls.$i", @args;
+             # shouldn't reach this unless exec fails
+             die("\n\nCould not run wget, please make sure its installed and in your path\n\n");
+         }

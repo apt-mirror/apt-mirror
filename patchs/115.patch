@@ -1,0 +1,23 @@
+From 0588c10c679d862f378b0395593c378110f25579 Mon Sep 17 00:00:00 2001
+From: mkdutchman <melvin@lancasterlanterns.com>
+Date: Tue, 2 Apr 2019 15:00:54 -0400
+Subject: [PATCH] Replace "rmdir" with "rm -r" when cleaning directories
+
+rmdir errors out if directories are nonempty. rm -r is more dependable and gets rid of them regardless
+---
+ apt-mirror | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/apt-mirror b/apt-mirror
+index effac7e..84a14df 100755
+--- a/apt-mirror
++++ b/apt-mirror
+@@ -1031,7 +1031,7 @@ else
+     print CLEAN "echo 'Removing $total unnecessary directories...'\n";
+     foreach (@rm_dirs)
+     {
+-        print CLEAN "if test -d '$_'; then rmdir '$_'; fi\n";
++        print CLEAN "if test -d '$_'; then rm -r '$_'; fi\n";
+         print CLEAN "echo -n '[" . int( 100 * $i / $total ) . "\%]'\n" unless $i % 50;
+         print CLEAN "echo -n .\n";
+         $i++;

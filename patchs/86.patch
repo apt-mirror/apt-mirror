@@ -1,0 +1,51 @@
+From f5c06478816e8fe3876eaf6b9c6cf48df40c70ef Mon Sep 17 00:00:00 2001
+From: Troy Lea <troy@box293.com>
+Date: Sun, 3 Sep 2017 18:19:24 +1000
+Subject: [PATCH] Added dry_run option
+
+---
+ apt-mirror  | 10 +++++++++-
+ mirror.list |  2 ++
+ 2 files changed, 11 insertions(+), 1 deletion(-)
+
+diff --git a/apt-mirror b/apt-mirror
+index effac7e..1a08a30 100755
+--- a/apt-mirror
++++ b/apt-mirror
+@@ -118,7 +118,8 @@ my %config_variables = (
+     "http_proxy"           => '',
+     "https_proxy"          => '',
+     "proxy_user"           => '',
+-    "proxy_password"       => ''
++    "proxy_password"       => '',
++    "dry_run"              => '0'
+ );
+ 
+ my @config_binaries = ();
+@@ -909,6 +910,13 @@ my $size_output = format_bytes($need_bytes);
+ 
+ print "$size_output will be downloaded into archive.\n";
+ 
++if ( get_variable("dry_run") == 1 )
++{
++    print "\nA dry-run was requested, no download performed, exiting.\n";
++    unlock_aptmirror();
++    exit(0)
++}
++
+ download_urls( "archive", sort keys %urls_to_download );
+ 
+ ######################################################################################
+diff --git a/mirror.list b/mirror.list
+index dbd4179..18b44a3 100644
+--- a/mirror.list
++++ b/mirror.list
+@@ -14,6 +14,8 @@ set use_proxy         off
+ set http_proxy        127.0.0.1:3128
+ set proxy_user        user
+ set proxy_password    password
++# dry_run (1) will not perform any downloads but will tell you the size of the download to be peformed
++set dry_run           0
+ 
+ deb http://archive.ubuntu.com/ubuntu precise main restricted universe multiverse
+ deb http://archive.ubuntu.com/ubuntu precise-security main restricted universe multiverse

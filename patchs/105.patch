@@ -1,0 +1,30 @@
+From 14505d8547c012753a827c8c0291819aaddf3bf1 Mon Sep 17 00:00:00 2001
+From: Elad Soffer <soffer.elad@gmail.com>
+Date: Wed, 8 Aug 2018 14:58:03 +0000
+Subject: [PATCH] Fetch InRelease file when dealing with exact path repository
+ reference
+
+---
+ apt-mirror | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/apt-mirror b/apt-mirror
+index effac7e..08b05f4 100755
+--- a/apt-mirror
++++ b/apt-mirror
+@@ -411,6 +411,7 @@ foreach (@config_sources)
+     }
+     else
+     {
++        add_url_to_download( $uri . "/$distribution/InRelease" );
+         add_url_to_download( $uri . "/$distribution/Release" );
+         add_url_to_download( $uri . "/$distribution/Release.gpg" );
+         add_url_to_download( $uri . "/$distribution/Sources.gz" );
+@@ -453,6 +454,7 @@ foreach (@config_binaries)
+     }
+     else
+     {
++        add_url_to_download( $uri . "/$distribution/InRelease" );
+         add_url_to_download( $uri . "/$distribution/Release" );
+         add_url_to_download( $uri . "/$distribution/Release.gpg" );
+         add_url_to_download( $uri . "/$distribution/Packages.gz" );

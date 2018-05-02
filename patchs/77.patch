@@ -1,0 +1,40 @@
+From 648476ff645884a1dde25bf80dec2b167a3926ac Mon Sep 17 00:00:00 2001
+From: sfinexer <proggi@yandex.ru>
+Date: Mon, 1 May 2017 16:39:20 +0400
+Subject: [PATCH] Update apt-mirror
+
+---
+ apt-mirror | 13 ++++++++++---
+ 1 file changed, 10 insertions(+), 3 deletions(-)
+
+diff --git a/apt-mirror b/apt-mirror
+index 7d9ff5c..52d585c 100755
+--- a/apt-mirror
++++ b/apt-mirror
+@@ -113,7 +113,7 @@ my %config_variables = (
+     "auth_no_challenge"    => 0,
+     "no_check_certificate" => 0,
+     "unlink"               => 0,
+-    "postmirror_script"    => '$var_path/postmirror.sh',
++    "postmirror_script"    => '$var_path/clean.sh',
+     "use_proxy"            => 'off',
+     "http_proxy"           => '',
+     "https_proxy"          => '',
+@@ -263,8 +263,15 @@ sub download_urls
+ 
+         if ( $pid == 0 )
+         {
+-            exec 'wget', '--no-cache', '--limit-rate=' . get_variable("limit_rate"), '-t', '5', '-r', '-N', '-l', 'inf', '-o', get_variable("var_path") . "/$stage-log.$i", '-i', get_variable("var_path") . "/$stage-urls.$i", @args;
+-
++      #  exec 'wget', '--no-cache', '--limit-rate=' . get_variable("limit_rate"), '-t', '5', '-r', '-N', '-l', 'inf', '-o', get_variable("var_path") . "/$stage-log.$i", '-i', get_variable("var_path") . "/$stage-urls.$i", @args;
++         if ( $stage eq 'archive')
++           {
++             exec 'wget', '--no-cache', '--limit-rate=' . get_variable("limit_rate"), '-t', '5', '-r', '-c', '-l', 'inf', '-o', get_variable("var_path") . "/$stage-log.$i", '-i', get_variable("var_path") . "/$stage-urls.$i", @args;
++           }
++        else
++          {
++             exec 'wget', '--no-cache', '--limit-rate=' . get_variable("limit_rate"), '-t', '5', '-r', '-N', '-l', 'inf', '-o', get_variable("var_path") . "/$stage-log.$i", '-i', get_variable("var_path") . "/$stage-urls.$i", @args;
++          }
+             # shouldn't reach this unless exec fails
+             die("\n\nCould not run wget, please make sure its installed and in your path\n\n");
+         }

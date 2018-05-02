@@ -1,0 +1,40 @@
+From ca227a65b48fc81f4ad188b08c1c66f6ab8ab514 Mon Sep 17 00:00:00 2001
+From: Brian Campbell <lambda@continuation.org>
+Date: Wed, 2 May 2018 17:00:25 -0400
+Subject: [PATCH] Don't strip port number in sanitise_uri
+
+sanitize_uri is used to translate URIs to pathnames in order to find
+downloaded index files.
+
+However, it had been stripping off the port number, while wget creates paths
+that include the port number.  This means that if your URI includes a port
+number, like http://example.com:8080/debian, wget would download files into a
+directory named .../skel/example.com:8080/debian/, but apt-mirror would look
+for the files in .../skel/example.com/debian/.
+
+It looks like wget has done this for many years, and there's no easy way to
+disable it.  You can have wget apply its own sanitization filters for
+different platforms with --restrict-file-names but Unix mode includes the port
+with a ":", and Windows mode replaces the ":" but also replaces other
+characters which would mean adjusting sanitise_uri to match.  It seems like the
+simplest way to be consistent with wget is to remove the port number filter
+from sanitise_ui, since ":" is a valid component of a pathname and doesn't
+seem to cause any issues.
+
+Fixes #19
+---
+ apt-mirror | 1 -
+ 1 file changed, 1 deletion(-)
+
+diff --git a/apt-mirror b/apt-mirror
+index effac7e..7024379 100755
+--- a/apt-mirror
++++ b/apt-mirror
+@@ -485,7 +485,6 @@ sub sanitise_uri
+     my $uri = shift;
+     $uri =~ s[^(\w+)://][];
+     $uri =~ s/^([^@]+)?@?// if $uri =~ /@/;
+-    $uri =~ s&:\d+/&/&;                       # and port information
+     $uri =~ s/~/\%7E/g if get_variable("_tilde");
+     return $uri;
+ }

@@ -1,0 +1,111 @@
+From 01833f2adf4a14ed14ef32ac0d85790826947119 Mon Sep 17 00:00:00 2001
+From: Jose Carlos Ramos Carmenates <carmenates09@gmail.com>
+Date: Thu, 3 Oct 2013 17:02:52 -0400
+Subject: [PATCH 1/3] Added proxy support.
+
+---
+ .gitignore  | 4 +++-
+ apt-mirror  | 7 ++++++-
+ mirror.list | 5 +++++
+ 3 files changed, 14 insertions(+), 2 deletions(-)
+
+diff --git a/.gitignore b/.gitignore
+index 7664704..d5725c2 100644
+--- a/.gitignore
++++ b/.gitignore
+@@ -1 +1,3 @@
+-*.bak
+\ No newline at end of file
++*.bak
++.idea
++.gitignore
+\ No newline at end of file
+diff --git a/apt-mirror b/apt-mirror
+index 701e4d5..5c56fcb 100755
+--- a/apt-mirror
++++ b/apt-mirror
+@@ -226,7 +226,12 @@ sub download_urls
+     if ( get_variable("auth_no_challenge") == 1 )    { push( @args, "--auth-no-challenge" ); }
+     if ( get_variable("no_check_certificate") == 1 ) { push( @args, "--no-check-certificate" ); }
+     if ( get_variable("unlink") == 1 )               { push( @args, "--unlink" ); }
+-
++    if ( length ( get_variable("use_proxy") ) && ( get_variable("use_proxy") eq 'yes' || get_variable("use_proxy") eq 'on' ) )
++    {
++        if ( length ( get_variable("http_proxy") ) )        { push( @args, "-e use_proxy=yes"); push( @args, "-e http_proxy=" . get_variable( "http_proxy" ) ); }
++        if ( length ( get_variable("proxy_user") ) )        { push( @args, "-e proxy_user=" . get_variable( "proxy_user" ) ); }
++        if ( length ( get_variable("proxy_password") ) )    { push( @args, "-e proxy_password=" . get_variable( "proxy_password" ) ); }
++    }
+     print "Downloading " . scalar(@urls) . " $stage files using $nthreads threads...\n";
+ 
+     while ( scalar @urls )
+diff --git a/mirror.list b/mirror.list
+index f744cd0..344d434 100644
+--- a/mirror.list
++++ b/mirror.list
+@@ -9,6 +9,11 @@ set nthreads          20
+ set _tilde            0
+ # Use --unlink with wget (for use with hardlinked directories)
+ set unlink            1
++# Proxy settings, off by default (for use set "use_proxy on")
++set use_proxy off
++set http_proxy 127.0.0.1:3128
++set proxy_user user
++set proxy_password password
+ 
+ deb http://archive.ubuntu.com/ubuntu precise main restricted universe multiverse
+ deb http://archive.ubuntu.com/ubuntu precise-security main restricted universe multiverse
+
+From 3f5ca442b7099efc702b58c9fd6768604569ffd1 Mon Sep 17 00:00:00 2001
+From: Jose Carlos Ramos Carmenates <jramoscarmenates@gmail.com>
+Date: Thu, 22 Oct 2015 11:56:55 -0400
+Subject: [PATCH 2/3] Add support to more values (true, 1) at user_proxy.
+
+---
+ apt-mirror | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/apt-mirror b/apt-mirror
+index 5c56fcb..07ebae5 100755
+--- a/apt-mirror
++++ b/apt-mirror
+@@ -226,7 +226,7 @@ sub download_urls
+     if ( get_variable("auth_no_challenge") == 1 )    { push( @args, "--auth-no-challenge" ); }
+     if ( get_variable("no_check_certificate") == 1 ) { push( @args, "--no-check-certificate" ); }
+     if ( get_variable("unlink") == 1 )               { push( @args, "--unlink" ); }
+-    if ( length ( get_variable("use_proxy") ) && ( get_variable("use_proxy") eq 'yes' || get_variable("use_proxy") eq 'on' ) )
++    if ( length ( get_variable("use_proxy") ) && ( get_variable("use_proxy") eq 'yes' || get_variable("use_proxy") eq 'on' || get_variable("use_proxy") eq 'true' || get_variable("use_proxy") eq '1' ) )
+     {
+         if ( length ( get_variable("http_proxy") ) )        { push( @args, "-e use_proxy=yes"); push( @args, "-e http_proxy=" . get_variable( "http_proxy" ) ); }
+         if ( length ( get_variable("proxy_user") ) )        { push( @args, "-e proxy_user=" . get_variable( "proxy_user" ) ); }
+
+From 65fc39329f95d422b5f9b56ac463a4fd8b4fb7de Mon Sep 17 00:00:00 2001
+From: Jose Carlos Ramos Carmenates <jramoscarmenates@gmail.com>
+Date: Thu, 22 Oct 2015 12:00:21 -0400
+Subject: [PATCH 3/3] Minor changes.
+
+---
+ .gitignore | 1 -
+ apt-mirror | 1 +
+ 2 files changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/.gitignore b/.gitignore
+index d5725c2..b1a4ad5 100644
+--- a/.gitignore
++++ b/.gitignore
+@@ -1,3 +1,2 @@
+-*.bak
+ .idea
+ .gitignore
+\ No newline at end of file
+diff --git a/apt-mirror b/apt-mirror
+index 07ebae5..13242cf 100755
+--- a/apt-mirror
++++ b/apt-mirror
+@@ -226,6 +226,7 @@ sub download_urls
+     if ( get_variable("auth_no_challenge") == 1 )    { push( @args, "--auth-no-challenge" ); }
+     if ( get_variable("no_check_certificate") == 1 ) { push( @args, "--no-check-certificate" ); }
+     if ( get_variable("unlink") == 1 )               { push( @args, "--unlink" ); }
++
+     if ( length ( get_variable("use_proxy") ) && ( get_variable("use_proxy") eq 'yes' || get_variable("use_proxy") eq 'on' || get_variable("use_proxy") eq 'true' || get_variable("use_proxy") eq '1' ) )
+     {
+         if ( length ( get_variable("http_proxy") ) )        { push( @args, "-e use_proxy=yes"); push( @args, "-e http_proxy=" . get_variable( "http_proxy" ) ); }

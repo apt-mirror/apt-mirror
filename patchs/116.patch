@@ -1,0 +1,120 @@
+From 2427657b8b80bfa97374f8dc6074c898e21d13ff Mon Sep 17 00:00:00 2001
+From: ZDuygu <c1211040@student.cankaya.edu.tr>
+Date: Sun, 14 Apr 2019 23:39:15 +0300
+Subject: [PATCH 1/2] Checking if there is enough space on disk
+
+If there isn't enough space on disk, it doesn't download the files and cleans the packages downloaded at preparation.
+---
+ apt-mirror | 72 +++++++++++++++++++++++++++++++-----------------------
+ 1 file changed, 41 insertions(+), 31 deletions(-)
+
+diff --git a/apt-mirror b/apt-mirror
+index effac7e..acbe2ae 100755
+--- a/apt-mirror
++++ b/apt-mirror
+@@ -907,41 +907,51 @@ foreach ( values %urls_to_download )
+ 
+ my $size_output = format_bytes($need_bytes);
+ 
+-print "$size_output will be downloaded into archive.\n";
++(my $size_mirror) = $size_output =~ /\A([^:\s]+)/;
++my $directory = get_variable("mirror_path");
++my $command = "df /var/spool/apt-mirror/mirror/ | awk -F'[^0-9]*' 'NR==2 {print \$5}'";
++(my $directory_size) = format_bytes(`$command`*1000) =~ /\A([^:\s]+)/;
+ 
+-download_urls( "archive", sort keys %urls_to_download );
+-
+-######################################################################################
+-## Copy skel to main archive
+-
+-sub copy_file
+-{
+-    my ( $from, $to ) = @_;
+-    my $dir = dirname($to);
+-    return unless -f $from;
+-    make_path($dir) unless -d $dir;
+-    if ( get_variable("unlink") == 1 )
+-    {
+-        if ( compare( $from, $to ) != 0 ) { unlink($to); }
+-    }
+-    unless ( copy( $from, $to ) )
+-    {
+-        warn("apt-mirror: can't copy $from to $to");
+-        return;
+-    }
+-    my ( $atime, $mtime ) = ( stat($from) )[ 8, 9 ];
+-    utime( $atime, $mtime, $to ) or die("apt-mirror: can't utime $to");
++if ($directory_size <= $size_mirror) {
++	warn("apt-mirror: need space $size_output\n");
+ }
+-
+-foreach (@index_urls)
++else 
+ {
+-    die("apt-mirror: invalid url in index_urls") unless s[^(\w+)://][];
+-    copy_file( get_variable("skel_path") . "/" . sanitise_uri("$_"), get_variable("mirror_path") . "/" . sanitise_uri("$_") );
+-    copy_file( get_variable("skel_path") . "/" . sanitise_uri("$_"), get_variable("mirror_path") . "/" . sanitise_uri("$_") ) if (s/\.gz$//);
+-    copy_file( get_variable("skel_path") . "/" . sanitise_uri("$_"), get_variable("mirror_path") . "/" . sanitise_uri("$_") ) if (s/\.bz2$//);
+-    copy_file( get_variable("skel_path") . "/" . sanitise_uri("$_"), get_variable("mirror_path") . "/" . sanitise_uri("$_") ) if (s/\.xz$//);
++	print "$size_output will be downloaded into archive.\n";
++
++	download_urls( "archive", sort keys %urls_to_download );
++
++	######################################################################################
++	## Copy skel to main archive
++
++	sub copy_file
++	{
++		my ( $from, $to ) = @_;
++		my $dir = dirname($to);
++		return unless -f $from;
++		make_path($dir) unless -d $dir;
++		if ( get_variable("unlink") == 1 )
++		{
++			if ( compare( $from, $to ) != 0 ) { unlink($to); }
++		}
++		unless ( copy( $from, $to ) )
++		{
++			warn("apt-mirror: can't copy $from to $to");
++			return;
++		}
++		my ( $atime, $mtime ) = ( stat($from) )[ 8, 9 ];
++		utime( $atime, $mtime, $to ) or die("apt-mirror: can't utime $to");
++	}
++
++	foreach (@index_urls)
++	{
++		die("apt-mirror: invalid url in index_urls") unless s[^(\w+)://][];
++		copy_file( get_variable("skel_path") . "/" . sanitise_uri("$_"), get_variable("mirror_path") . "/" . sanitise_uri("$_") );
++		copy_file( get_variable("skel_path") . "/" . sanitise_uri("$_"), get_variable("mirror_path") . "/" . sanitise_uri("$_") ) if (s/\.gz$//);
++		copy_file( get_variable("skel_path") . "/" . sanitise_uri("$_"), get_variable("mirror_path") . "/" . sanitise_uri("$_") ) if (s/\.bz2$//);
++		copy_file( get_variable("skel_path") . "/" . sanitise_uri("$_"), get_variable("mirror_path") . "/" . sanitise_uri("$_") ) if (s/\.xz$//);
++	}
+ }
+-
+ ######################################################################################
+ ## Make cleaning script
+ 
+
+From 752a914957c0ecb033b15e946b2a75dd5cbf4bf4 Mon Sep 17 00:00:00 2001
+From: zduygu <zeynepduyguolmez@gmail.com>
+Date: Tue, 16 Feb 2021 23:24:01 +0300
+Subject: [PATCH 2/2] changed static directory path to variable
+
+---
+ apt-mirror | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/apt-mirror b/apt-mirror
+index acbe2ae..f5d4850 100755
+--- a/apt-mirror
++++ b/apt-mirror
+@@ -909,7 +909,7 @@ my $size_output = format_bytes($need_bytes);
+ 
+ (my $size_mirror) = $size_output =~ /\A([^:\s]+)/;
+ my $directory = get_variable("mirror_path");
+-my $command = "df /var/spool/apt-mirror/mirror/ | awk -F'[^0-9]*' 'NR==2 {print \$5}'";
++my $command = "df $directory | awk -F'[^0-9]*' 'NR==2 {print \$5}'";
+ (my $directory_size) = format_bytes(`$command`*1000) =~ /\A([^:\s]+)/;
+ 
+ if ($directory_size <= $size_mirror) {

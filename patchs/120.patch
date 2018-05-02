@@ -1,0 +1,114 @@
+From 4c9203a32d8cba71b03c5ba8e1d0929e2b272396 Mon Sep 17 00:00:00 2001
+From: Josh Braden <josbraden@gmail.com>
+Date: Mon, 29 Apr 2019 16:25:20 -0500
+Subject: [PATCH] Download 'cnf' Files
+
+- Mostly (completely) copied/edited from DEP-11 code
+- Downloads Commands-${arch} and Commands-${arch}.(gz|bz2|xz)
+- Fixes issue with upgrading Ubuntu 18.10 -> 19.04 via do-release-upgrade
+---
+ apt-mirror | 91 ++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ 1 file changed, 91 insertions(+)
+
+diff --git a/apt-mirror b/apt-mirror
+index effac7e..da82a3a 100755
+--- a/apt-mirror
++++ b/apt-mirror
+@@ -721,6 +721,97 @@ foreach ( keys %urls_to_download )
+     $skipclean{$_} = 1;
+ }
+ 
++######################################################################################
++## cnf directory download
++
++%urls_to_download = ();
++
++sub find_cnf_files_in_release
++{
++    # Look in the dists/$DIST/Release file for the cnf files that belong
++    # to the given component and architecture.
++
++    my $dist_uri  = shift;
++    my $component = shift;
++    my $arch      = shift;
++    my ( $release_uri, $release_path, $line ) = '';
++
++    $release_uri  = $dist_uri . "Release";
++    $release_path = get_variable("skel_path") . "/" . sanitise_uri($release_uri);
++
++    unless ( open STREAM, "<$release_path" )
++    {
++        warn( "Failed to open Release file from " . $release_uri );
++        return;
++    }
++
++    my $checksums = 0;
++    while ( $line = <STREAM> )
++    {
++        chomp $line;
++        if ($checksums)
++        {
++            if ( $line =~ /^ +(.*)$/ )
++            {
++                my @parts = split( / +/, $1 );
++                if ( @parts == 3 )
++                {
++                    my ( $sha1, $size, $filename ) = @parts;
++                    if ( $filename =~ m{^$component/cnf/(Commands-${arch}(\.(gz|bz2|xz))?)$} )
++                    {
++                        add_url_to_download( $dist_uri . $filename, $size );
++                    }
++                }
++                else
++                {
++                    warn("Malformed checksum line \"$1\" in $release_uri");
++                }
++            }
++            else
++            {
++                $checksums = 0;
++            }
++        }
++        if ( not $checksums )
++        {
++            if ( $line eq "SHA256:" )
++            {
++                $checksums = 1;
++            }
++        }
++    }
++}
++
++print "Processing cnf indexes: [";
++
++foreach (@config_binaries)
++{
++    my ( $arch, $uri, $distribution, @components ) = @{$_};
++    print "C";
++    if (@components)
++    {
++        $url = $uri . "/dists/" . $distribution . "/";
++
++        my $component;
++        foreach $component (@components)
++        {
++            find_cnf_files_in_release( $url, $component, $arch );
++        }
++    }
++}
++
++print "]\n\n";
++
++push( @index_urls, sort keys %urls_to_download );
++download_urls( "cnf", sort keys %urls_to_download );
++
++foreach ( keys %urls_to_download )
++{
++    s[^(\w+)://][];
++    s[~][%7E]g if get_variable("_tilde");
++    $skipclean{$_} = 1;
++}
++
+ ######################################################################################
+ ## Main download preparations
+ 

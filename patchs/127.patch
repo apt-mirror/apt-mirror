@@ -1,0 +1,24 @@
+From 8f5705707c6e413b0c2712b8e0ef7952d892ee49 Mon Sep 17 00:00:00 2001
+From: ShujieDev <45399491+ShujieDev@users.noreply.github.com>
+Date: Tue, 9 Jul 2019 14:32:29 +0200
+Subject: [PATCH] Add missing  support for xz translations missing
+
+Fix a bug which caused apt-mirror ignored Translation files
+i18n/Tranlation-* files are compressed as xz in Debian Buster instead bz2 as in earlier releases.
+---
+ apt-mirror | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/apt-mirror b/apt-mirror
+index effac7e..9fadc26 100755
+--- a/apt-mirror
++++ b/apt-mirror
+@@ -520,7 +520,7 @@ sub find_translation_files_in_release
+                 if ( @parts == 3 )
+                 {
+                     my ( $sha1, $size, $filename ) = @parts;
+-                    if ( $filename =~ m{^$component/i18n/Translation-[^./]*\.bz2$} )
++                    if ( $filename =~ m{^$component/i18n/Translation-[^./]*\.(bz2|xz)$} )
+                     {
+                         add_url_to_download( $dist_uri . $filename, $size );
+                     }

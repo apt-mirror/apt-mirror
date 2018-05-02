@@ -1,0 +1,26 @@
+From 7353ae0dfd1e26446f0edeb058cb583d95a80ee3 Mon Sep 17 00:00:00 2001
+From: pbirokas <pbirokas@gmail.com>
+Date: Wed, 6 Jun 2018 12:05:54 +0200
+Subject: [PATCH] Enable downloading icons @2 files in dep11
+
+Ubuntu18.04 have dep11 icons filenames with an "@" symbol.
+The regex "[^./]"  excluding also the @ symbol and ignores the files.
+
+Changing it to "(.*)" will now work with icons-.*@2.tar.gz files.
+---
+ apt-mirror | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/apt-mirror b/apt-mirror
+index effac7e..53626e7 100755
+--- a/apt-mirror
++++ b/apt-mirror
+@@ -666,7 +666,7 @@ sub find_dep11_files_in_release
+                 if ( @parts == 3 )
+                 {
+                     my ( $sha1, $size, $filename ) = @parts;
+-                    if ( $filename =~ m{^$component/dep11/(Components-${arch}\.yml|icons-[^./]+\.tar)\.(gz|bz2|xz)$} )
++                    if ( $filename =~ m{^$component/dep11/(Components-${arch}\.yml|icons-(.*)+\.tar)\.(gz|bz2|xz)$} )
+                     {
+                         add_url_to_download( $dist_uri . $filename, $size );
+                     }
