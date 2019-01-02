@@ -94,6 +94,7 @@ use File::Compare;
 use File::Path qw(make_path);
 use File::Basename;
 use Fcntl qw(:flock);
+use Getopt::Long;
 
 my $config_file;
 
@@ -128,11 +129,17 @@ my @index_urls;
 my @childrens       = ();
 my %skipclean       = ();
 my %clean_directory = ();
+my $verbose         = 0;
+my $progress        = 1;
 
 ######################################################################################
 ## Setting up $config_file variable
 
 $config_file = "/etc/apt/mirror.list";    # Default value
+GetOptions('verbose|v+', \$verbose,
+           'progress|p!', \$progress,
+    ) or die "Usage: apt-mirror [--verbose] [--[no-]progress] [configfile]\n";
+
 if ( $_ = shift )
 {
     die("apt-mirror: invalid config file specified") unless -e $_;
@@ -256,7 +263,9 @@ sub download_urls
         open URLS, ">" . get_variable("var_path") . "/$stage-urls.$i" or die("apt-mirror: can't write to intermediate file ($stage-urls.$i)");
         foreach (@part) { print URLS "$_\n"; }
         close URLS or die("apt-mirror: can't close intermediate file ($stage-urls.$i)");
-
+        if ($verbose >= 2) {
+            print join("\n  ", "Downloading batch $i:", @part), "\n";
+        }
         $pid = fork();
 
         die("apt-mirror: can't do fork in download_urls") if !defined($pid);
@@ -274,14 +283,17 @@ sub download_urls
         $nthreads--;
     }
 
-    print "Begin time: " . localtime() . "\n[" . scalar(@childrens) . "]... ";
+    print "Begin time: " . localtime() . "\n[" . scalar(@childrens) . "]... "
+        if $progress;
     while ( scalar @childrens )
     {
         my $dead = wait();
         @childrens = grep { $_ != $dead } @childrens;
-        print "[" . scalar(@childrens) . "]... ";
+        print "[" . scalar(@childrens) . "]... "
+            if $progress;
     }
-    print "\nEnd time: " . localtime() . "\n\n";
+    print "\nEnd time: " . localtime() . "\n\n"
+        if $progress;
 }
 
 ## Parse config
@@ -600,12 +612,13 @@ sub process_translation_index
     close STREAM;
 }
 
-print "Processing translation indexes: [";
+print "Processing translation indexes: ["
+    if $progress;
 
 foreach (@config_binaries)
 {
     my ( $arch, $uri, $distribution, @components ) = @{$_};
-    print "T";
+    print "T" if $progress;
     if (@components)
     {
         $url = $uri . "/dists/" . $distribution . "/";
@@ -618,7 +631,7 @@ foreach (@config_binaries)
     }
 }
 
-print "]\n\n";
+print "]\n\n" if $progress;
 
 push( @index_urls, sort keys %urls_to_download );
 download_urls( "translation", sort keys %urls_to_download );
@@ -691,12 +704,13 @@ sub find_dep11_files_in_release
     }
 }
 
-print "Processing DEP-11 indexes: [";
+print "Processing DEP-11 indexes: ["
+    if $progress;
 
 foreach (@config_binaries)
 {
     my ( $arch, $uri, $distribution, @components ) = @{$_};
-    print "D";
+    print "D" if $progress;
     if (@components)
     {
         $url = $uri . "/dists/" . $distribution . "/";
@@ -709,7 +723,7 @@ foreach (@config_binaries)
     }
 }
 
-print "]\n\n";
+print "]\n\n" if $progress;
 
 push( @index_urls, sort keys %urls_to_download );
 download_urls( "dep11", sort keys %urls_to_download );
@@ -815,12 +829,16 @@ sub process_index
         {    # Packages index
             $skipclean{ remove_double_slashes( $path . "/" . $lines{"Filename:"} ) } = 1;
             print FILES_ALL remove_double_slashes( $path . "/" . $lines{"Filename:"} ) . "\n";
+            print "ALL: " . remove_double_slashes( $path . "/" . $lines{"Filename:"} ) . "\n"
+                if $verbose >= 3;
             print FILES_MD5 $lines{"MD5sum:"} . "  " . remove_double_slashes( $path . "/" . $lines{"Filename:"} ) . "\n" if defined $lines{"MD5sum:"};
             print FILES_SHA1 $lines{"SHA1:"} . "  " . remove_double_slashes( $path . "/" . $lines{"Filename:"} ) . "\n" if defined $lines{"SHA1:"};
             print FILES_SHA256 $lines{"SHA256:"} . "  " . remove_double_slashes( $path . "/" . $lines{"Filename:"} ) . "\n" if defined $lines{"SHA256:"};
             if ( need_update( $mirror . "/" . $lines{"Filename:"}, $lines{"Size:"} ) )
             {
                 print FILES_NEW remove_double_slashes( $uri . "/" . $lines{"Filename:"} ) . "\n";
+                print "NEW: " . remove_double_slashes( $uri . "/" . $lines{"Filename:"} ) . "\n"
+                    if $verbose >= 1;
                 add_url_to_download( $uri . "/" . $lines{"Filename:"}, $lines{"Size:"} );
             }
         }
@@ -833,10 +851,14 @@ sub process_index
                 die("apt-mirror: invalid Sources format") if @file != 3;
                 $skipclean{ remove_double_slashes( $path . "/" . $lines{"Directory:"} . "/" . $file[2] ) } = 1;
                 print FILES_ALL remove_double_slashes( $path . "/" . $lines{"Directory:"} . "/" . $file[2] ) . "\n";
+                print "ALL: " . remove_double_slashes( $path . "/" . $lines{"Directory:"} . "/" . $file[2] ) . "\n"
+                    if $verbose >= 3;
                 print FILES_MD5 $file[0] . "  " . remove_double_slashes( $path . "/" . $lines{"Directory:"} . "/" . $file[2] ) . "\n";
                 if ( need_update( $mirror . "/" . $lines{"Directory:"} . "/" . $file[2], $file[1] ) )
                 {
                     print FILES_NEW remove_double_slashes( $uri . "/" . $lines{"Directory:"} . "/" . $file[2] ) . "\n";
+                    print "NEW: " . remove_double_slashes( $uri . "/" . $lines{"Directory:"} . "/" . $file[2] ) . "\n"
+                        if $verbose >= 1;
                     add_url_to_download( $uri . "/" . $lines{"Directory:"} . "/" . $file[2], $file[1] );
                 }
             }
@@ -846,12 +868,13 @@ sub process_index
     close STREAM;
 }
 
-print "Processing indexes: [";
+print "Processing indexes: ["
+    if $progress;
 
 foreach (@config_sources)
 {
     my ( $uri, $distribution, @components ) = @{$_};
-    print "S";
+    print "S" if $progress;
     if (@components)
     {
         my $component;
@@ -869,7 +892,7 @@ foreach (@config_sources)
 foreach (@config_binaries)
 {
     my ( $arch, $uri, $distribution, @components ) = @{$_};
-    print "P";
+    print "P" if $progress;
     if (@components)
     {
         my $component;
@@ -886,7 +909,8 @@ foreach (@config_binaries)
 
 clear_stat_cache();
 
-print "]\n\n";
+print "]\n\n"
+    if $progress;
 
 close FILES_ALL;
 close FILES_NEW;
@@ -1019,6 +1043,7 @@ else
     foreach (@rm_files)
     {
         print CLEAN "rm -f '$_'\n";
+        print "  $_\n" if $verbose >= 1;
         print CLEAN "echo -n '[" . int( 100 * $i / $total ) . "\%]'\n" unless $i % 500;
         print CLEAN "echo -n .\n" unless $i % 10;
         $i++;
