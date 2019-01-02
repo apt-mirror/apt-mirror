@@ -8,7 +8,7 @@ apt-mirror - apt sources mirroring tool
 
 =head1 SYNOPSIS
 
-apt-mirror [configfile]
+apt-mirror [--[no-]progress] [--verbose] [configfile]
 
 =head1 DESCRIPTION
 
