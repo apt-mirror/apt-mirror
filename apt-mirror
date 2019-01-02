@@ -16,14 +16,34 @@ A small and efficient tool that lets you mirror a part of or
 the whole Debian GNU/Linux distribution or any other apt sources.
 
 Main features:
- * It uses a config similar to APT's F<sources.list>
- * It's fully pool compliant
- * It supports multithreaded downloading
- * It supports multiple architectures at the same time
- * It can automatically remove unneeded files
- * It works well on an overloaded Internet connection
- * It never produces an inconsistent mirror including while mirroring
- * It works on all POSIX compliant systems with Perl and wget
+
+=over
+
+=item *
+It uses a config similar to APT's F<sources.list>
+
+=item *
+It's fully pool compliant
+
+=item *
+It supports multithreaded downloading
+
+=item *
+It supports multiple architectures at the same time
+
+=item *
+It can automatically remove unneeded files
+
+=item *
+It works well on an overloaded Internet connection
+
+=item *
+It never produces an inconsistent mirror including while mirroring
+
+=item *
+It works on all POSIX compliant systems with Perl and wget
+
+=back
 
 =head1 COMMENTS
 
