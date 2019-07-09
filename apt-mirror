@@ -106,13 +106,13 @@ my %config_variables = (
     "var_path"    => '$base_path/var',
     "cleanscript" => '$var_path/clean.sh',
     "_contents"   => 1,
-    "_autoclean"  => 0,
+    "_autoclean"  => 1,
     "_tilde"      => 0,
     "_plus"      => 0,
     "limit_rate"  => '100m',
     "run_postmirror"       => 1,
-    "auth_no_challenge"    => 0,
-    "no_check_certificate" => 0,
+    "auth_no_challenge"    => 1,
+    "no_check_certificate" => 1,
     "unlink"               => 0,
     "postmirror_script"    => '$var_path/postmirror.sh',
     "use_proxy"            => 'off',
@@ -264,7 +264,7 @@ sub download_urls
 
         if ( $pid == 0 )
         {
-            exec 'wget', '--no-cache', '--limit-rate=' . get_variable("limit_rate"), '-t', '5', '-r', '-N', '-l', 'inf', '-o', get_variable("var_path") . "/$stage-log.$i", '-i', get_variable("var_path") . "/$stage-urls.$i", @args;
+            exec '/usr/bin/wget', '-v', '--no-cache', '--limit-rate=' . get_variable("limit_rate"), '-T', '30', '-t', '2', '-r', '-N', '-l', 'inf', '-o', get_variable("var_path") . "/$stage-log.$i", '-i', get_variable("var_path") . "/$stage-urls.$i", '-U', 'Aptly/1.0', '--no-hsts', '--no-proxy', @args;
 
             # shouldn't reach this unless exec fails
             die("\n\nCould not run wget, please make sure its installed and in your path\n\n");
@@ -831,7 +831,7 @@ sub process_index
                 add_url_to_download( $uri . "/" . $lines{"Filename:"}, $lines{"Size:"} );
             }
         }
-        else
+        elsif ( exists $lines{"Files:"} )
         {    # Sources index
             foreach ( split( /\n/, $lines{"Files:"} ) )
             {

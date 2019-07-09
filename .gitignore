@@ -1,2 +1,4 @@
 *.bak
 *.tar.*
+github.com/*
+github.com
