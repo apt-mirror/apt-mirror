@@ -411,6 +411,7 @@ foreach (@config_sources)
     }
     else
     {
+        add_url_to_download( $uri . "/$distribution/InRelease" );
         add_url_to_download( $uri . "/$distribution/Release" );
         add_url_to_download( $uri . "/$distribution/Release.gpg" );
         add_url_to_download( $uri . "/$distribution/Sources.gz" );
@@ -453,6 +454,7 @@ foreach (@config_binaries)
     }
     else
     {
+        add_url_to_download( $uri . "/$distribution/InRelease" );
         add_url_to_download( $uri . "/$distribution/Release" );
         add_url_to_download( $uri . "/$distribution/Release.gpg" );
         add_url_to_download( $uri . "/$distribution/Packages.gz" );
