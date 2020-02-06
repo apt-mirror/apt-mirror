@@ -722,6 +722,99 @@ foreach ( keys %urls_to_download )
 }
 
 ######################################################################################
+## by-hash SHA256 files download
+
+%urls_to_download = ();
+
+sub find_by_hash_sha256_files_in_release
+{
+    # Look in the dists/$DIST/Release file for the by-hash SHA256 files that belong
+    # to the given component and architecture.
+
+    my $dist_uri  = shift; 
+    my $component = shift;
+    my $arch      = shift;
+    my ( $release_uri, $release_path, $line ) = '';
+
+    $release_uri  = $dist_uri . "Release";
+    $release_path = get_variable("skel_path") . "/" . sanitise_uri($release_uri);
+
+    unless ( open STREAM, "<$release_path" )
+    {
+        warn( "Failed to open Release file from " . $release_uri );
+        return;
+    }
+
+    my $checksums = 0;
+    while ( $line = <STREAM> )
+    {
+        chomp $line;
+        if ($checksums)
+        {
+            if ( $line =~ /^ +(.*)$/ )
+            {
+                my @parts = split( / +/, $1 );
+                if ( @parts == 3 )
+                {
+                    my ( $sha256, $size, $filename ) = @parts;
+                    my $dirname = dirname($filename);
+                    my $sha256_filename = '/'.$dirname.'/by-hash/SHA256/'.$sha256;
+                    {
+                        add_url_to_download( $dist_uri . $sha256_filename );
+                    }
+                }
+                else
+                {
+                    warn("Malformed checksum line \"$1\" in $release_uri");
+                }
+            }
+            else
+            {
+                $checksums = 0;
+            }
+        }
+        if ( not $checksums )
+        {
+            if ( $line eq "SHA256:" )
+            {
+                $checksums = 1;
+            }
+        }
+    }
+}
+
+print "Processing SHA256 by-hash files ["
+    if $progress;
+
+foreach (@config_binaries)
+{
+    my ( $arch, $uri, $distribution, @components ) = @{$_};
+    print "D" if $progress;
+    if (@components)
+    {
+        $url = $uri . "/dists/" . $distribution . "/";
+
+        my $component;
+        foreach $component (@components)
+        {
+            find_by_hash_sha256_files_in_release( $url, $component, $arch );
+        }
+    }
+}
+
+print "]\n\n" if $progress;
+
+push( @index_urls, sort keys %urls_to_download );
+download_urls( "by-hash-SHA256", sort keys %urls_to_download );
+
+foreach ( keys %urls_to_download )
+{
+    s[^(\w+)://][];
+    s[~][%7E]g if get_variable("_tilde");
+    $skipclean{$_} = 1;
+}
+
+######################################################################################
 ## Main download preparations
 
 %urls_to_download = ();
