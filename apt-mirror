@@ -485,7 +485,8 @@ sub sanitise_uri
 {
     my $uri = shift;
     $uri =~ s[^(\w+)://][];
-    $uri =~ s/^([^@]+)?@?// if $uri =~ /@/;
+    #$uri =~ s/^([^@]+)?@?// if $uri =~ /@/;
+    $uri =~ s/^([^@]+)?@?// if (split '/',$uri)[0] =~ /@/;
     $uri =~ s&:\d+/&/&;                       # and port information
     $uri =~ s/~/\%7E/g if get_variable("_tilde");
     return $uri;
