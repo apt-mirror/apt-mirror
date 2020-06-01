@@ -522,7 +522,7 @@ sub find_translation_files_in_release
                 if ( @parts == 3 )
                 {
                     my ( $sha1, $size, $filename ) = @parts;
-                    if ( $filename =~ m{^$component/i18n/Translation-[^./]*\.bz2$} )
+                    if ( $filename =~ m{^$component/i18n/Translation-[^./]*\.(bz2|xz)$} )
                     {
                         add_url_to_download( $dist_uri . $filename, $size );
                     }
