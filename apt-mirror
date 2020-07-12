@@ -384,6 +384,7 @@ lock_aptmirror();
 ## Skel download
 
 my %urls_to_download = ();
+my %sha256_to_link = ();
 my ( $url, $arch );
 
 sub remove_double_slashes
@@ -405,6 +406,16 @@ sub add_url_to_download
     $url =~ s[~][%7E]g if get_variable("_tilde");
     $url =~ s[\+][%2B]g if get_variable("_plus");
     $skipclean{$url} = 1;
+}
+
+sub add_sha256_to_link
+{
+    my $url = remove_double_slashes(shift);
+    my $sha256 = shift;
+    $sha256_to_link{$url} = $sha256;
+    $url =~ s[^(\w+)://][];
+    $url =~ s[~][%7E]g if get_variable("_tilde");
+    $skipclean{dirname($url) . "/by-hash/SHA256/" . $sha256} = 1;
 }
 
 foreach (@config_sources)
@@ -525,11 +536,13 @@ sub find_metadata_in_release
                             )
                             {
                                 add_url_to_download( $dist_uri . $filename, $size );
+                                add_sha256_to_link( $dist_uri . $filename, $sha256 );
                             }
                         } else {
                             if ($filename =~ m{^Sources${compressed_extension_regex}}
                             ) {
                                 add_url_to_download( $dist_uri . $filename, $size );
+                                add_sha256_to_link( $dist_uri . $filename, $sha256 );
                             }
                         }
                     } else {
@@ -554,6 +567,7 @@ sub find_metadata_in_release
                         )
                         {
                             add_url_to_download( $dist_uri . $filename, $size );
+                            add_sha256_to_link( $dist_uri . $filename, $sha256 );
                         }
                     }
                 }
@@ -755,6 +769,13 @@ sub process_index
         return;
     }
 
+    my $index_uri = remove_double_slashes($uri . "/" . $index);
+    unless ($sha256_to_link{$index_uri})
+    {
+        use Digest::file;
+        $sha256_to_link{$index_uri} = Digest::file::digest_file_hex("$path/$index", "SHA-256");
+    }
+
     while ( $package = <STREAM> )
     {
         local $/ = "\n";
@@ -899,6 +920,14 @@ foreach (@index_urls)
     copy_file( get_variable("skel_path") . "/" . sanitise_uri("$_"), get_variable("mirror_path") . "/" . sanitise_uri("$_") ) if (s/\.gz$//);
     copy_file( get_variable("skel_path") . "/" . sanitise_uri("$_"), get_variable("mirror_path") . "/" . sanitise_uri("$_") ) if (s/\.bz2$//);
     copy_file( get_variable("skel_path") . "/" . sanitise_uri("$_"), get_variable("mirror_path") . "/" . sanitise_uri("$_") ) if (s/\.xz$//);
+}
+
+foreach my $url (sort keys %sha256_to_link)
+{
+    my $from = get_variable("mirror_path") . "/" . sanitise_uri("$url");
+    my $dir = dirname($from) . "/by-hash/SHA256";
+    my $shapath = $dir . "/" . $sha256_to_link{$url};
+    copy_file($from, $shapath);
 }
 
 ######################################################################################
