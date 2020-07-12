@@ -479,6 +479,7 @@ sub find_metadata_in_release
 
     my ( $release_uri, $release_path, $line ) = '';
     my $component_regex = undef;
+    my $arch_regex = "(?:${arch}|all)";
     my $compressed_extension_regex = '(?:\.(?:gz|bz2|xz))?$';
     my $dist_uri;
 
@@ -534,17 +535,17 @@ sub find_metadata_in_release
                     } else {
                         if (
                             (
-                                $filename =~ m{^Contents-${arch}${compressed_extension_regex}$}
+                                $filename =~ m{^Contents-${arch_regex}${compressed_extension_regex}$}
                             ) or (
                                 $filename =~ m{^Packages${compressed_extension_regex}$}
                             ) or (
-                                $filename =~ m{^${component_regex}/Contents-${arch}${compressed_extension_regex}$}
+                                $filename =~ m{^${component_regex}/Contents-${arch_regex}${compressed_extension_regex}$}
                             ) or (
-                                $filename =~ m{^${component_regex}/binary-${arch}/Packages${compressed_extension_regex}$}
+                                $filename =~ m{^${component_regex}/binary-${arch_regex}/Packages${compressed_extension_regex}$}
                             ) or (
-                                $filename =~ m{^${component_regex}/cnf/Commands-${arch}${compressed_extension_regex}$}
+                                $filename =~ m{^${component_regex}/cnf/Commands-${arch_regex}${compressed_extension_regex}$}
                             ) or (
-                                $filename =~ m{^${component_regex}/dep11/Components-${arch}}
+                                $filename =~ m{^${component_regex}/dep11/Components-${arch_regex}}
                             ) or (
                                 $filename =~ m{^${component_regex}/dep11/icons-}
                             ) or (
@@ -724,6 +725,7 @@ sub process_index
 {
     my $uri   = shift;
     my $index = shift;
+    my $optional = shift;
     my ( $path, $package, $mirror, $files ) = '';
 
     $path = sanitise_uri($uri);
@@ -745,6 +747,10 @@ sub process_index
 
     unless ( open STREAM, "<$path/$index" )
     {
+        if ($optional)
+        {
+            return;
+        }
         warn("apt-mirror: can't open index $path/$index in process_index");
         return;
     }
@@ -824,6 +830,7 @@ foreach (@config_binaries)
         foreach $component (@components)
         {
             process_index( $uri, "/dists/$distribution/$component/binary-$arch/Packages" );
+            process_index( $uri, "/dists/$distribution/$component/binary-all/Packages", 1 );
         }
     }
     elsif ($distribution)
