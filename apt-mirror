@@ -288,7 +288,7 @@ sub download_urls
 
 sub parse_config_line
 {
-    my $pattern_deb_line = qr/^[\t ]*(?<type>deb-src|deb)(?:-(?<arch>[\w\-]+))?[\t ]+(?:\[(?<options>[^\]]+)\][\t ]+)?(?<uri>[^\s]+)[\t ]+(?<components>.+)$/;
+    my $pattern_deb_line = qr/^[\t ]*(?<type>deb-src|deb)(?:-(?<arch>[\w\-]+))?[\t ]+(?:\[(?<options>[^\]]+)\][\t ]+)?(?<uri>[^\s]+)[\t ]?(?<components>.*)$/;
     my $line = $_;
     my %config;
     if ( $line =~ $pattern_deb_line ) {
@@ -452,13 +452,21 @@ foreach (@config_binaries)
             add_url_to_download( $url . $_ . "/cnf/Commands-" . $arch . ".xz" );            
         }
     }
-    else
+    elsif ($distribution)
     {
         add_url_to_download( $uri . "/$distribution/Release" );
         add_url_to_download( $uri . "/$distribution/Release.gpg" );
         add_url_to_download( $uri . "/$distribution/Packages.gz" );
         add_url_to_download( $uri . "/$distribution/Packages.bz2" );
         add_url_to_download( $uri . "/$distribution/Packages.xz" );
+    }
+    else
+    {
+        add_url_to_download( $uri . "/Release" );
+        add_url_to_download( $uri . "/Release.gpg" );
+        add_url_to_download( $uri . "/Packages.gz" );
+        add_url_to_download( $uri . "/Packages.bz2" );
+        add_url_to_download( $uri . "/Packages.xz" );
     }
 }
 
@@ -880,9 +888,13 @@ foreach (@config_binaries)
             process_index( $uri, "/dists/$distribution/$component/binary-$arch/Packages" );
         }
     }
-    else
+    elsif ($distribution)
     {
         process_index( $uri, "/$distribution/Packages" );
+    }
+    else
+    {
+        process_index( $uri, "/Packages" );
     }
 }
 
