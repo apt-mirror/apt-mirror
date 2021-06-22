@@ -1,6 +1,18 @@
 This is a fork of the original apt-mirror.
 ==========
 
+The easiest way to get going with this version is to clone it somewhere on your local system, and then copy or symlink it to /usr/bin/apt-mirror.
+
+Make a backup of the original located there first.
+
+`sudo cp /usr/bin/apt-mirror /usr/bin/apt-mirror.original`
+
+Either way if you copy or symlink, change the permissions.
+
+`sudo chown root:root /usr/bin/apt-mirror && sudo chmod 755 /usr/bin/apt-mirror`
+
+---
+
 This version now supports cnf (command-not-found) folder structures in the newer repos (such as eaon and focal). https://github.com/Stifler6996/apt-mirror/commit/c6a8a7eacf48f72453f1d5920a1514761679c952
 
 This version adds support for files with the "@" character in filenames. https://github.com/Stifler6996/apt-mirror/commit/36255f35e9a8698c46ce20d06412e8bc16f821fc
