@@ -339,8 +339,8 @@ sub download_urls
     push( @args, "--no-cache --no-hsts --retry-on-host-error" );
     push( @args, "--retry-connrefused --waitretry=3" );
 
-
     print "Downloading " . scalar(@urls) . " $stage files using $nthreads threads...\n";
+
 
     while ( scalar @urls )
     {
