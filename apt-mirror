@@ -249,16 +249,32 @@ sub download_urls
     @urls = @_;
     $nthreads = @urls if @urls < $nthreads;
 
-    if ( get_variable("auth_no_challenge") == 1 )    { push( @args, "--auth-no-challenge" ); }
-    if ( get_variable("no_check_certificate") == 1 ) { push( @args, "--no-check-certificate" ); }
-    if ( get_variable("unlink") == 1 )               { push( @args, "--unlink" ); }
+    # set auth_no_challenge 1
+    if ( get_variable("auth_no_challenge") == 1 )
+    {
+        push( @args, "--auth-no-challenge" );
+    }
 
+    # set no_check_certificate 1
+    if ( get_variable("no_check_certificate") == 1 )
+    {
+        push( @args, "--no-check-certificate" );
+    }
+
+    # set unlink 1
+    if ( get_variable("unlink") == 1 )
+    {
+        push( @args, "--unlink" );
+    }
+
+    # set tries 3
     if ( get_variable("tries") > 0 )
     {
         # '-t=30', '--tries=3'
         push( @args, "--tries=" . get_variable("tries") );
     }
 
+    # set timeout 30
     if ( get_variable("timeout") > 0 )
     {
         # '-T=30', '--timeout=30', '--read-timeout=30', '--dns-timeout=30', '--connect-timeout=30',
@@ -268,18 +284,21 @@ sub download_urls
         push( @args, "--connect-timeout=" . get_variable("timeout") );
     }
 
+    # set limit_rate 25m
     if ( length( get_variable("limit_rate") ) )
     {
         # '--limit-rate=' . get_variable("limit_rate"),
         push( @args, "--limit-rate=" . get_variable("limit_rate") );
     }
 
+    # set user_agent Aptly/1.0
     if ( length( get_variable("user_agent") ) )
     {
         # '--user-agent=' . get_variable("user_agent"),
         push( @args, "--user-agent=" . get_variable("user_agent") );
     }
 
+    # set cookies_file /tmp/apt-mirror.cookies
     if ( length( get_variable("cookies_file") ) )
     {
         # '--load-cookies=afile --save-cookies=afile --keep-session-cookies'
@@ -294,6 +313,10 @@ sub download_urls
         push( @args, "--keep-session-cookies" );
     }
 
+    # set use_proxy       0
+    # set http_proxy      127.0.0.1:3128
+    # set proxy_user      user
+    # set proxy_password  password
     if ( length( get_variable("use_proxy") ) && ( get_variable("use_proxy") eq 'yes' || get_variable("use_proxy") eq 'on'  || get_variable("use_proxy") eq 'true' || get_variable("use_proxy") eq '1' ) )
     {
         if ( length( get_variable("http_proxy") ) || length( get_variable("https_proxy") ) ) { push( @args, "-e use_proxy=yes" ); }
@@ -308,7 +331,7 @@ sub download_urls
         push( @args, "--no-proxy" );
     }
 
-    #--- default argumets for wget
+    #--- default arguments for wget
     #-----------------------------
     # '-v', '-r', '-c', '-N', '-l', 'inf',
     # '--no-cache', '--no-hsts', '--retry-connrefused', '--waitretry=3',
