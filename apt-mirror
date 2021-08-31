@@ -94,6 +94,7 @@ use File::Compare;
 use File::Path qw(make_path);
 use File::Basename;
 use Fcntl qw(:flock);
+use Fcntl qw(F_GETFL F_SETFL O_NONBLOCK);
 use Getopt::Long;
 
 my $config_file;
@@ -109,20 +110,23 @@ my %config_variables = (
     "_contents"   => 1,
     "_autoclean"  => 1,
     "_tilde"      => 0,
-    "_plus"      => 0,
+    "_plus"       => 0,
     "limit_rate"  => '100m',
-    "run_postmirror"       => 1,
     "auth_no_challenge"    => 1,
     "no_check_certificate" => 1,
+    "no_verbose"           => 0,
     "unlink"               => 0,
     "postmirror_script"    => '$var_path/postmirror.sh',
+    "run_postmirror"       => 1,
+    "premirror_script"     => '$var_path/premirror.sh',
+    "run_premirror"        => 1,
     "use_proxy"            => 0,
     "http_proxy"           => '',
     "https_proxy"          => '',
     "proxy_user"           => '',
     "proxy_password"       => '',
     "dry_run"              => '0',
-    "user_agent"           => 'Aptly',
+    "user_agent"           => 'Aptly/1.0',
     "timeout"              => 30,
     "none"                 => '0'
 );
@@ -226,7 +230,9 @@ sub lock_aptmirror
     my $lock = flock( LOCK_FILE, LOCK_EX | LOCK_NB );
     if ( !$lock )
     {
-        die("apt-mirror is already running, exiting");
+        #-- die("apt-mirror is already running, exiting");
+        my $flags = fcntl( LOCK_FILE, F_GETFL, 0) or die "Cannot set flags for lock file: $!\n";
+		    fcntl( LOCK_FILE, F_SETFL, $flags | O_NONBLOCK) or die "Cannot get lock file, apt-mirror is running already: $!\n";
     }
 }
 
@@ -249,68 +255,78 @@ sub download_urls
     @urls = @_;
     $nthreads = @urls if @urls < $nthreads;
 
+    #--- clear RAM
+    system('sync; echo 1 > /proc/sys/vm/drop_caches');
+
+
     # set auth_no_challenge 1
     if ( get_variable("auth_no_challenge") == 1 )
     {
-        push( @args, "--auth-no-challenge" );
+        push( @args, " --auth-no-challenge" );
     }
 
     # set no_check_certificate 1
     if ( get_variable("no_check_certificate") == 1 )
     {
-        push( @args, "--no-check-certificate" );
+        push( @args, " --no-check-certificate" );
     }
 
     # set unlink 1
     if ( get_variable("unlink") == 1 )
     {
-        push( @args, "--unlink" );
+        push( @args, " --unlink" );
     }
 
     # set tries 3
     if ( get_variable("tries") > 0 )
     {
         # '-t=30', '--tries=3'
-        push( @args, "--tries=" . get_variable("tries") );
+        push( @args, " --tries=" . get_variable("tries") );
     }
 
     # set timeout 30
     if ( get_variable("timeout") > 0 )
     {
         # '-T=30', '--timeout=30', '--read-timeout=30', '--dns-timeout=30', '--connect-timeout=30',
-        push( @args, "--timeout=" . get_variable("timeout") );
-        push( @args, "--read-timeout=" . get_variable("timeout") );
-        push( @args, "--dns-timeout=" . get_variable("timeout") );
-        push( @args, "--connect-timeout=" . get_variable("timeout") );
+        push( @args, " --timeout=" . get_variable("timeout") );
+        push( @args, " --read-timeout=" . get_variable("timeout") );
+        push( @args, " --dns-timeout=" . get_variable("timeout") );
+        push( @args, " --connect-timeout=" . get_variable("timeout") );
     }
 
     # set limit_rate 25m
     if ( length( get_variable("limit_rate") ) )
     {
         # '--limit-rate=' . get_variable("limit_rate"),
-        push( @args, "--limit-rate=" . get_variable("limit_rate") );
+        push( @args, " --limit-rate=" . get_variable("limit_rate") );
     }
 
     # set user_agent Aptly/1.0
     if ( length( get_variable("user_agent") ) )
     {
         # '--user-agent=' . get_variable("user_agent"),
-        push( @args, "--user-agent=" . get_variable("user_agent") );
+        push( @args, " --user-agent=" . get_variable("user_agent") );
+    }
+    else
+    {
+        push( @args, " --user-agent='Aptly/1.0' " );
     }
 
     # set cookies_file /tmp/apt-mirror.cookies
     if ( length( get_variable("cookies_file") ) )
     {
         # '--load-cookies=afile --save-cookies=afile --keep-session-cookies'
-        push( @args, "--load-cookies=" . get_variable("cookies_file") );
-        push( @args, "--save-cookies=" . get_variable("cookies_file") );
-        push( @args, "--keep-session-cookies" );
+        push( @args, " --load-cookies=" . get_variable("cookies_file") );
+        push( @args, " --save-cookies=" . get_variable("cookies_file") );
+        push( @args, " --keep-session-cookies" );
+        system('touch ' . get_variable("cookies_file"));
     }
     else {
         # /tmp/apt-mirror.cookies
-        push( @args, "--load-cookies=/tmp/apt-mirror.cookies" );
-        push( @args, "--save-cookies=/tmp/apt-mirror.cookies" );
-        push( @args, "--keep-session-cookies" );
+        push( @args, " --load-cookies=/tmp/apt-mirror.cookies" );
+        push( @args, " --save-cookies=/tmp/apt-mirror.cookies" );
+        push( @args, " --keep-session-cookies" );
+        system('touch /tmp/apt-mirror.cookies');
     }
 
     # set use_proxy       0
@@ -319,25 +335,34 @@ sub download_urls
     # set proxy_password  password
     if ( length( get_variable("use_proxy") ) && ( get_variable("use_proxy") eq 'yes' || get_variable("use_proxy") eq 'on'  || get_variable("use_proxy") eq 'true' || get_variable("use_proxy") eq '1' ) )
     {
-        if ( length( get_variable("http_proxy") ) || length( get_variable("https_proxy") ) ) { push( @args, "-e use_proxy=yes" ); }
-        if ( length( get_variable("http_proxy") ) ) { push( @args, "-e http_proxy=" . get_variable("http_proxy") ); }
-        if ( length( get_variable("https_proxy") ) ) { push( @args, "-e https_proxy=" . get_variable("https_proxy") ); }
-        if ( length( get_variable("proxy_user") ) ) { push( @args, "-e proxy_user=" . get_variable("proxy_user") ); }
-        if ( length( get_variable("proxy_password") ) ) { push( @args, "-e proxy_password=" . get_variable("proxy_password") ); }
+        if ( length( get_variable("http_proxy") ) || length( get_variable("https_proxy") ) ) { push( @args, " -e use_proxy=yes" ); }
+        if ( length( get_variable("http_proxy") ) ) { push( @args, " -e http_proxy=" . get_variable("http_proxy") ); }
+        if ( length( get_variable("https_proxy") ) ) { push( @args, " -e https_proxy=" . get_variable("https_proxy") ); }
+        if ( length( get_variable("proxy_user") ) ) { push( @args, " -e proxy_user=" . get_variable("proxy_user") ); }
+        if ( length( get_variable("proxy_password") ) ) { push( @args, " -e proxy_password=" . get_variable("proxy_password") ); }
     }
     else
     {
         # --no-proxy
-        push( @args, "--no-proxy" );
+        push( @args, " --no-proxy" );
+    }
+
+    if ( get_variable("no_verbose") == 1 )
+    {
+        push( @args, " --no-verbose" );
+    }
+    else
+    {
+        push( @args, " --verbose" );
     }
 
     #--- default arguments for wget
     #-----------------------------
     # '-v', '-r', '-c', '-N', '-l', 'inf',
     # '--no-cache', '--no-hsts', '--retry-connrefused', '--waitretry=3',
-    push( @args, "-v -r -c -N -l inf" );
-    push( @args, "--no-cache --no-hsts --retry-on-host-error" );
-    push( @args, "--retry-connrefused --waitretry=3" );
+    push( @args, " -r -c -N -l inf" );
+    push( @args, " --no-cache --no-hsts --retry-on-host-error" );
+    push( @args, " --retry-connrefused --waitretry=3" );
 
     print "Downloading " . scalar(@urls) . " $stage files using $nthreads threads...\n";
 
@@ -363,7 +388,7 @@ sub download_urls
             @args);
 
             # shouldn't reach this unless exec fails
-            die("\n\nCould not run wget, please make sure its installed and in your path\n\n");
+            die("\n\nCould not run wget, please make sure its installed and in your path\n\n")
                 if $? == -1;
             my $exit_status = $? >> 8;
             if ( $exit_status ) {
@@ -396,13 +421,17 @@ sub download_urls
     }
     print "\nEnd time: " . localtime() . "\n\n"
         if $progress;
+
+    #--- clear RAM
+    system('sync; echo 1 > /proc/sys/vm/drop_caches');
+
 }
 
 ## Parse config
 
 sub parse_config_line
 {
-    my $pattern_deb_line = qr/^[\t ]*(?<type>deb-src|deb)(?:-(?<arch>[\w\-]+))?[\t ]+(?:\[(?<options>[^\]]+)\][\t ]+)?(?<uri>[^\s]+)[\t ]+(?<components>.+)$/;
+    my $pattern_deb_line = qr/^[\t ]*(?<type>deb-src|deb)(?:-(?<arch>[\w\-]+))?[\t ]+(?:\[(?<options>[^\]]+)\][\t ]+)?(?<uri>[^\s]+)[\t ]?(?<components>.*)$/;
     my $line = $_;
     my %config;
     if ( $line =~ $pattern_deb_line ) {
@@ -468,6 +497,31 @@ close CONFIG;
 
 die("Please explicitly specify 'defaultarch' in mirror.list") unless get_variable("defaultarch");
 
+
+######################################################################################
+## execute pre-mirror script
+
+#--- clear RAM
+system('sync; echo 3 > /proc/sys/vm/drop_caches');
+
+
+if ( get_variable("run_premirror") )
+{
+    print "Running the Pre Mirror script ...\n";
+    print "(" . get_variable("premirror_script") . ")\n\n";
+    if ( -x get_variable("premirror_script") )
+    {
+        system( get_variable("premirror_script"), '' );
+    }
+    else
+    {
+        system( '/bin/sh', get_variable("premirror_script") );
+    }
+    print "\nPre Mirror script has completed. See above output for any possible errors.\n\n";
+}
+
+
+
 ######################################################################################
 ## Create the 3 needed directories if they don't exist yet
 my @needed_directories = ( get_variable("mirror_path"), get_variable("skel_path"), get_variable("var_path") );
@@ -485,6 +539,10 @@ lock_aptmirror();
 
 ######################################################################################
 ## Skel download
+
+#--- clear RAM
+system('sync; echo 3 > /proc/sys/vm/drop_caches');
+
 
 my %urls_to_download = ();
 my ( $url, $arch );
@@ -569,9 +627,10 @@ foreach (@config_binaries)
             add_url_to_download( $url . $_ . "/binary-" . $arch . "/Packages.bz2" );
             add_url_to_download( $url . $_ . "/binary-" . $arch . "/Packages.xz" );
             add_url_to_download( $url . $_ . "/i18n/Index" );
+            add_url_to_download( $url . $_ . "/cnf/Commands-" . $arch . ".xz" );
         }
     }
-    else
+    elsif ($distribution)
     {
         add_url_to_download( $uri . "/$distribution/InRelease" );
         add_url_to_download( $uri . "/$distribution/Release" );
@@ -580,6 +639,16 @@ foreach (@config_binaries)
         add_url_to_download( $uri . "/$distribution/Packages.gz" );
         add_url_to_download( $uri . "/$distribution/Packages.bz2" );
         add_url_to_download( $uri . "/$distribution/Packages.xz" );
+    }
+    else
+    {
+        add_url_to_download( $uri . "/InRelease" );
+        add_url_to_download( $uri . "/Release" );
+        add_url_to_download( $uri . "/Release.gpg" );
+        add_url_to_download( $uri . "/Packages" );
+        add_url_to_download( $uri . "/Packages.gz" );
+        add_url_to_download( $uri . "/Packages.bz2" );
+        add_url_to_download( $uri . "/Packages.xz" );
     }
 }
 
@@ -601,13 +670,18 @@ foreach ( keys %urls_to_download )
 ######################################################################################
 ## Translation index download
 
+#--- clear RAM
+system('sync; echo 3 > /proc/sys/vm/drop_caches');
+
+
 %urls_to_download = ();
 
 sub sanitise_uri
 {
     my $uri = shift;
     $uri =~ s[^(\w+)://][];
-    $uri =~ s/^([^@]+)?@?// if $uri =~ /@/;
+    #$uri =~ s/^([^@]+)?@?// if $uri =~ /@/;
+    $uri =~ s/^([^@]+)?@?// if (split '/',$uri)[0] =~ /@/;
     #$uri =~ s&:\d+/&/&;                       # and port information
     $uri =~ s/~/\%7E/g if get_variable("_tilde");
     $uri =~ s/\+/\%2B/g if get_variable("_plus");
@@ -644,7 +718,7 @@ sub find_translation_files_in_release
                 if ( @parts == 3 )
                 {
                     my ( $sha1, $size, $filename ) = @parts;
-                    if ( $filename =~ m{^$component/i18n/Translation-[^./]*\.(bz2|xz)$} )
+                    if ( $filename =~ m{^$component/i18n/Translation-[^./]*\.(bz2|xz|gz)$} )
                     {
                         add_url_to_download( $dist_uri . $filename, $size );
                     }
@@ -759,6 +833,10 @@ foreach ( keys %urls_to_download )
 ######################################################################################
 ## DEP-11 index download
 
+#--- clear RAM
+system('sync; echo 3 > /proc/sys/vm/drop_caches');
+
+
 %urls_to_download = ();
 
 sub find_dep11_files_in_release
@@ -849,8 +927,112 @@ foreach ( keys %urls_to_download )
     $skipclean{$_} = 1;
 }
 
+
+######################################################################################
+## by-hash SHA256 files download
+
+#--- clear RAM
+system('sync; echo 3 > /proc/sys/vm/drop_caches');
+
+
+%urls_to_download = ();
+
+sub find_by_hash_sha256_files_in_release
+{
+    # Look in the dists/$DIST/Release file for the by-hash SHA256 files that belong
+    # to the given component and architecture.
+
+    my $dist_uri  = shift;
+    my $component = shift;
+    my $arch      = shift;
+    my ( $release_uri, $release_path, $line ) = '';
+
+    $release_uri  = $dist_uri . "Release";
+    $release_path = get_variable("skel_path") . "/" . sanitise_uri($release_uri);
+
+    unless ( open STREAM, "<$release_path" )
+    {
+        warn( "Failed to open Release file from " . $release_uri );
+        return;
+    }
+
+    my $checksums = 0;
+    while ( $line = <STREAM> )
+    {
+        chomp $line;
+        if ($checksums)
+        {
+            if ( $line =~ /^ +(.*)$/ )
+            {
+                my @parts = split( / +/, $1 );
+                if ( @parts == 3 )
+                {
+                    my ( $sha256, $size, $filename ) = @parts;
+                    my $dirname = dirname($filename);
+                    my $sha256_filename = '/'.$dirname.'/by-hash/SHA256/'.$sha256;
+                    {
+                        add_url_to_download( $dist_uri . $sha256_filename );
+                    }
+                }
+                else
+                {
+                    warn("Malformed checksum line \"$1\" in $release_uri");
+                }
+            }
+            else
+            {
+                $checksums = 0;
+            }
+        }
+        if ( not $checksums )
+        {
+            if ( $line eq "SHA256:" )
+            {
+                $checksums = 1;
+            }
+        }
+    }
+}
+
+print "Processing SHA256 by-hash files ["
+    if $progress;
+
+foreach (@config_binaries)
+{
+    my ( $arch, $uri, $distribution, @components ) = @{$_};
+    print "D" if $progress;
+    if (@components)
+    {
+        $url = $uri . "/dists/" . $distribution . "/";
+
+        my $component;
+        foreach $component (@components)
+        {
+            find_by_hash_sha256_files_in_release( $url, $component, $arch );
+        }
+    }
+}
+
+print "]\n\n" if $progress;
+
+push( @index_urls, sort keys %urls_to_download );
+download_urls( "by-hash-SHA256", sort keys %urls_to_download );
+
+foreach ( keys %urls_to_download )
+{
+    s[^(\w+)://][];
+    s[~][%7E]g if get_variable("_tilde");
+    s[\+][%2B]g if get_variable("_plus");
+    $skipclean{$_} = 1;
+}
+
+
 ######################################################################################
 ## cnf directory download
+
+#--- clear RAM
+system('sync; echo 3 > /proc/sys/vm/drop_caches');
+
 
 %urls_to_download = ();
 
@@ -944,6 +1126,10 @@ foreach ( keys %urls_to_download )
 ######################################################################################
 ## debian-installer directory download
 
+#--- clear RAM
+system('sync; echo 3 > /proc/sys/vm/drop_caches');
+
+
 %urls_to_download = ();
 
 sub find_debian_files_in_release
@@ -1035,6 +1221,10 @@ foreach ( keys %urls_to_download )
 
 ######################################################################################
 ## Main download preparations
+
+#--- clear RAM
+system('sync; echo 3 > /proc/sys/vm/drop_caches');
+
 
 %urls_to_download = ();
 
@@ -1199,9 +1389,13 @@ foreach (@config_binaries)
             process_index( $uri, "/dists/$distribution/$component/binary-$arch/Packages" );
         }
     }
-    else
+    elsif ($distribution)
     {
         process_index( $uri, "/$distribution/Packages" );
+    }
+    else
+    {
+        process_index( $uri, "/Packages" );
     }
 }
 
@@ -1218,6 +1412,10 @@ close FILES_SHA256;
 
 ######################################################################################
 ## Main download
+
+#--- clear RAM
+system('sync; echo 3 > /proc/sys/vm/drop_caches');
+
 
 chdir get_variable("mirror_path") or die("apt-mirror: can't chdir to mirror");
 
@@ -1284,6 +1482,10 @@ else
 
 ######################################################################################
 ## Make cleaning script
+
+#--- clear RAM
+system('sync; echo 3 > /proc/sys/vm/drop_caches');
+
 
 my ( @rm_dirs, @rm_files ) = ();
 my $unnecessary_bytes = 0;

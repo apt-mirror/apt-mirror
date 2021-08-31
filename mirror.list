@@ -8,35 +8,53 @@
 # set cleanscript       $var_path/clean.sh
 # set postmirror_script $var_path/postmirror.sh
 # set run_postmirror    0
+# set premirror_script  $var_path/premirror.sh
+# set run_premirror     0
 # set defaultarch       <running host architecture>
 # set defaultarch       amd64
 
 set base_path         /mnt/hdd/debo
 
+#-- concurrent wget instances
 set nthreads          32
-set limit_rate        25m
-set _tilde            0
 
+#-- options for URL parsing
+set _tilde            1
+set _plus             1
+
+#-- disable SSL certificate checks
 set no_check_certificate 1
 set auth_no_challenge    1
 
-# Use --unlink with wget (for use with hardlinked directories)
-set unlink            1
-
+#-- proxy settings
 set use_proxy         0
 set http_proxy        127.0.0.1:3128
 set proxy_user        user
 set proxy_password    password
 
+#-- some options for wget
 set user_agent        Aptly/1.0
 set timeout           30
 set tries             3
 set cookies_file      /tmp/apt-mirror.cookies
+set no_verbose        1
 
+#-- Use --unlink with wget (for use with hardlinked directories)
+set unlink            1
+
+#-- limit rate per wget instances
+set limit_rate        25m
+
+#-- show only space needed
 set dry_run           0
 
-set _autoclean 1
-set run_postmirror 1
+#-- running pre/post mirror script
+set run_postmirror    1
+set run_premirror     1
+
+#-- un-documented options
+set _contents         1
+set _autoclean        1
 #
 ############# end config ##############
 
