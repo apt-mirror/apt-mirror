@@ -1,29 +1,56 @@
-set base_path         /var/spool/apt-mirror
-set mirror_path       $base_path/mirror
-set skel_path         $base_path/skel
-set var_path          $base_path/var
-set postmirror_script $var_path/postmirror.sh
-set defaultarch       i386
-set run_postmirror    0
-set nthreads          20
-set limit_rate        100m
+############# config ##################
+#
+# set base_path         /var/spool/apt-mirror
+#
+# set mirror_path       $base_path/mirror
+# set skel_path         $base_path/skel
+# set var_path          $base_path/var
+# set cleanscript       $var_path/clean.sh
+# set postmirror_script $var_path/postmirror.sh
+# set run_postmirror    0
+# set defaultarch       <running host architecture>
+# set defaultarch       amd64
+
+set base_path         /mnt/hdd/debo
+
+set nthreads          32
+set limit_rate        25m
 set _tilde            0
+
+set no_check_certificate 1
+set auth_no_challenge    1
+
 # Use --unlink with wget (for use with hardlinked directories)
 set unlink            1
-set use_proxy         off
+
+set use_proxy         0
 set http_proxy        127.0.0.1:3128
 set proxy_user        user
 set proxy_password    password
 
-deb http://archive.ubuntu.com/ubuntu precise main restricted universe multiverse
-deb http://archive.ubuntu.com/ubuntu precise-security main restricted universe multiverse
-deb http://archive.ubuntu.com/ubuntu precise-updates main restricted universe multiverse
-deb http://archive.ubuntu.com/ubuntu precise-backports main restricted universe multiverse
+set user_agent        Aptly/1.0
+set timeout           30
+set tries             3
+set cookies_file      /tmp/apt-mirror.cookies
 
-#deb-src http://archive.ubuntu.com/ubuntu precise main restricted universe multiverse
-#deb-src http://archive.ubuntu.com/ubuntu precise-security main restricted universe multiverse
-#deb-src http://archive.ubuntu.com/ubuntu precise-updates main restricted universe multiverse
-#deb-src http://archive.ubuntu.com/ubuntu precise-backports main restricted universe multiverse
+set dry_run           0
+
+set _autoclean 1
+set run_postmirror 1
+#
+############# end config ##############
+
+
+
+deb http://archive.ubuntu.com/ubuntu disco main restricted universe multiverse
+deb http://archive.ubuntu.com/ubuntu disco-security main restricted universe multiverse
+deb http://archive.ubuntu.com/ubuntu disco-updates main restricted universe multiverse
+deb http://archive.ubuntu.com/ubuntu disco-backports main restricted universe multiverse
+
+#deb-src http://archive.ubuntu.com/ubuntu disco main restricted universe multiverse
+#deb-src http://archive.ubuntu.com/ubuntu disco-security main restricted universe multiverse
+#deb-src http://archive.ubuntu.com/ubuntu disco-updates main restricted universe multiverse
+#deb-src http://archive.ubuntu.com/ubuntu disco-backports main restricted universe multiverse
 
 clean http://archive.ubuntu.com/ubuntu
 

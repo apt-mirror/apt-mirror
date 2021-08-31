@@ -2,3 +2,4 @@
 *.tar.*
 github.com/*
 github.com
+*.code-workspace

@@ -1,15 +1,35 @@
-apt-mirror
-==========
+# apt-mirror
 
-See: http://apt-mirror.github.com
+Josh's fork of apt-mirror
 
-New maintainer(s) wanted
-========================
+For official source, see: http://apt-mirror.github.com
 
-We (the current maintainers) lack the time and energy to maintain apt-mirror:
-Our last commit is years old and the number of pull request is rising. We
-agreed on acknowledging this fact and are searching for new maintainers who
-wants to join the GitHub apt-mirror group and continue maintaining this
-repository and do new releases. If you are interested and have time and energy
-to take the project over, please contact Brandon Holtsclaw to give you the
-permission.
+## Usage
+
+Basic execution:
+
+```
+# To run with default paths and values (e.g /etc/apt/mirror.list)
+./apt-mirror
+# To run using ./mirror.list
+./apt-mirror mirror.list
+# Or:
+perl ./apt-mirror mirror.list
+```
+
+apt-mirror can also be installed with
+
+`make install`
+
+See also:
+
+`perldoc ./apt-mirror`
+
+## Changes from apt-mirror/apt-mirror
+
+- Updated for Ubuntu 19.04
+  - Default mirror.list reflects new release
+  - apt-mirror supports cnf directory with Commands index
+- Set default architecture to amd64
+- Expanded README.md
+- Download 'debian-installer' directory

@@ -16,34 +16,14 @@ A small and efficient tool that lets you mirror a part of or
 the whole Debian GNU/Linux distribution or any other apt sources.
 
 Main features:
-
-=over
-
-=item *
-It uses a config similar to APT's F<sources.list>
-
-=item *
-It's fully pool compliant
-
-=item *
-It supports multithreaded downloading
-
-=item *
-It supports multiple architectures at the same time
-
-=item *
-It can automatically remove unneeded files
-
-=item *
-It works well on an overloaded Internet connection
-
-=item *
-It never produces an inconsistent mirror including while mirroring
-
-=item *
-It works on all POSIX compliant systems with Perl and wget
-
-=back
+ * It uses a config similar to APT's F<sources.list>
+ * It's fully pool compliant
+ * It supports multithreaded downloading
+ * It supports multiple architectures at the same time
+ * It can automatically remove unneeded files
+ * It works well on an overloaded Internet connection
+ * It never produces an inconsistent mirror including while mirroring
+ * It works on all POSIX compliant systems with Perl and wget
 
 =head1 COMMENTS
 
@@ -136,11 +116,15 @@ my %config_variables = (
     "no_check_certificate" => 1,
     "unlink"               => 0,
     "postmirror_script"    => '$var_path/postmirror.sh',
-    "use_proxy"            => 'off',
+    "use_proxy"            => 0,
     "http_proxy"           => '',
     "https_proxy"          => '',
     "proxy_user"           => '',
-    "proxy_password"       => ''
+    "proxy_password"       => '',
+    "dry_run"              => '0',
+    "user_agent"           => 'Aptly',
+    "timeout"              => 30,
+    "none"                 => '0'
 );
 
 my @config_binaries = ();
@@ -268,7 +252,49 @@ sub download_urls
     if ( get_variable("auth_no_challenge") == 1 )    { push( @args, "--auth-no-challenge" ); }
     if ( get_variable("no_check_certificate") == 1 ) { push( @args, "--no-check-certificate" ); }
     if ( get_variable("unlink") == 1 )               { push( @args, "--unlink" ); }
-    if ( length( get_variable("use_proxy") ) && ( get_variable("use_proxy") eq 'yes' || get_variable("use_proxy") eq 'on' ) )
+
+    if ( get_variable("tries") > 0 )
+    {
+        # '-t=30', '--tries=3'
+        push( @args, "--tries=" . get_variable("tries") );
+    }
+
+    if ( get_variable("timeout") > 0 )
+    {
+        # '-T=30', '--timeout=30', '--read-timeout=30', '--dns-timeout=30', '--connect-timeout=30',
+        push( @args, "--timeout=" . get_variable("timeout") );
+        push( @args, "--read-timeout=" . get_variable("timeout") );
+        push( @args, "--dns-timeout=" . get_variable("timeout") );
+        push( @args, "--connect-timeout=" . get_variable("timeout") );
+    }
+
+    if ( length( get_variable("limit_rate") ) )
+    {
+        # '--limit-rate=' . get_variable("limit_rate"),
+        push( @args, "--limit-rate=" . get_variable("limit_rate") );
+    }
+
+    if ( length( get_variable("user_agent") ) )
+    {
+        # '--user-agent=' . get_variable("user_agent"),
+        push( @args, "--user-agent=" . get_variable("user_agent") );
+    }
+
+    if ( length( get_variable("cookies_file") ) )
+    {
+        # '--load-cookies=afile --save-cookies=afile --keep-session-cookies'
+        push( @args, "--load-cookies=" . get_variable("cookies_file") );
+        push( @args, "--save-cookies=" . get_variable("cookies_file") );
+        push( @args, "--keep-session-cookies" );
+    }
+    else {
+        # /tmp/apt-mirror.cookies
+        push( @args, "--load-cookies=/tmp/apt-mirror.cookies" );
+        push( @args, "--save-cookies=/tmp/apt-mirror.cookies" );
+        push( @args, "--keep-session-cookies" );
+    }
+
+    if ( length( get_variable("use_proxy") ) && ( get_variable("use_proxy") eq 'yes' || get_variable("use_proxy") eq 'on'  || get_variable("use_proxy") eq 'true' || get_variable("use_proxy") eq '1' ) )
     {
         if ( length( get_variable("http_proxy") ) || length( get_variable("https_proxy") ) ) { push( @args, "-e use_proxy=yes" ); }
         if ( length( get_variable("http_proxy") ) ) { push( @args, "-e http_proxy=" . get_variable("http_proxy") ); }
@@ -276,6 +302,21 @@ sub download_urls
         if ( length( get_variable("proxy_user") ) ) { push( @args, "-e proxy_user=" . get_variable("proxy_user") ); }
         if ( length( get_variable("proxy_password") ) ) { push( @args, "-e proxy_password=" . get_variable("proxy_password") ); }
     }
+    else
+    {
+        # --no-proxy
+        push( @args, "--no-proxy" );
+    }
+
+    #--- default argumets for wget
+    #-----------------------------
+    # '-v', '-r', '-c', '-N', '-l', 'inf',
+    # '--no-cache', '--no-hsts', '--retry-connrefused', '--waitretry=3',
+    push( @args, "-v -r -c -N -l inf" );
+    push( @args, "--no-cache --no-hsts --retry-on-host-error" );
+    push( @args, "--retry-connrefused --waitretry=3" );
+
+
     print "Downloading " . scalar(@urls) . " $stage files using $nthreads threads...\n";
 
     while ( scalar @urls )
@@ -293,10 +334,27 @@ sub download_urls
 
         if ( $pid == 0 )
         {
-            exec '/usr/bin/wget', '-v', '--no-cache', '--limit-rate=' . get_variable("limit_rate"), '-T', '30', '-t', '2', '-r', '-N', '-l', 'inf', '-o', get_variable("var_path") . "/$stage-log.$i", '-i', get_variable("var_path") . "/$stage-urls.$i", '-U', 'Aptly/1.0', '--no-hsts', '--no-proxy', @args;
+            system('/usr/bin/wget',
+            '-o', get_variable("var_path") . "/$stage-log.$i",
+            '-i', get_variable("var_path") . "/$stage-urls.$i",
+            @args);
 
             # shouldn't reach this unless exec fails
             die("\n\nCould not run wget, please make sure its installed and in your path\n\n");
+                if $? == -1;
+            my $exit_status = $? >> 8;
+            if ( $exit_status ) {
+                if ( $stage eq 'archive' || $exit_status < 8 ) {
+                    # wget exit code 8 is "server error response".  This is normal for downloading indices where we try
+                    # to download .gz, .xz and .bz2 and don't care about some of them returning 404.  For package
+                    # download, this is probably a real problem which should be investigated.
+                    print "wget failed with exit status $exit_status.  See ",
+                        get_variable("var_path") . "/$stage-log.$i", " for details.\n";
+                    exit ($exit_status);
+                }
+            }
+            # child is done
+            exit (0);
         }
 
         push @childrens, $pid;
@@ -438,6 +496,7 @@ foreach (@config_sources)
         add_url_to_download( $url . "Release.gpg" );
         foreach (@components)
         {
+            add_url_to_download( $url . $_ . "/source/InRelease" );
             add_url_to_download( $url . $_ . "/source/Release" );
             add_url_to_download( $url . $_ . "/source/Sources.gz" );
             add_url_to_download( $url . $_ . "/source/Sources.bz2" );
@@ -480,7 +539,9 @@ foreach (@config_binaries)
                 add_url_to_download( $url . $_ . "/Contents-" . $arch . ".bz2" );
                 add_url_to_download( $url . $_ . "/Contents-" . $arch . ".xz" );
             }
+            add_url_to_download( $url . $_ . "/binary-" . $arch . "/InRelease" );
             add_url_to_download( $url . $_ . "/binary-" . $arch . "/Release" );
+            add_url_to_download( $url . $_ . "/binary-" . $arch . "/Packages" );
             add_url_to_download( $url . $_ . "/binary-" . $arch . "/Packages.gz" );
             add_url_to_download( $url . $_ . "/binary-" . $arch . "/Packages.bz2" );
             add_url_to_download( $url . $_ . "/binary-" . $arch . "/Packages.xz" );
@@ -492,6 +553,7 @@ foreach (@config_binaries)
         add_url_to_download( $uri . "/$distribution/InRelease" );
         add_url_to_download( $uri . "/$distribution/Release" );
         add_url_to_download( $uri . "/$distribution/Release.gpg" );
+        add_url_to_download( $uri . "/$distribution/Packages" );
         add_url_to_download( $uri . "/$distribution/Packages.gz" );
         add_url_to_download( $uri . "/$distribution/Packages.bz2" );
         add_url_to_download( $uri . "/$distribution/Packages.xz" );
@@ -523,7 +585,7 @@ sub sanitise_uri
     my $uri = shift;
     $uri =~ s[^(\w+)://][];
     $uri =~ s/^([^@]+)?@?// if $uri =~ /@/;
-    $uri =~ s&:\d+/&/&;                       # and port information
+    #$uri =~ s&:\d+/&/&;                       # and port information
     $uri =~ s/~/\%7E/g if get_variable("_tilde");
     $uri =~ s/\+/\%2B/g if get_variable("_plus");
     return $uri;
@@ -765,6 +827,190 @@ foreach ( keys %urls_to_download )
 }
 
 ######################################################################################
+## cnf directory download
+
+%urls_to_download = ();
+
+sub find_cnf_files_in_release
+{
+    # Look in the dists/$DIST/Release file for the cnf files that belong
+    # to the given component and architecture.
+
+    my $dist_uri  = shift;
+    my $component = shift;
+    my $arch      = shift;
+    my ( $release_uri, $release_path, $line ) = '';
+
+    $release_uri  = $dist_uri . "Release";
+    $release_path = get_variable("skel_path") . "/" . sanitise_uri($release_uri);
+
+    unless ( open STREAM, "<$release_path" )
+    {
+        warn( "Failed to open Release file from " . $release_uri );
+        return;
+    }
+
+    my $checksums = 0;
+    while ( $line = <STREAM> )
+    {
+        chomp $line;
+        if ($checksums)
+        {
+            if ( $line =~ /^ +(.*)$/ )
+            {
+                my @parts = split( / +/, $1 );
+                if ( @parts == 3 )
+                {
+                    my ( $sha1, $size, $filename ) = @parts;
+                    if ( $filename =~ m{^$component/cnf/(Commands-${arch}(\.(gz|bz2|xz))?)$} )
+                    {
+                        add_url_to_download( $dist_uri . $filename, $size );
+                    }
+                }
+                else
+                {
+                    warn("Malformed checksum line \"$1\" in $release_uri");
+                }
+            }
+            else
+            {
+                $checksums = 0;
+            }
+        }
+        if ( not $checksums )
+        {
+            if ( $line eq "SHA256:" )
+            {
+                $checksums = 1;
+            }
+        }
+    }
+}
+
+print "Processing cnf indexes: [";
+
+foreach (@config_binaries)
+{
+    my ( $arch, $uri, $distribution, @components ) = @{$_};
+    print "C";
+    if (@components)
+    {
+        $url = $uri . "/dists/" . $distribution . "/";
+
+        my $component;
+        foreach $component (@components)
+        {
+            find_cnf_files_in_release( $url, $component, $arch );
+        }
+    }
+}
+
+print "]\n\n";
+
+push( @index_urls, sort keys %urls_to_download );
+download_urls( "cnf", sort keys %urls_to_download );
+
+foreach ( keys %urls_to_download )
+{
+    s[^(\w+)://][];
+    s[~][%7E]g if get_variable("_tilde");
+    s[\+][%2B]g if get_variable("_plus");
+    $skipclean{$_} = 1;
+}
+
+######################################################################################
+## debian-installer directory download
+
+%urls_to_download = ();
+
+sub find_debian_files_in_release
+{
+    # Look in the dists/$DIST/Release file for the debian-installer files that belong
+    # to the given component and architecture.
+
+    my $dist_uri  = shift;
+    my $component = shift;
+    my $arch      = shift;
+    my ( $release_uri, $release_path, $line ) = '';
+
+    $release_uri  = $dist_uri . "Release";
+    $release_path = get_variable("skel_path") . "/" . sanitise_uri($release_uri);
+
+    unless ( open STREAM, "<$release_path" )
+    {
+        warn( "Failed to open Release file from " . $release_uri );
+        return;
+    }
+
+    my $checksums = 0;
+    while ( $line = <STREAM> )
+    {
+        chomp $line;
+        if ($checksums)
+        {
+            if ( $line =~ /^ +(.*)$/ )
+            {
+                my @parts = split( / +/, $1 );
+                if ( @parts == 3 )
+                {
+                    my ( $sha1, $size, $filename ) = @parts;
+                    if ( $filename =~ m{^$component/debian-installer/(binary-${arch})/Packages(\.(gz|bz2|xz))?$} )
+                    {
+                        add_url_to_download( $dist_uri . $filename, $size );
+                    }
+                }
+                else
+                {
+                    warn("Malformed checksum line \"$1\" in $release_uri");
+                }
+            }
+            else
+            {
+                $checksums = 0;
+            }
+        }
+        if ( not $checksums )
+        {
+            if ( $line eq "SHA256:" )
+            {
+                $checksums = 1;
+            }
+        }
+    }
+}
+
+print "Processing debian-installer: [";
+
+foreach (@config_binaries)
+{
+    my ( $arch, $uri, $distribution, @components ) = @{$_};
+    print "D";
+    if (@components)
+    {
+        $url = $uri . "/dists/" . $distribution . "/";
+
+        my $component;
+        foreach $component (@components)
+        {
+            find_debian_files_in_release( $url, $component, $arch );
+        }
+    }
+}
+
+print "]\n\n";
+
+push( @index_urls, sort keys %urls_to_download );
+download_urls( "debian-installer", sort keys %urls_to_download );
+
+foreach ( keys %urls_to_download )
+{
+    s[^(\w+)://][];
+    s[~][%7E]g if get_variable("_tilde");
+    s[\+][%2B]g if get_variable("_plus");
+    $skipclean{$_} = 1;
+}
+
+######################################################################################
 ## Main download preparations
 
 %urls_to_download = ();
@@ -960,39 +1206,57 @@ foreach ( values %urls_to_download )
 
 my $size_output = format_bytes($need_bytes);
 
-print "$size_output will be downloaded into archive.\n";
-
-download_urls( "archive", sort keys %urls_to_download );
-
-######################################################################################
-## Copy skel to main archive
-
-sub copy_file
+if ( get_variable("dry_run") == 1 )
 {
-    my ( $from, $to ) = @_;
-    my $dir = dirname($to);
-    return unless -f $from;
-    make_path($dir) unless -d $dir;
-    if ( get_variable("unlink") == 1 )
-    {
-        if ( compare( $from, $to ) != 0 ) { unlink($to); }
-    }
-    unless ( copy( $from, $to ) )
-    {
-        warn("apt-mirror: can't copy $from to $to");
-        return;
-    }
-    my ( $atime, $mtime ) = ( stat($from) )[ 8, 9 ];
-    utime( $atime, $mtime, $to ) or die("apt-mirror: can't utime $to");
+    print "\nA dry-run was requested, no download performed, exiting.\n";
+    unlock_aptmirror();
+    exit(0)
 }
 
-foreach (@index_urls)
+(my $size_mirror) = $size_output =~ /\A([^:\s]+)/;
+my $directory = get_variable("mirror_path");
+my $command = "df $directory | awk -F'[^0-9]*' 'NR==2 {print \$5}'";
+(my $directory_size) = format_bytes(`$command`*1000) =~ /\A([^:\s]+)/;
+
+if ($directory_size <= $size_mirror) {
+    warn("apt-mirror: need space $size_output\n");
+}
+else
 {
-    die("apt-mirror: invalid url in index_urls") unless s[^(\w+)://][];
-    copy_file( get_variable("skel_path") . "/" . sanitise_uri("$_"), get_variable("mirror_path") . "/" . sanitise_uri("$_") );
-    copy_file( get_variable("skel_path") . "/" . sanitise_uri("$_"), get_variable("mirror_path") . "/" . sanitise_uri("$_") ) if (s/\.gz$//);
-    copy_file( get_variable("skel_path") . "/" . sanitise_uri("$_"), get_variable("mirror_path") . "/" . sanitise_uri("$_") ) if (s/\.bz2$//);
-    copy_file( get_variable("skel_path") . "/" . sanitise_uri("$_"), get_variable("mirror_path") . "/" . sanitise_uri("$_") ) if (s/\.xz$//);
+    print "$size_output will be downloaded into archive.\n";
+
+    download_urls( "archive", sort keys %urls_to_download );
+
+    ######################################################################################
+    ## Copy skel to main archive
+
+    sub copy_file
+    {
+        my ( $from, $to ) = @_;
+        my $dir = dirname($to);
+        return unless -f $from;
+        make_path($dir) unless -d $dir;
+        if ( get_variable("unlink") == 1 )
+        {
+            if ( compare( $from, $to ) != 0 ) { unlink($to); }
+        }
+        unless ( copy( $from, $to ) )
+        {
+            warn("apt-mirror: can't copy $from to $to");
+            return;
+        }
+        my ( $atime, $mtime ) = ( stat($from) )[ 8, 9 ];
+        utime( $atime, $mtime, $to ) or die("apt-mirror: can't utime $to");
+    }
+
+    foreach (@index_urls)
+    {
+        die("apt-mirror: invalid url in index_urls") unless s[^(\w+)://][];
+        copy_file( get_variable("skel_path") . "/" . sanitise_uri("$_"), get_variable("mirror_path") . "/" . sanitise_uri("$_") );
+        copy_file( get_variable("skel_path") . "/" . sanitise_uri("$_"), get_variable("mirror_path") . "/" . sanitise_uri("$_") ) if (s/\.gz$//);
+        copy_file( get_variable("skel_path") . "/" . sanitise_uri("$_"), get_variable("mirror_path") . "/" . sanitise_uri("$_") ) if (s/\.bz2$//);
+        copy_file( get_variable("skel_path") . "/" . sanitise_uri("$_"), get_variable("mirror_path") . "/" . sanitise_uri("$_") ) if (s/\.xz$//);
+    }
 }
 
 ######################################################################################
@@ -1086,7 +1350,7 @@ else
     print CLEAN "echo 'Removing $total unnecessary directories...'\n";
     foreach (@rm_dirs)
     {
-        print CLEAN "if test -d '$_'; then rmdir '$_'; fi\n";
+        print CLEAN "if test -d '$_'; then rm -rf '$_'; fi\n";
         print CLEAN "echo -n '[" . int( 100 * $i / $total ) . "\%]'\n" unless $i % 50;
         print CLEAN "echo -n .\n";
         $i++;
