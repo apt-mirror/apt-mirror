@@ -13,14 +13,35 @@
 # set defaultarch       <running host architecture>
 # set defaultarch       amd64
 
-set base_path         /mnt/hdd/debo
+set base_path         /mnt/hdd/apt-test
 
 #-- concurrent wget instances
-set nthreads          32
+set nthreads          128
 
 #-- options for URL parsing
 set _tilde            1
 set _plus             1
+
+#-- show only space needed
+set dry_run           0
+
+#-- running pre/post mirror script
+set run_postmirror    0
+set run_premirror     0
+
+#-- un-documented options
+set _contents         1
+set _autoclean        1
+
+#-- execute subroutines
+set sub_cnf           0
+set sub_deb_ins       0
+set sub_by_hash       0
+
+
+
+#-- WGET CONFIGS
+#---------------------------------------
 
 #-- disable SSL certificate checks
 set no_check_certificate 1
@@ -32,7 +53,6 @@ set http_proxy        127.0.0.1:3128
 set proxy_user        user
 set proxy_password    password
 
-#-- some options for wget
 set user_agent        Aptly/1.0
 set timeout           30
 set tries             3
@@ -45,30 +65,25 @@ set unlink            1
 #-- limit rate per wget instances
 set limit_rate        25m
 
-#-- show only space needed
-set dry_run           0
+#-- --prefer-family=none/IPv4/IPv6 --inet4-only --inet6-only
+set ip_v6             0
+set max_redirect      3
 
-#-- running pre/post mirror script
-set run_postmirror    1
-set run_premirror     1
-
-#-- un-documented options
-set _contents         1
-set _autoclean        1
 #
 ############# end config ##############
 
+deb-armhf http://security.debian.org/debian-security bullseye-security main
+deb-arm64 http://security.debian.org/debian-security bullseye-security main
+deb-amd64 http://security.debian.org/debian-security bullseye-security main
+deb-i386  http://security.debian.org/debian-security bullseye-security main
+deb-src   http://security.debian.org/debian-security bullseye-security main
+
+deb-armhf http://cdn-fastly.deb.debian.org/debian bullseye-backports main contrib non-free
+deb-arm64 http://cdn-fastly.deb.debian.org/debian bullseye-backports main contrib non-free
+deb-amd64 http://cdn-fastly.deb.debian.org/debian bullseye-backports main contrib non-free
+deb-i386  http://cdn-fastly.deb.debian.org/debian bullseye-backports main contrib non-free
+deb-src   http://cdn-fastly.deb.debian.org/debian bullseye-backports main contrib non-free
 
 
-deb http://archive.ubuntu.com/ubuntu disco main restricted universe multiverse
-deb http://archive.ubuntu.com/ubuntu disco-security main restricted universe multiverse
-deb http://archive.ubuntu.com/ubuntu disco-updates main restricted universe multiverse
-deb http://archive.ubuntu.com/ubuntu disco-backports main restricted universe multiverse
-
-#deb-src http://archive.ubuntu.com/ubuntu disco main restricted universe multiverse
-#deb-src http://archive.ubuntu.com/ubuntu disco-security main restricted universe multiverse
-#deb-src http://archive.ubuntu.com/ubuntu disco-updates main restricted universe multiverse
-#deb-src http://archive.ubuntu.com/ubuntu disco-backports main restricted universe multiverse
-
-clean http://archive.ubuntu.com/ubuntu
-
+clean http://security.debian.org/debian-security
+clean http://cdn-fastly.deb.debian.org/debian
