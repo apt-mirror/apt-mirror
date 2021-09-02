@@ -18,11 +18,11 @@ set base_path         /mnt/hdd/apt-test
 #-- concurrent wget instances
 set nthreads          128
 
-#-- options for URL parsing
+#-- options for URL sanitizing
 set _tilde            1
 set _plus             1
 
-#-- show only space needed
+#-- show only space needed, NO actual downloads executed except for the indexes
 set dry_run           0
 
 #-- running pre/post mirror script
@@ -34,10 +34,19 @@ set _contents         1
 set _autoclean        1
 
 #-- execute subroutines
-set sub_cnf           0
-set sub_deb_ins       0
-set sub_by_hash       0
+set exec_translation  1
+set exec_dep11        1
+set exec_cnf          0
+set exec_deb_ins      0
+set exec_by_hash      0
+set exec_clean        0
 
+#-- do file sum checking, after/before download
+set pre_check_sum     1
+set post_check_sum    1
+
+#-- delete files with mismatch size or sum
+set delete_bad_file   1
 
 
 #-- WGET CONFIGS
@@ -48,10 +57,10 @@ set no_check_certificate 1
 set auth_no_challenge    1
 
 #-- proxy settings
-set use_proxy         0
+set use_proxy         1
 set http_proxy        127.0.0.1:3128
-set proxy_user        user
-set proxy_password    password
+# set proxy_user      auser
+# set proxy_password  apassword
 
 set user_agent        Aptly/1.0
 set timeout           30
@@ -72,18 +81,33 @@ set max_redirect      3
 #
 ############# end config ##############
 
-deb-armhf http://security.debian.org/debian-security bullseye-security main
-deb-arm64 http://security.debian.org/debian-security bullseye-security main
-deb-amd64 http://security.debian.org/debian-security bullseye-security main
-deb-i386  http://security.debian.org/debian-security bullseye-security main
-deb-src   http://security.debian.org/debian-security bullseye-security main
+#deb-armhf http://security.debian.org/debian-security bullseye-security main
+#deb-arm64 http://security.debian.org/debian-security bullseye-security main
+#deb-amd64 http://security.debian.org/debian-security bullseye-security main
+#deb-i386  http://security.debian.org/debian-security bullseye-security main
+#deb-src   http://security.debian.org/debian-security bullseye-security main
 
-deb-armhf http://cdn-fastly.deb.debian.org/debian bullseye-backports main contrib non-free
-deb-arm64 http://cdn-fastly.deb.debian.org/debian bullseye-backports main contrib non-free
-deb-amd64 http://cdn-fastly.deb.debian.org/debian bullseye-backports main contrib non-free
-deb-i386  http://cdn-fastly.deb.debian.org/debian bullseye-backports main contrib non-free
-deb-src   http://cdn-fastly.deb.debian.org/debian bullseye-backports main contrib non-free
+#deb-armhf http://cdn-fastly.deb.debian.org/debian bullseye-backports main contrib non-free
+#deb-arm64 http://cdn-fastly.deb.debian.org/debian bullseye-backports main contrib non-free
+#deb-amd64 http://cdn-fastly.deb.debian.org/debian bullseye-backports main contrib non-free
+#deb-i386  http://cdn-fastly.deb.debian.org/debian bullseye-backports main contrib non-free
+#deb-src   http://cdn-fastly.deb.debian.org/debian bullseye-backports main contrib non-free
+
+#deb-armhf http://archive.raspberrypi.org/debian buster main contrib non-free rpi firmware ui untested
+#deb-arm64 http://archive.raspberrypi.org/debian buster main contrib non-free rpi firmware ui untested
+#deb-src   http://archive.raspberrypi.org/debian buster main contrib non-free rpi firmware ui untested
+
+
+deb-armhf http://cdn-fastly.deb.debian.org/debian bullseye main/debian-installer
+deb-arm64 http://cdn-fastly.deb.debian.org/debian bullseye main/debian-installer
+deb-amd64 http://cdn-fastly.deb.debian.org/debian bullseye main/debian-installer
+deb-src   http://cdn-fastly.deb.debian.org/debian bullseye main/debian-installer
 
 
 clean http://security.debian.org/debian-security
 clean http://cdn-fastly.deb.debian.org/debian
+
+clean http://raspbian.raspberrypi.org/raspbian
+clean http://archive.raspberrypi.org/debian
+clean http://raspbian.raspberrypi.org/
+clean http://archive.raspberrypi.org/

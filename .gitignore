@@ -4,6 +4,8 @@ github.com/*
 github.com
 *.code-workspace
 upload-argo.sh
+upload-test.sh
+upload-prod.sh
 test-apt-mirror.sh
 baks/*
 baks
