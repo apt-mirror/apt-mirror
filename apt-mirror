@@ -390,7 +390,7 @@ sub download_urls
     }
     else
     {
-				push( @args, " --inet4-only --prefer-family=IPv4" );
+        push( @args, " --inet4-only --prefer-family=IPv4" );
     }
 
     if ( get_variable("max_redirect") > 0 )
@@ -428,26 +428,26 @@ sub download_urls
         $nthreads--;
     }
 
-		sleep(5);
+    sleep(5);
     my $nums_now = `ps auxw | grep -v grep | grep wget | grep Aptly | wc -l`;
     $nums_now = int($nums_now);
 
-		if ( $nums_now > 2)
-		{
-				print "\n\n wget ins=$nums_now";
-				while ($nums_now > 1)
-				{
-						sleep(3);
-						my $nums_new = `ps auxw | grep -v grep | grep wget | grep Aptly | wc -l`;
-						$nums_new = int($nums_new);
+    if ( $nums_now > 2)
+    {
+        print "\n\n wget ins=$nums_now";
+        while ($nums_now > 1)
+        {
+            sleep(3);
+            my $nums_new = `ps auxw | grep -v grep | grep wget | grep Aptly | wc -l`;
+            $nums_new = int($nums_new);
 
-						if ( $nums_new < $nums_now && $nums_new > 0 ) { print " " . $nums_new; }
-						else { print "."; }
+            if ( $nums_new < $nums_now && $nums_new > 0 ) { print " " . $nums_new; }
+            else { print "."; }
 
-						$nums_now = $nums_new;
-				}
-				print "\n\n";
-		}
+            $nums_now = $nums_new;
+        }
+        print "\n\n";
+    }
 
 }
 
@@ -816,39 +816,39 @@ sub process_translation_index
 
 sub mainsub_process_translation
 {
-		print "\n\n Processing translation indexes: ["
-				if $progress;
+    print "\n\n Processing translation indexes: ["
+        if $progress;
 
-		foreach (@config_binaries)
-		{
-				my ( $arch, $uri, $distribution, @components ) = @{$_};
-				print "T" if $progress;
-				# print "T-$distribution " if $progress;
-				if (@components)
-				{
-						$url = $uri . "/dists/" . $distribution . "/";
+    foreach (@config_binaries)
+    {
+        my ( $arch, $uri, $distribution, @components ) = @{$_};
+        print "T" if $progress;
+        # print "T-$distribution " if $progress;
+        if (@components)
+        {
+            $url = $uri . "/dists/" . $distribution . "/";
 
-						my $component;
-						foreach $component (@components)
-						{
-								# print "C-$component " if $progress;
-								process_translation_index( $url, $component );
-						}
-				}
-		}
+            my $component;
+            foreach $component (@components)
+            {
+                # print "C-$component " if $progress;
+                process_translation_index( $url, $component );
+            }
+        }
+    }
 
-		print "]\n\n" if $progress;
+    print "]\n\n" if $progress;
 
-		push( @index_urls, sort keys %urls_to_download );
-		download_urls( "translation", sort keys %urls_to_download );
+    push( @index_urls, sort keys %urls_to_download );
+    download_urls( "translation", sort keys %urls_to_download );
 
-		foreach ( keys %urls_to_download )
-		{
-				s[^(\w+)://][];
-				s[~][%7E]g if get_variable("_tilde");
-				s[\+][%2B]g if get_variable("_plus");
-				$skipclean{$_} = 1;
-		}
+    foreach ( keys %urls_to_download )
+    {
+        s[^(\w+)://][];
+        s[~][%7E]g if get_variable("_tilde");
+        s[\+][%2B]g if get_variable("_plus");
+        $skipclean{$_} = 1;
+    }
 }
 
 mainsub_process_translation()  if ( get_variable("exec_translation") > 0 );
@@ -920,39 +920,39 @@ sub find_dep11_files_in_release
 
 sub mainsub_process_dep11
 {
-		print "\n\n Processing DEP-11 indexes: ["
-				if $progress;
+    print "\n\n Processing DEP-11 indexes: ["
+            if $progress;
 
-		foreach (@config_binaries)
-		{
-				my ( $arch, $uri, $distribution, @components ) = @{$_};
-				print "D" if $progress;
-				# print "D-$distribution " if $progress;
-				if (@components)
-				{
-						$url = $uri . "/dists/" . $distribution . "/";
+    foreach (@config_binaries)
+    {
+        my ( $arch, $uri, $distribution, @components ) = @{$_};
+        print "D" if $progress;
+        # print "D-$distribution " if $progress;
+        if (@components)
+        {
+            $url = $uri . "/dists/" . $distribution . "/";
 
-						my $component;
-						foreach $component (@components)
-						{
-								# print "C-$component A-$arch " if $progress;
-								find_dep11_files_in_release( $url, $component, $arch );
-						}
-				}
-		}
+            my $component;
+            foreach $component (@components)
+            {
+                # print "C-$component A-$arch " if $progress;
+                find_dep11_files_in_release( $url, $component, $arch );
+            }
+        }
+    }
 
-		print "]\n\n" if $progress;
+    print "]\n\n" if $progress;
 
-		push( @index_urls, sort keys %urls_to_download );
-		download_urls( "dep11", sort keys %urls_to_download );
+    push( @index_urls, sort keys %urls_to_download );
+    download_urls( "dep11", sort keys %urls_to_download );
 
-		foreach ( keys %urls_to_download )
-		{
-				s[^(\w+)://][];
-				s[~][%7E]g if get_variable("_tilde");
-				s[\+][%2B]g if get_variable("_plus");
-				$skipclean{$_} = 1;
-		}
+    foreach ( keys %urls_to_download )
+    {
+        s[^(\w+)://][];
+        s[~][%7E]g if get_variable("_tilde");
+        s[\+][%2B]g if get_variable("_plus");
+        $skipclean{$_} = 1;
+    }
 }
 
 mainsub_process_dep11()  if ( get_variable("exec_dep11") > 0 );
@@ -1341,21 +1341,21 @@ sub process_index
     $path = sanitise_uri($uri);
     local $/ = "\n\n";
     $mirror = get_variable("mirror_path") . "/" . $path;
-		$path_index = remove_double_slashes( "$mirror/$index" );  #Bug #1730285 Ubuntu
+    $path_index = remove_double_slashes( "$mirror/$index" );  #Bug #1730285 Ubuntu
 
     unless (-e "$path_index" ) {
-				my $ret=	system("gunzip -dfk < $path_index.gz > $path_index")  if (-e "$path_index.gz" );
+        system("gunzip -dfk < $path_index.gz > $path_index")  if (-e "$path_index.gz" );
 
         # if gunzip failed
         unless (-e "$path_index" ) {
-						system("xz -dfk < $path_index.xz > $path_index")  if (-e "$path_index.xz" );
+            system("xz -dfk < $path_index.xz > $path_index")  if (-e "$path_index.xz" );
         }
 
         # if xz decompress failed
         unless (-e "$path_index" ) {
-						system("bzip2 -dfk < $path_index.bz2 > $path_index")  if (-e "$path_index.bz2" );
+            system("bzip2 -dfk < $path_index.bz2 > $path_index")  if (-e "$path_index.bz2" );
         }
-		}
+    }
 
     unless ( open STREAM, "<$path_index" )
     {
@@ -1383,19 +1383,19 @@ sub process_index
                 if $verbose >= 3;
 
 
-						# check if need to update
-						my $need_update = 0;
+            # check if need to update
+            my $need_update = 0;
 
-						# check file size
+            # check file size
             $need_update = need_update_by_size( $fullpath_filename, $lines{"Size:"} );
 
-						# check file sum
-						if (-e $fullpath_filename && $need_update < 1 && get_variable("pre_check_sum") > 0 )
-						{
-								# $need_update = need_update_by_sum($fullpath_filename, $lines{"MD5sum:"}, "md5") if defined $lines{"MD5sum:"};
-								# $need_update = need_update_by_sum($fullpath_filename, $lines{"SHA1:"}, "sha1") if defined $lines{"SHA1:"};
-								# $need_update = need_update_by_sum($fullpath_filename, $lines{"SHA256:"}, "sha256") if defined $lines{"SHA256:"};
-						}
+            # check file sum
+            if (-e $fullpath_filename && $need_update < 1 && get_variable("pre_check_sum") > 0 )
+            {
+                # $need_update = need_update_by_sum($fullpath_filename, $lines{"MD5sum:"}, "md5") if defined $lines{"MD5sum:"};
+                # $need_update = need_update_by_sum($fullpath_filename, $lines{"SHA1:"}, "sha1") if defined $lines{"SHA1:"};
+                # $need_update = need_update_by_sum($fullpath_filename, $lines{"SHA256:"}, "sha256") if defined $lines{"SHA256:"};
+            }
 
             if ( $need_update > 0 )
             {
@@ -1403,12 +1403,12 @@ sub process_index
                 print "NEW: " . remove_double_slashes( $uri . "/" . $lines{"Filename:"} ) . "\n"
                     if $verbose >= 1;
 
-								print FILES_MD5 $lines{"MD5sum:"} . "  " . $fullpath_filename . "\n" if defined $lines{"MD5sum:"};
-								print FILES_SHA1 $lines{"SHA1:"} . "  " . $fullpath_filename . "\n" if defined $lines{"SHA1:"};
-								print FILES_SHA256 $lines{"SHA256:"} . "  " . $fullpath_filename . "\n" if defined $lines{"SHA256:"};
+                print FILES_MD5 $lines{"MD5sum:"} . "  " . $fullpath_filename . "\n" if defined $lines{"MD5sum:"};
+                print FILES_SHA1 $lines{"SHA1:"} . "  " . $fullpath_filename . "\n" if defined $lines{"SHA1:"};
+                print FILES_SHA256 $lines{"SHA256:"} . "  " . $fullpath_filename . "\n" if defined $lines{"SHA256:"};
 
                 add_url_to_download( $uri . "/" . $lines{"Filename:"}, $lines{"Size:"} );
-								push( @del_files, $fullpath_filename )  if (-e $fullpath_filename && get_variable("delete_bad_file") > 0 );
+                push( @del_files, $fullpath_filename )  if (-e $fullpath_filename && get_variable("delete_bad_file") > 0 );
             }
         }
         elsif ( exists $lines{"Files:"} )
@@ -1419,36 +1419,36 @@ sub process_index
                 my @file = split;
                 die("apt-mirror: invalid Sources format") if @file != 3;
 
-								$fullpath_filename = un_sanitise_filename(remove_double_slashes( $mirror . "/" . $lines{"Directory:"} . "/" . $file[2] ) );
+                $fullpath_filename = un_sanitise_filename(remove_double_slashes( $mirror . "/" . $lines{"Directory:"} . "/" . $file[2] ) );
                 $skipclean{ $fullpath_filename  } = 1;
 
-								print FILES_ALL $fullpath_filename . "\n";
+                print FILES_ALL $fullpath_filename . "\n";
                 print "ALL: " . $fullpath_filename . "\n"
                     if $verbose >= 3;
 
 
-								# check if need to update
-								my $need_update = 0;
+                # check if need to update
+                my $need_update = 0;
 
-								# check file size
+                # check file size
                 $need_update = need_update_by_size( $fullpath_filename, $file[1] );
 
-								# check file sum
-								if (-e $fullpath_filename && $need_update < 1 && get_variable("pre_check_sum") > 0 )
-								{
-										# $need_update = need_update_by_sum($fullpath_filename, $file[0], "md5");
-								}
+                # check file sum
+                if (-e $fullpath_filename && $need_update < 1 && get_variable("pre_check_sum") > 0 )
+                {
+                        # $need_update = need_update_by_sum($fullpath_filename, $file[0], "md5");
+                }
 
-								if ( $need_update > 0 )
-								{
+                if ( $need_update > 0 )
+                {
                     print FILES_NEW remove_double_slashes( $uri . "/" . $lines{"Directory:"} . "/" . $file[2] ) . "\n";
                     print "NEW: " . remove_double_slashes( $uri . "/" . $lines{"Directory:"} . "/" . $file[2] ) . "\n"
                         if $verbose >= 1;
 
-		                print FILES_MD5 $file[0] . "  " . $fullpath_filename . "\n";
+                    print FILES_MD5 $file[0] . "  " . $fullpath_filename . "\n";
 
                     add_url_to_download( $uri . "/" . $lines{"Directory:"} . "/" . $file[2], $file[1] );
-										push( @del_files, $fullpath_filename )  if (-e $fullpath_filename && get_variable("delete_bad_file") > 0 );
+                    push( @del_files, $fullpath_filename )  if (-e $fullpath_filename && get_variable("delete_bad_file") > 0 );
                 }
             }
         }
@@ -1460,177 +1460,177 @@ sub process_index
 
 sub mainsub_process_indexes
 {
-		open FILES_ALL, ">" . get_variable("var_path") . "/ALL" or die("apt-mirror: can't write to intermediate file (ALL)");
-		open FILES_NEW, ">" . get_variable("var_path") . "/NEW" or die("apt-mirror: can't write to intermediate file (NEW)");
-		open FILES_MD5, ">" . get_variable("var_path") . "/MD5" or die("apt-mirror: can't write to intermediate file (MD5)");
-		open FILES_SHA1, ">" . get_variable("var_path") . "/SHA1" or die("apt-mirror: can't write to intermediate file (SHA1)");
-		open FILES_SHA256, ">" . get_variable("var_path") . "/SHA256" or die("apt-mirror: can't write to intermediate file (SHA256)");
+    open FILES_ALL, ">" . get_variable("var_path") . "/ALL" or die("apt-mirror: can't write to intermediate file (ALL)");
+    open FILES_NEW, ">" . get_variable("var_path") . "/NEW" or die("apt-mirror: can't write to intermediate file (NEW)");
+    open FILES_MD5, ">" . get_variable("var_path") . "/MD5" or die("apt-mirror: can't write to intermediate file (MD5)");
+    open FILES_SHA1, ">" . get_variable("var_path") . "/SHA1" or die("apt-mirror: can't write to intermediate file (SHA1)");
+    open FILES_SHA256, ">" . get_variable("var_path") . "/SHA256" or die("apt-mirror: can't write to intermediate file (SHA256)");
 
-		print "\n\n Processing indexes: {S=source, B=Binary} ["
-				if $progress;
+    print "\n\n Processing indexes: {S=source, B=Binary} ["
+        if $progress;
 
-		foreach (@config_sources)
-		{
-				my ( $uri, $distribution, @components ) = @{$_};
-				print "S" if $progress;
-				# print "S-$distribution " if $progress;
-				if (@components)
-				{
-						my $component;
-						foreach $component (@components)
-						{
-								# print "C-$component " if $progress;
-								process_index( $uri, "/dists/$distribution/$component/source/Sources" );
-						}
-				}
-				else
-				{
-						process_index( $uri, "/$distribution/Sources" );
-				}
-		}
+    foreach (@config_sources)
+    {
+        my ( $uri, $distribution, @components ) = @{$_};
+        print "S" if $progress;
+        # print "S-$distribution " if $progress;
+        if (@components)
+        {
+            my $component;
+            foreach $component (@components)
+            {
+                # print "C-$component " if $progress;
+                process_index( $uri, "/dists/$distribution/$component/source/Sources" );
+            }
+        }
+        else
+        {
+            process_index( $uri, "/$distribution/Sources" );
+        }
+    }
 
-		print "  " if $progress;
-		foreach (@config_binaries)
-		{
-				my ( $arch, $uri, $distribution, @components ) = @{$_};
-				print "B" if $progress;
-				# print "P-$distribution " if $progress;
-				if (@components)
-				{
-						my $component;
-						foreach $component (@components)
-						{
-								# print "C-$component A-$arch " if $progress;
-								process_index( $uri, "/dists/$distribution/$component/binary-$arch/Packages" );
-						}
-				}
-				elsif ($distribution)
-				{
-						process_index( $uri, "/$distribution/Packages" );
-				}
-				else
-				{
-						process_index( $uri, "/Packages" );
-				}
-		}
+    print "  " if $progress;
+    foreach (@config_binaries)
+    {
+        my ( $arch, $uri, $distribution, @components ) = @{$_};
+        print "B" if $progress;
+        # print "P-$distribution " if $progress;
+        if (@components)
+        {
+            my $component;
+            foreach $component (@components)
+            {
+                # print "C-$component A-$arch " if $progress;
+                process_index( $uri, "/dists/$distribution/$component/binary-$arch/Packages" );
+            }
+        }
+        elsif ($distribution)
+        {
+            process_index( $uri, "/$distribution/Packages" );
+        }
+        else
+        {
+            process_index( $uri, "/Packages" );
+        }
+    }
 
-		clear_stat_cache();
-		print "]\n\n" if $progress;
+    clear_stat_cache();
+    print "]\n\n" if $progress;
 
-		if ( scalar @del_files )
-		{
-				print "\n --- Delete file with mismatch size: " . scalar @del_files . " files"  if $progress;
-				unlink( @del_files );
-				@del_files = ();
-		}
-		else
-		{
-				print "\n No file with mismatch size found. "  if $progress;
-		}
+    if ( scalar @del_files )
+    {
+        print "\n --- Delete file with mismatch size: " . scalar @del_files . " files"  if $progress;
+        unlink( @del_files );
+        @del_files = ();
+    }
+    else
+    {
+        print "\n No file with mismatch size found. "  if $progress;
+    }
 
-		close FILES_ALL;
-		close FILES_NEW;
-		close FILES_MD5;
-		close FILES_SHA1;
-		close FILES_SHA256;
+    close FILES_ALL;
+    close FILES_NEW;
+    close FILES_MD5;
+    close FILES_SHA1;
+    close FILES_SHA256;
 }
 
 
 sub parse_checksum_result
 {
-		my $fileres = shift;
-		my @bad_files;
+    my $fileres = shift;
+    my @bad_files;
 
-		open FH, '<', $fileres or die $!;
-		while(<FH>){
-				my ($afilename, $aresult) = split /\:/, $_;
-				# print "\n $afilename --- $aresult ";
-				push ( @bad_files, $afilename )  if ( $afilename =~ /\/mirror\//);
-		}
-		close(FH);
+    open FH, '<', $fileres or die $!;
+    while(<FH>){
+        my ($afilename, $aresult) = split /\:/, $_;
+        # print "\n $afilename --- $aresult ";
+        push ( @bad_files, $afilename )  if ( $afilename =~ /\/mirror\//);
+    }
+    close(FH);
 
-		if ( scalar @bad_files && get_variable("delete_bad_file") > 0 )
-		{
-				unlink( @bad_files );
-		}
+    if ( scalar @bad_files && get_variable("delete_bad_file") > 0 )
+    {
+        unlink( @bad_files );
+    }
 }
 
 sub checksum_checking
 {
-		my ( $type ) = @_;
-		print "\n\n Checksum $type-Checking.. "  if $progress;
+    my ( $type ) = @_;
+    print "\n\n Checksum $type-Checking.. "  if $progress;
 
-		my $var_path = get_variable("var_path");
-		my $checksum_fails = 0;
-
-
-		#--- SHA256 checking
-		my $checksum_file = "$var_path/SHA256";
-		my $checksum_res = "$var_path/res-sha256";
-		my $checksum_tmp = "$var_path/tmp-sha256";
-
-		print "\n Checksum Type: SHA256 "  if $progress;
-		if (-e $checksum_file && -s $checksum_file )
-		{
-				system ("cat $checksum_file | sort -u | sort > $checksum_tmp; cp $checksum_tmp $checksum_file");
-				system ("/usr/bin/shasum -a 256 -c $checksum_file 2>&1 | grep -v WARNING | grep -v OK > $checksum_res");
-				parse_checksum_result($checksum_res);
-
-				my $curfail = int(`cat $checksum_res | grep -v WARNING | grep -v OK | wc -l`);
-				$checksum_fails += $curfail;
-				print ( $curfail > 0? " \t--- fails= $curfail " : " \t--- OK " )  if $progress;
-		}
-		else
-		{
-				print " \t--- checksum file not exists" if (-e $checksum_file && $progress);
-				print " \t--- empty checksum file" if (-s $checksum_file && $progress);
-		}
+    my $var_path = get_variable("var_path");
+    my $checksum_fails = 0;
 
 
-		#--- SHA1 checking
-		$checksum_file = get_variable("var_path") . "/SHA1";
-		$checksum_res = "$var_path/res-sha1";
-		$checksum_tmp = "$var_path/tmp-sha1";
+    #--- SHA256 checking
+    my $checksum_file = "$var_path/SHA256";
+    my $checksum_res = "$var_path/res-sha256";
+    my $checksum_tmp = "$var_path/tmp-sha256";
 
-		print "\n Checksum Type: SHA1   "  if $progress;
-		if (-e $checksum_file && -s $checksum_file )
-		{
-				system ("cat $checksum_file | sort -u | sort > $checksum_tmp; cp $checksum_tmp $checksum_file");
-				system ("/usr/bin/shasum -a 1 -c $checksum_file 2>&1 | grep -v WARNING | grep -v OK > $checksum_res");
-				parse_checksum_result($checksum_res);
+    print "\n Checksum Type: SHA256 "  if $progress;
+    if (-e $checksum_file && -s $checksum_file )
+    {
+        system ("cat $checksum_file | sort -u | sort > $checksum_tmp; cp $checksum_tmp $checksum_file");
+        system ("/usr/bin/shasum -a 256 -c $checksum_file 2>&1 | grep -v WARNING | grep -v OK > $checksum_res");
+        parse_checksum_result($checksum_res);
 
-				my $curfail = int(`cat $checksum_res | grep -v WARNING | grep -v OK | wc -l`);
-				$checksum_fails += $curfail;
-				print ( $curfail > 0? " \t--- fails= $curfail " : " \t--- OK " )  if $progress;
-		}
-		else
-		{
-				print " \t--- checksum file not exists" if (-e $checksum_file && $progress);
-				print " \t--- empty checksum file" if (-s $checksum_file && $progress);
-		}
+        my $curfail = int(`cat $checksum_res | grep -v WARNING | grep -v OK | wc -l`);
+        $checksum_fails += $curfail;
+        print ( $curfail > 0? " \t--- fails= $curfail " : " \t--- OK " )  if $progress;
+    }
+    else
+    {
+        print " \t--- checksum file not exists" if (-e $checksum_file && $progress);
+        print " \t--- empty checksum file" if (-s $checksum_file && $progress);
+    }
 
 
-		#--- MD5 checking
-		$checksum_file = get_variable("var_path") . "/MD5";
-		$checksum_res = "$var_path/res-md5";
-		$checksum_tmp = "$var_path/tmp-md5";
+    #--- SHA1 checking
+    $checksum_file = get_variable("var_path") . "/SHA1";
+    $checksum_res = "$var_path/res-sha1";
+    $checksum_tmp = "$var_path/tmp-sha1";
 
-		print "\n Checksum Type: MD5    "  if $progress;
-		if (-e $checksum_file && -s $checksum_file )
-		{
-				system ("cat $checksum_file | sort -u | sort > $checksum_tmp; cp $checksum_tmp $checksum_file");
-				system ("/usr/bin/md5sum -c $checksum_file 2>&1 | grep -v WARNING | grep -v OK > $checksum_res");
-				parse_checksum_result($checksum_res);
+    print "\n Checksum Type: SHA1   "  if $progress;
+    if (-e $checksum_file && -s $checksum_file )
+    {
+        system ("cat $checksum_file | sort -u | sort > $checksum_tmp; cp $checksum_tmp $checksum_file");
+        system ("/usr/bin/shasum -a 1 -c $checksum_file 2>&1 | grep -v WARNING | grep -v OK > $checksum_res");
+        parse_checksum_result($checksum_res);
 
-				my $curfail = int(`cat $checksum_res | grep -v WARNING | grep -v OK | wc -l`);
-				$checksum_fails += $curfail;
-				print ( $curfail > 0? " \t--- fails= $curfail " : " \t--- OK " )  if $progress;
-		}
-		else
-		{
-				print " \t--- checksum file not exists" if (-e $checksum_file && $progress);
-				print " \t--- empty checksum file" if (-s $checksum_file && $progress);
-		}
+        my $curfail = int(`cat $checksum_res | grep -v WARNING | grep -v OK | wc -l`);
+        $checksum_fails += $curfail;
+        print ( $curfail > 0? " \t--- fails= $curfail " : " \t--- OK " )  if $progress;
+    }
+    else
+    {
+        print " \t--- checksum file not exists" if (-e $checksum_file && $progress);
+        print " \t--- empty checksum file" if (-s $checksum_file && $progress);
+    }
+
+
+    #--- MD5 checking
+    $checksum_file = get_variable("var_path") . "/MD5";
+    $checksum_res = "$var_path/res-md5";
+    $checksum_tmp = "$var_path/tmp-md5";
+
+    print "\n Checksum Type: MD5    "  if $progress;
+    if (-e $checksum_file && -s $checksum_file )
+    {
+        system ("cat $checksum_file | sort -u | sort > $checksum_tmp; cp $checksum_tmp $checksum_file");
+        system ("/usr/bin/md5sum -c $checksum_file 2>&1 | grep -v WARNING | grep -v OK > $checksum_res");
+        parse_checksum_result($checksum_res);
+
+        my $curfail = int(`cat $checksum_res | grep -v WARNING | grep -v OK | wc -l`);
+        $checksum_fails += $curfail;
+        print ( $curfail > 0? " \t--- fails= $curfail " : " \t--- OK " )  if $progress;
+    }
+    else
+    {
+        print " \t--- checksum file not exists" if (-e $checksum_file && $progress);
+        print " \t--- empty checksum file" if (-s $checksum_file && $progress);
+    }
 }
 
 mainsub_process_indexes();
@@ -1643,72 +1643,72 @@ checksum_checking('Pre')  if ( get_variable("pre_check_sum") > 0 );
 
 sub mainsub_main_download
 {
-		print "\n\n Main download.. "  if $progress;
+    print "\n\n Main download.. "  if $progress;
 
-		chdir get_variable("mirror_path") or die("apt-mirror: can't chdir to mirror");
+    chdir get_variable("mirror_path") or die("apt-mirror: can't chdir to mirror");
 
-		my $need_bytes = 0;
-		foreach ( values %urls_to_download )
-		{
-				$need_bytes += $_;
-		}
+    my $need_bytes = 0;
+    foreach ( values %urls_to_download )
+    {
+        $need_bytes += $_;
+    }
 
-		my $size_output = format_bytes($need_bytes);
-		my $url_count = scalar(%urls_to_download);
+    my $size_output = format_bytes($need_bytes);
+    my $url_count = scalar(%urls_to_download);
 
-		if ( get_variable("dry_run") > 0 )
-		{
-				print "\n\n $size_output will be downloaded into archive [$url_count urls].\n";
-				print " A dry-run was requested, no download performed, exiting.\n";
-				unlock_aptmirror();
-				exit(0)
-		}
+    if ( get_variable("dry_run") > 0 )
+    {
+        print "\n\n $size_output will be downloaded into archive [$url_count urls].\n";
+        print " A dry-run was requested, no download performed, exiting.\n";
+        unlock_aptmirror();
+        exit(0)
+    }
 
-		(my $size_mirror) = $size_output =~ /\A([^:\s]+)/;
-		my $directory = get_variable("mirror_path");
-		my $command = "df $directory | awk -F'[^0-9]*' 'NR==2 {print \$5}'";
-		(my $directory_size) = format_bytes(`$command`*1000) =~ /\A([^:\s]+)/;
+    (my $size_mirror) = $size_output =~ /\A([^:\s]+)/;
+    my $directory = get_variable("mirror_path");
+    my $command = "df $directory | awk -F'[^0-9]*' 'NR==2 {print \$5}'";
+    (my $directory_size) = format_bytes(`$command`*1000) =~ /\A([^:\s]+)/;
 
-		if ($directory_size <= $size_mirror) {
-				warn("apt-mirror: need space $size_output\n");
-		}
-		else
-		{
-				print " $size_output will be downloaded into archive [$url_count urls].\n";
+    if ($directory_size <= $size_mirror) {
+        warn("apt-mirror: need space $size_output\n");
+    }
+    else
+    {
+        print " $size_output will be downloaded into archive [$url_count urls].\n";
 
-				download_urls( "archive", sort keys %urls_to_download );
+        download_urls( "archive", sort keys %urls_to_download );
 
-				######################################################################################
-				## Copy skel to main archive
+        ######################################################################################
+        ## Copy skel to main archive
 
-				sub copy_file
-				{
-						my ( $from, $to ) = @_;
-						my $dir = dirname($to);
-						return unless -f $from;
-						make_path($dir) unless -d $dir;
-						if ( get_variable("unlink") == 1 )
-						{
-								if ( compare( $from, $to ) != 0 ) { unlink($to); }
-						}
-						unless ( copy( $from, $to ) )
-						{
-								warn("apt-mirror: can't copy $from to $to");
-								return;
-						}
-						my ( $atime, $mtime ) = ( stat($from) )[ 8, 9 ];
-						utime( $atime, $mtime, $to ) or die("apt-mirror: can't utime $to");
-				}
+        sub copy_file
+        {
+            my ( $from, $to ) = @_;
+            my $dir = dirname($to);
+            return unless -f $from;
+            make_path($dir) unless -d $dir;
+            if ( get_variable("unlink") == 1 )
+            {
+                if ( compare( $from, $to ) != 0 ) { unlink($to); }
+            }
+            unless ( copy( $from, $to ) )
+            {
+                warn("apt-mirror: can't copy $from to $to");
+                return;
+            }
+            my ( $atime, $mtime ) = ( stat($from) )[ 8, 9 ];
+            utime( $atime, $mtime, $to ) or die("apt-mirror: can't utime $to");
+        }
 
-				foreach (@index_urls)
-				{
-						die("apt-mirror: invalid url in index_urls: $_") unless s[^(\w+)://][];
-						copy_file( get_variable("skel_path") . "/" . sanitise_uri("$_"), get_variable("mirror_path") . "/" . sanitise_uri("$_") );
-						copy_file( get_variable("skel_path") . "/" . sanitise_uri("$_"), get_variable("mirror_path") . "/" . sanitise_uri("$_") ) if (s/\.gz$//);
-						copy_file( get_variable("skel_path") . "/" . sanitise_uri("$_"), get_variable("mirror_path") . "/" . sanitise_uri("$_") ) if (s/\.bz2$//);
-						copy_file( get_variable("skel_path") . "/" . sanitise_uri("$_"), get_variable("mirror_path") . "/" . sanitise_uri("$_") ) if (s/\.xz$//);
-				}
-		}
+        foreach (@index_urls)
+        {
+            die("apt-mirror: invalid url in index_urls: $_") unless s[^(\w+)://][];
+            copy_file( get_variable("skel_path") . "/" . sanitise_uri("$_"), get_variable("mirror_path") . "/" . sanitise_uri("$_") );
+            copy_file( get_variable("skel_path") . "/" . sanitise_uri("$_"), get_variable("mirror_path") . "/" . sanitise_uri("$_") ) if (s/\.gz$//);
+            copy_file( get_variable("skel_path") . "/" . sanitise_uri("$_"), get_variable("mirror_path") . "/" . sanitise_uri("$_") ) if (s/\.bz2$//);
+            copy_file( get_variable("skel_path") . "/" . sanitise_uri("$_"), get_variable("mirror_path") . "/" . sanitise_uri("$_") ) if (s/\.xz$//);
+        }
+    }
 }
 
 mainsub_main_download();
@@ -1723,129 +1723,129 @@ checksum_checking('Post')  if ( get_variable("post_check_sum") > 0 );
 if ( get_variable("exec_clean") > 0 )
 {
 
-		print "\n\n Create clean script.. "  if $progress;
+    print "\n\n Create clean script.. "  if $progress;
 
-		my ( @rm_dirs, @rm_files ) = ();
-		my $unnecessary_bytes = 0;
+    my ( @rm_dirs, @rm_files ) = ();
+    my $unnecessary_bytes = 0;
 
-		sub process_symlink
-		{
-				return 1;    # symlinks are always needed
-		}
+    sub process_symlink
+    {
+        return 1;    # symlinks are always needed
+    }
 
-		sub process_file
-		{
-				my $file = shift;
-				$file =~ s[~][%7E]g if get_variable("_tilde");
-				$file =~ s[\+][%2B]g if get_variable("_plus");
-				return 1 if $skipclean{$file};
+    sub process_file
+    {
+        my $file = shift;
+        $file =~ s[~][%7E]g if get_variable("_tilde");
+        $file =~ s[\+][%2B]g if get_variable("_plus");
+        return 1 if $skipclean{$file};
 
-				push @rm_files, sanitise_uri($file);
-				my ( undef, undef, undef, undef, undef, undef, undef, $size, undef, undef, undef, undef, $blocks ) = stat($file);
-				$unnecessary_bytes += $blocks * 512  if (defined $blocks);
-				return 0;
-		}
+        push @rm_files, sanitise_uri($file);
+        my ( undef, undef, undef, undef, undef, undef, undef, $size, undef, undef, undef, undef, $blocks ) = stat($file);
+        $unnecessary_bytes += $blocks * 512  if (defined $blocks);
+        return 0;
+    }
 
-		sub process_directory
-		{
-				my $dir       = shift;
-				my $is_needed = 0;
-				return 1 if $skipclean{$dir};
-				opendir( my $dir_h, $dir ) or die "apt-mirror: can't opendir $dir: $!";
-				foreach ( grep { !/^\.$/ && !/^\.\.$/ } readdir($dir_h) )
-				{
-						my $item = $dir . "/" . $_;
-						$is_needed |= process_directory($item) if -d $item && !-l $item;
-						$is_needed |= process_file($item)      if -f $item;
-						$is_needed |= process_symlink($item)   if -l $item;
-				}
-				closedir $dir_h;
-				push @rm_dirs, $dir unless $is_needed;
-				return $is_needed;
-		}
+    sub process_directory
+    {
+        my $dir       = shift;
+        my $is_needed = 0;
+        return 1 if $skipclean{$dir};
+        opendir( my $dir_h, $dir ) or die "apt-mirror: can't opendir $dir: $!";
+        foreach ( grep { !/^\.$/ && !/^\.\.$/ } readdir($dir_h) )
+        {
+            my $item = $dir . "/" . $_;
+            $is_needed |= process_directory($item) if -d $item && !-l $item;
+            $is_needed |= process_file($item)      if -f $item;
+            $is_needed |= process_symlink($item)   if -l $item;
+        }
+        closedir $dir_h;
+        push @rm_dirs, $dir unless $is_needed;
+        return $is_needed;
+    }
 
-		chdir get_variable("mirror_path") or die("apt-mirror: can't chdir to mirror");
+    chdir get_variable("mirror_path") or die("apt-mirror: can't chdir to mirror");
 
-		foreach ( keys %clean_directory )
-		{
-				process_directory($_) if -d $_ && !-l $_;
-		}
+    foreach ( keys %clean_directory )
+    {
+        process_directory($_) if -d $_ && !-l $_;
+    }
 
-		open CLEAN, ">" . get_variable("cleanscript") or die("apt-mirror: can't open clean script file");
+    open CLEAN, ">" . get_variable("cleanscript") or die("apt-mirror: can't open clean script file");
 
-		my ( $i, $total ) = ( 0, scalar @rm_files );
+    my ( $i, $total ) = ( 0, scalar @rm_files );
 
-		if ( get_variable("_autoclean") )
-		{
+    if ( get_variable("_autoclean") )
+    {
 
-				my $size_output = format_bytes($unnecessary_bytes);
-				print "$size_output in $total files and " . scalar(@rm_dirs) . " directories will be freed...";
+        my $size_output = format_bytes($unnecessary_bytes);
+        print "$size_output in $total files and " . scalar(@rm_dirs) . " directories will be freed...";
 
-				chdir get_variable("mirror_path") or die("apt-mirror: can't chdir to mirror");
+        chdir get_variable("mirror_path") or die("apt-mirror: can't chdir to mirror");
 
-				foreach (@rm_files) { unlink $_; }
-				foreach (@rm_dirs)  { rmdir $_; }
+        foreach (@rm_files) { unlink $_; }
+        foreach (@rm_dirs)  { rmdir $_; }
 
-		}
-		else
-		{
+    }
+    else
+    {
 
-				my $size_output = format_bytes($unnecessary_bytes);
-				print "$size_output in $total files and " . scalar(@rm_dirs) . " directories can be freed.\n";
-				print "Run " . get_variable("cleanscript") . " for this purpose.\n\n";
+        my $size_output = format_bytes($unnecessary_bytes);
+        print "$size_output in $total files and " . scalar(@rm_dirs) . " directories can be freed.\n";
+        print "Run " . get_variable("cleanscript") . " for this purpose.\n\n";
 
-				print CLEAN "#!/bin/sh\n";
-				print CLEAN "set -e\n\n";
-				print CLEAN "cd " . quoted_path(get_variable("mirror_path")) . "\n\n";
-				print CLEAN "echo 'Removing $total unnecessary files [$size_output]...'\n";
-				foreach (@rm_files)
-				{
-						print CLEAN "rm -f '$_'\n";
-						print "  $_\n" if $verbose >= 1;
-						print CLEAN "echo -n '[" . int( 100 * $i / $total ) . "\%]'\n" unless $i % 500;
-						print CLEAN "echo -n .\n" unless $i % 10;
-						$i++;
-				}
-				print CLEAN "echo 'done.'\n";
-				print CLEAN "echo\n\n";
+        print CLEAN "#!/bin/sh\n";
+        print CLEAN "set -e\n\n";
+        print CLEAN "cd " . quoted_path(get_variable("mirror_path")) . "\n\n";
+        print CLEAN "echo 'Removing $total unnecessary files [$size_output]...'\n";
+        foreach (@rm_files)
+        {
+            print CLEAN "rm -f '$_'\n";
+            print "  $_\n" if $verbose >= 1;
+            print CLEAN "echo -n '[" . int( 100 * $i / $total ) . "\%]'\n" unless $i % 500;
+            print CLEAN "echo -n .\n" unless $i % 10;
+            $i++;
+        }
+        print CLEAN "echo 'done.'\n";
+        print CLEAN "echo\n\n";
 
-				$i     = 0;
-				$total = scalar @rm_dirs;
-				print CLEAN "echo 'Removing $total unnecessary directories...'\n";
-				foreach (@rm_dirs)
-				{
-						print CLEAN "if test -d '$_'; then rm -rf '$_'; fi\n";
-						print CLEAN "echo -n '[" . int( 100 * $i / $total ) . "\%]'\n" unless $i % 50;
-						print CLEAN "echo -n .\n";
-						$i++;
-				}
-				print CLEAN "echo 'done.'\n";
-				print CLEAN "echo\n";
+        $i     = 0;
+        $total = scalar @rm_dirs;
+        print CLEAN "echo 'Removing $total unnecessary directories...'\n";
+        foreach (@rm_dirs)
+        {
+            print CLEAN "if test -d '$_'; then rm -rf '$_'; fi\n";
+            print CLEAN "echo -n '[" . int( 100 * $i / $total ) . "\%]'\n" unless $i % 50;
+            print CLEAN "echo -n .\n";
+            $i++;
+        }
+        print CLEAN "echo 'done.'\n";
+        print CLEAN "echo\n";
 
-				close CLEAN;
+        close CLEAN;
 
-		}
+    }
 
-		# Make clean script executable
-		print "\n\n Execute clean script.. "  if $progress;
+    # Make clean script executable
+    print "\n\n Execute clean script.. "  if $progress;
 
-		my $perm = ( stat get_variable("cleanscript") )[2] & 07777;
-		chmod( $perm | 0111, get_variable("cleanscript") );
+    my $perm = ( stat get_variable("cleanscript") )[2] & 07777;
+    chmod( $perm | 0111, get_variable("cleanscript") );
 
-		if ( get_variable("run_postmirror") )
-		{
-				print "Running the Post Mirror script ...\n";
-				print "(" . get_variable("postmirror_script") . ")\n\n";
-				if ( -x get_variable("postmirror_script") )
-				{
-						system(get_variable("postmirror_script").'');
-				}
-				else
-				{
-						system('/bin/sh', get_variable("postmirror_script"));
-				}
-				print "\nPost Mirror script has completed. See above output for any possible errors.\n\n";
-		}
+    if ( get_variable("run_postmirror") )
+    {
+        print "Running the Post Mirror script ...\n";
+        print "(" . get_variable("postmirror_script") . ")\n\n";
+        if ( -x get_variable("postmirror_script") )
+        {
+            system(get_variable("postmirror_script").'');
+        }
+        else
+        {
+            system('/bin/sh', get_variable("postmirror_script"));
+        }
+        print "\nPost Mirror script has completed. See above output for any possible errors.\n\n";
+    }
 }
 
 unlock_aptmirror();
