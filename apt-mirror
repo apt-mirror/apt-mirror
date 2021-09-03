@@ -104,38 +104,50 @@ use feature 'fc';
 my $config_file;
 
 my %config_variables = (
-    "defaultarch"          => `dpkg --print-architecture 2>/dev/null` || 'i386',
-    "nthreads"             => 20,
+		# PATH configs
     "base_path"            => '/var/spool/apt-mirror',
     "mirror_path"          => '$base_path/mirror',
     "skel_path"            => '$base_path/skel',
     "var_path"             => '$base_path/var',
-    "cleanscript"          => '$var_path/clean.sh',
+
+		"defaultarch"          => `dpkg --print-architecture 2>/dev/null` || 'amd64',
+
+		# main config
+    "nthreads"             => 20,
+		"cleanscript"          => '$var_path/clean.sh',
     "_contents"            => 1,
     "_autoclean"           => 1,
+    "dry_run"              => 0,
+
+		# URL sanitizen
     "_tilde"               => 0,
     "_plus"                => 0,
-    "exec_dep11"           => 0,
+
+		# subroutine execution
+		"exec_dep11"           => 0,
     "exec_translation"     => 0,
     "exec_cnf"             => 0,
     "exec_deb_ins"         => 0,
     "exec_by_hash"         => 0,
     "exec_clean"           => 0,
-    "unlink"               => 0,
+
+		# post/pre mirroring
     "postmirror_script"    => '$var_path/postmirror.sh',
     "run_postmirror"       => 1,
     "premirror_script"     => '$var_path/premirror.sh',
     "run_premirror"        => 1,
-    "dry_run"              => 0,
+
+		# checksum operations
     "pre_check_sum"        => 1,
     "post_check_sum"       => 1,
-    "delete_bad_file"       => 0,
+    "delete_bad_file"      => 1,
 
-		# WGET options
-    "limit_rate"  => '100m',
+		# WGET configs
+		"unlink"               => 0,
+    "limit_rate"           => '20m',
     "auth_no_challenge"    => 1,
     "no_check_certificate" => 1,
-    "no_verbose"           => 0,
+    "no_verbose"           => 1,
     "use_proxy"            => 0,
     "http_proxy"           => '',
     "https_proxy"          => '',
@@ -1332,16 +1344,16 @@ sub process_index
 		$path_index = remove_double_slashes( "$mirror/$index" );  #Bug #1730285 Ubuntu
 
     unless (-e "$path_index" ) {
-				my $ret=	system("gunzip -df -V < $path_index.gz > $path_index")  if (-e "$path_index.gz" );
+				my $ret=	system("gunzip -dfk < $path_index.gz > $path_index")  if (-e "$path_index.gz" );
 
         # if gunzip failed
         unless (-e "$path_index" ) {
-						system("xz -df < $path_index.xz > $path_index")  if (-e "$path_index.xz" );
+						system("xz -dfk < $path_index.xz > $path_index")  if (-e "$path_index.xz" );
         }
 
         # if xz decompress failed
         unless (-e "$path_index" ) {
-						system("bzip2 -df < $path_index.bz2 > $path_index")  if (-e "$path_index.bz2" );
+						system("bzip2 -dfk < $path_index.bz2 > $path_index")  if (-e "$path_index.bz2" );
         }
 		}
 

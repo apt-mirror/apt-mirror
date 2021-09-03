@@ -15,45 +15,111 @@
 
 set base_path         /mnt/hdd/apt-test
 
-#-- concurrent wget instances
+
+#-- Number concurrent wget instances
+# Make sure you have enough bandwidth space. Check also limit_rate
+# Default: 20
 set nthreads          128
 
-#-- options for URL sanitizing
+
+#== Options for URL sanitizing
+#==============================================
+#-- Convert tilde '~' into '%7E'  (without quote)
+# Default: 1
 set _tilde            1
+
+#-- Convert plus '+' into '%2B'  (without quote)
+# Default: 1
 set _plus             1
+#==============================================
 
-#-- show only space needed, NO actual downloads executed except for the indexes
-set dry_run           0
 
-#-- running pre/post mirror script
-set run_postmirror    0
+#== Running pre/post mirror script
+#==============================================
+#-- Executed before download process
+# Default: 1
 set run_premirror     0
 
-#-- un-documented options
+#-- Executed after download process
+# Default: 1
+set run_postmirror    0
+#==============================================
+
+
+#-- Show only space needed, NO actual downloads executed except for the indexes
+# Default: 0
+set dry_run           0
+
+#--  Also download Contents.* files
+# Default: 1
 set _contents         1
+
+#-- Auto delete unused files
+# Default: 1
 set _autoclean        1
 
-#-- execute subroutines
-set exec_translation  1
-set exec_dep11        1
-set exec_cnf          0
-set exec_deb_ins      0
-set exec_by_hash      0
-set exec_clean        0
 
-#-- do file sum checking, after/before download
+
+#== Subroutines execution options
+#==============================================
+#-- Download translation files
+# Default: 1
+set exec_translation  1
+
+#-- Download Dep 11 files
+# Default: 1
+set exec_dep11        1
+
+#-- Download CNF files
+# Default: 0
+set exec_cnf          0
+
+#-- Download installer files (for remote boot)
+# Default: 0
+set exec_deb_ins      0
+
+#-- Download By_hash files
+# Default: 0
+set exec_by_hash      0
+
+#-- Create and execute clean script
+# You may enable (set exec_clean 1) if you have limited storage space.
+# Old packages is useful for backup and maintenance
+# Default: 0
+set exec_clean        0
+#==============================================
+
+
+
+#== Do file sum checking, after/before download
+#==============================================
+#-- Executed before download process
+# Default: 1
 set pre_check_sum     1
+
+#-- Executed before download process
+# Default: 1
 set post_check_sum    1
+#==============================================
+
 
 #-- delete files with mismatch size or sum
+# Default: 1
 set delete_bad_file   1
 
 
+
+
 #-- WGET CONFIGS
-#---------------------------------------
+#-- these settings is control wget
+#------------------------------------------
 
 #-- disable SSL certificate checks
+# Default: 1
 set no_check_certificate 1
+
+#-- disable auth challenge
+# Default: 1
 set auth_no_challenge    1
 
 #-- proxy settings
@@ -62,24 +128,49 @@ set http_proxy        127.0.0.1:3128
 # set proxy_user      auser
 # set proxy_password  apassword
 
+#-- mimic as other user agent
+# Default: Aptly/1.0
 set user_agent        Aptly/1.0
+
+#-- General network timeout, ie: read, connect and dns timeout
+# Default: 30
 set timeout           30
+
+#-- if download is failed, wget will retry with this number before give up
+# Default: 3
 set tries             3
+
+#-- if URL is redirected to another URL, wget will follow the new URL.
+# This number is maximum follow attempt
+# Default: 3
+set max_redirect      3
+
+#-- Some repository servers (most of them not) need to save cookies.
+# We need to save cookies between download sessions, to act as legitimate
+# and trustful repo client
+# Default: /tmp/apt-mirror.cookies
 set cookies_file      /tmp/apt-mirror.cookies
+
+#-- Make wget silent
+# Default: 1
 set no_verbose        1
 
 #-- Use --unlink with wget (for use with hardlinked directories)
+# Default: {no default value}
 set unlink            1
 
-#-- limit rate per wget instances
+#-- limit download rate per wget instances
+# Default: {no default value}
 set limit_rate        25m
 
-#-- --prefer-family=none/IPv4/IPv6 --inet4-only --inet6-only
+#-- using IPv6 only
+# if disabled (set ip_v6 0) wget will use to use only IPv4
+# Default: 0
 set ip_v6             0
-set max_redirect      3
 
 #
 ############# end config ##############
+
 
 #deb-armhf http://security.debian.org/debian-security bullseye-security main
 #deb-arm64 http://security.debian.org/debian-security bullseye-security main
