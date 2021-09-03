@@ -28,6 +28,7 @@ See also:
 ## Changes from apt-mirror/apt-mirror
 
 - Coded at debian buster 10.10
+- Enough explanation at config file
 - Some new features added :
 	- new config option "use_proxy"  (PR #48)
 	- new config option "http_proxy"  (PR #48)
@@ -48,7 +49,16 @@ See also:
 	- merge pull request (PR) #36, #40, #48, #77, #86, #95, #96, #100, #103, #105, #111, #112, #115, #116, #120, #127, #131, #136, #143
 	- bz2 or xz or gz (buster-backports i18n xz) (fixes #130)
 	- port number (fixes #19)
+	- checksum checking for binary & sources files. checksum checking can be executed at pre and post mirroring. both can be enabled/disabled via config file.
+	- using absolute full path for uncompress *.gz, *.xs and *.bz2
 
+
+## TODO :
+- Release and Packages files checking
+
+
+## DROPPED TODO LIST :
+-not yet-
 
 ## List all of PR merged
 - https://github.com/apt-mirror/apt-mirror/pull/36
