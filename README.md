@@ -51,14 +51,17 @@ See also:
 	- port number (fixes #19)
 	- checksum checking for binary & sources files. checksum checking can be executed at pre and post mirroring. both can be enabled/disabled via config file.
 	- using absolute full path for uncompress *.gz, *.xs and *.bz2
+	- Release and Packages files checksum checking
 
 
 ## TODO :
-- Release and Packages files checking
+- Translation files checksum checking
+- DEP-11 files checksum checking
 
 
 ## DROPPED TODO LIST :
 -not yet-
+
 
 ## List all of PR merged
 - https://github.com/apt-mirror/apt-mirror/pull/36

@@ -19,6 +19,8 @@
 	  #112, #115, #116, #120, #127, #131, #136, #143
 	* bz2 or xz or gz (buster-backports i18n xz) (fixes #130)
 	* port number (fixes #19)
+	* Release and Packages files checksum checking
+	* Absolute path for compressed files (bug fixes #1730285 Ubuntu)
 
 0.5.4 (2017-05-29)
   * Add limit_rate to example mirror.list (fixes #72)

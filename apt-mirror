@@ -434,7 +434,7 @@ sub download_urls
 
     if ( $nums_now > 2)
     {
-        print "\n\n wget ins=$nums_now";
+        print "\n wget ins= $nums_now";
         while ($nums_now > 1)
         {
             sleep(3);
@@ -563,7 +563,12 @@ lock_aptmirror();
 
 
 my %urls_to_download = ();
+my @release_files = ();
 my ( $url, $arch );
+
+my $mirror_path = get_variable("mirror_path");
+my $var_path = get_variable("var_path");
+
 
 sub remove_double_slashes
 {
@@ -580,110 +585,339 @@ sub add_url_to_download
 {
     my $url = remove_double_slashes(shift);
     $urls_to_download{$url} = shift;
-}
 
-foreach (@config_sources)
-{
-    my ( $uri, $distribution, @components ) = @{$_};
-
-    if (@components)
-    {
-        $url = $uri . "/dists/" . $distribution . "/";
-
-        add_url_to_download( $url . "InRelease" );
-        add_url_to_download( $url . "Release" );
-        add_url_to_download( $url . "Release.gpg" );
-        foreach (@components)
-        {
-            add_url_to_download( $url . $_ . "/source/InRelease" );
-            add_url_to_download( $url . $_ . "/source/Release" );
-            add_url_to_download( $url . $_ . "/source/Sources.gz" );
-            add_url_to_download( $url . $_ . "/source/Sources.bz2" );
-            add_url_to_download( $url . $_ . "/source/Sources.xz" );
-        }
-    }
-    else
-    {
-        add_url_to_download( $uri . "/$distribution/InRelease" );
-        add_url_to_download( $uri . "/$distribution/Release" );
-        add_url_to_download( $uri . "/$distribution/Release.gpg" );
-        add_url_to_download( $uri . "/$distribution/Sources.gz" );
-        add_url_to_download( $uri . "/$distribution/Sources.bz2" );
-        add_url_to_download( $uri . "/$distribution/Sources.xz" );
+    if (index($url, "Release") != -1 && index($url, ".gpg") < 0) {
+        my $apath = $url;
+        $apath =~ s/https?\:\/\///g;
+        $apath = $mirror_path . "/" . remove_double_slashes($apath);
+        push( @release_files, $apath );
+        # print "\n$apath";
     }
 }
 
-foreach (@config_binaries)
+sub mainsub_process_skel
 {
-    my ( $arch, $uri, $distribution, @components ) = @{$_};
-
-    if (@components)
+    foreach (@config_sources)
     {
-        $url = $uri . "/dists/" . $distribution . "/";
+        my ( $uri, $distribution, @components ) = @{$_};
 
-        add_url_to_download( $url . "InRelease" );
-        add_url_to_download( $url . "Release" );
-        add_url_to_download( $url . "Release.gpg" );
-        if ( get_variable("_contents") )
+        if (@components)
         {
-            add_url_to_download( $url . "Contents-" . $arch . ".gz" );
-            add_url_to_download( $url . "Contents-" . $arch . ".bz2" );
-            add_url_to_download( $url . "Contents-" . $arch . ".xz" );
+            $url = $uri . "/dists/" . $distribution . "/";
+
+            add_url_to_download( $url . "InRelease" );
+            add_url_to_download( $url . "Release" );
+            add_url_to_download( $url . "Release.gpg" );
+            foreach (@components)
+            {
+                add_url_to_download( $url . $_ . "/source/InRelease" );
+                add_url_to_download( $url . $_ . "/source/Release" );
+                add_url_to_download( $url . $_ . "/source/Sources.gz" );
+                add_url_to_download( $url . $_ . "/source/Sources.bz2" );
+                add_url_to_download( $url . $_ . "/source/Sources.xz" );
+            }
         }
-        foreach (@components)
+        else
         {
+            add_url_to_download( $uri . "/$distribution/InRelease" );
+            add_url_to_download( $uri . "/$distribution/Release" );
+            add_url_to_download( $uri . "/$distribution/Release.gpg" );
+            add_url_to_download( $uri . "/$distribution/Sources.gz" );
+            add_url_to_download( $uri . "/$distribution/Sources.bz2" );
+            add_url_to_download( $uri . "/$distribution/Sources.xz" );
+        }
+    }
+
+    foreach (@config_binaries)
+    {
+        my ( $arch, $uri, $distribution, @components ) = @{$_};
+
+        if (@components)
+        {
+            $url = $uri . "/dists/" . $distribution . "/";
+
+            add_url_to_download( $url . "InRelease" );
+            add_url_to_download( $url . "Release" );
+            add_url_to_download( $url . "Release.gpg" );
             if ( get_variable("_contents") )
             {
-                add_url_to_download( $url . $_ . "/Contents-" . $arch . ".gz" );
-                add_url_to_download( $url . $_ . "/Contents-" . $arch . ".bz2" );
-                add_url_to_download( $url . $_ . "/Contents-" . $arch . ".xz" );
+                add_url_to_download( $url . "Contents-" . $arch . ".gz" );
+                add_url_to_download( $url . "Contents-" . $arch . ".bz2" );
+                add_url_to_download( $url . "Contents-" . $arch . ".xz" );
             }
-            add_url_to_download( $url . $_ . "/binary-" . $arch . "/InRelease" );
-            add_url_to_download( $url . $_ . "/binary-" . $arch . "/Release" );
-            add_url_to_download( $url . $_ . "/binary-" . $arch . "/Packages" );
-            add_url_to_download( $url . $_ . "/binary-" . $arch . "/Packages.gz" );
-            add_url_to_download( $url . $_ . "/binary-" . $arch . "/Packages.bz2" );
-            add_url_to_download( $url . $_ . "/binary-" . $arch . "/Packages.xz" );
-            add_url_to_download( $url . $_ . "/i18n/Index" );
-            add_url_to_download( $url . $_ . "/cnf/Commands-" . $arch . ".xz" );
+            foreach (@components)
+            {
+                if ( get_variable("_contents") )
+                {
+                    add_url_to_download( $url . $_ . "/Contents-" . $arch . ".gz" );
+                    add_url_to_download( $url . $_ . "/Contents-" . $arch . ".bz2" );
+                    add_url_to_download( $url . $_ . "/Contents-" . $arch . ".xz" );
+                }
+                add_url_to_download( $url . $_ . "/binary-" . $arch . "/InRelease" );
+                add_url_to_download( $url . $_ . "/binary-" . $arch . "/Release" );
+                add_url_to_download( $url . $_ . "/binary-" . $arch . "/Packages" );
+                add_url_to_download( $url . $_ . "/binary-" . $arch . "/Packages.gz" );
+                add_url_to_download( $url . $_ . "/binary-" . $arch . "/Packages.bz2" );
+                add_url_to_download( $url . $_ . "/binary-" . $arch . "/Packages.xz" );
+                add_url_to_download( $url . $_ . "/i18n/Index" );
+                add_url_to_download( $url . $_ . "/cnf/Commands-" . $arch . ".xz" );
+            }
+        }
+        elsif ($distribution)
+        {
+            add_url_to_download( $uri . "/$distribution/InRelease" );
+            add_url_to_download( $uri . "/$distribution/Release" );
+            add_url_to_download( $uri . "/$distribution/Release.gpg" );
+            add_url_to_download( $uri . "/$distribution/Packages" );
+            add_url_to_download( $uri . "/$distribution/Packages.gz" );
+            add_url_to_download( $uri . "/$distribution/Packages.bz2" );
+            add_url_to_download( $uri . "/$distribution/Packages.xz" );
+        }
+        else
+        {
+            add_url_to_download( $uri . "/InRelease" );
+            add_url_to_download( $uri . "/Release" );
+            add_url_to_download( $uri . "/Release.gpg" );
+            add_url_to_download( $uri . "/Packages" );
+            add_url_to_download( $uri . "/Packages.gz" );
+            add_url_to_download( $uri . "/Packages.bz2" );
+            add_url_to_download( $uri . "/Packages.xz" );
         }
     }
-    elsif ($distribution)
+
+    chdir get_variable("skel_path") or die("apt-mirror: can't chdir to skel");
+    @index_urls = sort keys %urls_to_download;
+    download_urls( "index", @index_urls );
+
+    foreach ( keys %urls_to_download )
     {
-        add_url_to_download( $uri . "/$distribution/InRelease" );
-        add_url_to_download( $uri . "/$distribution/Release" );
-        add_url_to_download( $uri . "/$distribution/Release.gpg" );
-        add_url_to_download( $uri . "/$distribution/Packages" );
-        add_url_to_download( $uri . "/$distribution/Packages.gz" );
-        add_url_to_download( $uri . "/$distribution/Packages.bz2" );
-        add_url_to_download( $uri . "/$distribution/Packages.xz" );
+        s[^(\w+)://][];
+        s[~][%7E]g if get_variable("_tilde");
+        s[\+][%2B]g if get_variable("_plus");
+        $skipclean{$_} = 1;
+        $skipclean{$_} = 1 if s[\.gz$][];
+        $skipclean{$_} = 1 if s[\.bz2$][];
+        $skipclean{$_} = 1 if s[\.xz$][];
+    }
+}
+
+mainsub_process_skel();
+
+
+sub parsing_checksum_result
+{
+    my $fileres = shift;
+    my @bad_files;
+
+    open FH, '<', $fileres or die $!;
+    while(<FH>){
+        my ($afilename, $aresult) = split /\:/, $_;
+        push ( @bad_files, $afilename )  if ( $afilename =~ /\/mirror\//);
+        # print "\n $afilename --- $aresult ";
+    }
+    close(FH);
+
+    unlink( @bad_files )  if ( scalar @bad_files && get_variable("delete_bad_file") > 0 );
+    # print "\n" . join("\n", @bad_files) . "\n";
+}
+
+sub checking_file_sum
+{
+    my ( $ajob, $akind, $checksum_file ) = @_;
+
+    $ajob = lc($ajob);
+    $akind = lc($akind);
+
+    my $checksum_res = "$var_path/res-$ajob-$akind";
+    my $checksum_tmp = "$var_path/tmp-$ajob-$akind";
+
+    my $bin_tool = "";
+    $bin_tool = "/usr/bin/md5sum"  if ( $akind eq "md5" );
+    $bin_tool = "/usr/bin/shasum -a 1"  if ( $akind eq "sha1" );
+    $bin_tool = "/usr/bin/shasum -a 256"  if ( $akind eq "sha256" );
+
+    my $cur_fail = 0;
+    my $tot_line = 0;
+    my $ajob_str = 0;
+
+    $ajob_str = "Release Files"  if ( $ajob eq "release" );
+    $ajob_str = "Pre Mirroring"  if ( $ajob eq "pre" );
+    $ajob_str = "Post Mirroring"  if ( $ajob eq "post" );
+
+    print "\n [$ajob_str] Checksum Type: " . sprintf("%6s", uc($akind))  if $progress;
+    if (-e $checksum_file && -s $checksum_file )
+    {
+        my $grepm = 'grep "\/mirror\/"';
+        my $grepv = 'grep -iv "no\ssuch\|properly\|WARNING\|OK\|shasum\|md5sum" | ' . $grepm;
+
+        system ("cat $checksum_file | $grepm | sort -u | sort > $checksum_tmp; cp $checksum_tmp $checksum_file");
+        system ("$bin_tool -c $checksum_file 2>&1 | $grepv > $checksum_res");
+        parsing_checksum_result($checksum_res);
+
+        $tot_line = int(`cat $checksum_file | wc -l`);
+        $cur_fail = int(`cat $checksum_res | $grepv | wc -l`);
+        print ( " \t--- lines= $tot_line \t")  if $progress;
+        print ( $cur_fail > 0? "fails= $cur_fail " : "[ OK ]" )  if $progress;
+        print ( " \t$checksum_file")  if (-e $checksum_file && $progress);
     }
     else
     {
-        add_url_to_download( $uri . "/InRelease" );
-        add_url_to_download( $uri . "/Release" );
-        add_url_to_download( $uri . "/Release.gpg" );
-        add_url_to_download( $uri . "/Packages" );
-        add_url_to_download( $uri . "/Packages.gz" );
-        add_url_to_download( $uri . "/Packages.bz2" );
-        add_url_to_download( $uri . "/Packages.xz" );
+        print " \t--- checksum file NOT exists" if (-e $checksum_file && $progress);
+        print " \t--- empty checksum file" if (-s $checksum_file && $progress);
+    }
+
+    return $cur_fail;
+}
+
+my (@lines_md5, @lines_sha1, @lines_sha256) = ();
+if ( scalar @release_files )
+{
+    print "\n\n Checksum Checking: Release-file.. "  if $progress;
+
+    my %lines_md5 = ();
+    my %lines_sha1 = ();
+    my %lines_sha256 = ();
+    my $avalue = "";
+    my $cur_num_files = 0;
+    my $prev_num_files = 0;
+
+    sub append_file_checksum
+    {
+        my ( $apart, $aline, $arel ) = @_;
+
+        my @cols = split / /, $aline;
+        @cols = grep { $_ ne '' } @cols;
+        my ( $asum, $asize, $afile ) = @cols;
+
+        my ($arel_file, $arel_dir, $arel_ext) = fileparse($arel, qr/\.[^.]*/);
+
+        chomp $arel_dir;
+        my $afile_path = remove_double_slashes($arel_dir . "/" . $afile);
+        return  unless (-e $afile_path );
+
+        $avalue = "$asum  $afile_path";
+        if ( $apart eq "md5" ) { $lines_md5{$avalue} = $avalue };
+        if ( $apart eq "sha1" ) { $lines_sha1{$avalue} = $avalue };
+        if ( $apart eq "sha256" ) { $lines_sha256{$avalue} = $avalue };
+
+        $cur_num_files = scalar %lines_md5 + scalar %lines_sha1 + scalar %lines_sha256;
+        if ( $prev_num_files != $cur_num_files )
+        {
+            $prev_num_files = $cur_num_files;
+            print "R"  if (-e $afile_path && $progress );
+            print "\n OK=$apart $afile_path "  if (-e $afile_path && $verbose > 2 );
+        }
+
+        # print FILE_SUM_MD5 "$asum  $afile_path\n"  if ( $apart eq "md5" );
+        # print FILE_SUM_SHA1 "$asum  $afile_path\n"  if ( $apart eq "sha1" );
+        # print FILE_SUM_SHA256 "$asum  $afile_path\n"  if ( $apart eq "sha256" );
+
+        # $num_file_to_check++;
+    }
+
+    #--- preparing file checksum
+    print "\n\n Preparing Release files checksum: [" if $progress;
+    foreach my $arel (@release_files) {
+        next unless (-e $arel );
+
+        unless ( open STREAM, "<$arel" )
+        {
+            warn( "Failed to open Release file from " . $arel )  if ($verbose > 1);
+            return;
+        }
+
+        # print "\n $arel"  if $progress;
+
+        my $cur_part = "";
+        my $prev_part = "";
+
+        while ( my $aline = <STREAM> )
+        {
+            chomp $aline;
+            $aline =~ s/^\s+|\s+$//g;
+
+            # MD5Sum:, SHA256:, SHA1:
+            if ( $aline eq "MD5Sum:" )
+            {
+                $prev_part = $cur_part;
+                $cur_part = 'md5';
+                next;
+            }
+            elsif ( $aline eq "SHA256:" )
+            {
+                $prev_part = $cur_part;
+                $cur_part = 'sha256';
+                next;
+            }
+            elsif ( $aline eq "SHA1:" )
+            {
+                $prev_part = $cur_part;
+                $cur_part = 'sha1';
+                next;
+            }
+            elsif ( index($aline, 'PGP SIGNATURE') != -1 ) {
+                $prev_part = $cur_part;
+                $cur_part = "";
+            }
+
+            if ( $cur_part ne $prev_part )
+            {
+                # print "\n cur=$cur_part prev=$prev_part"  if $progress;
+            }
+
+            #-- skip for short line
+            next if ( length($aline) < 10 );
+
+            #-- skip if not Packages.* files
+            next if ( index($aline, 'Packages') < 0 );
+
+            append_file_checksum($cur_part, $aline, $arel)  if ( $cur_part eq "md5" );
+            append_file_checksum($cur_part, $aline, $arel)  if ( $cur_part eq "sha256" );
+            append_file_checksum($cur_part, $aline, $arel)  if ( $cur_part eq "sha1" );
+
+            $prev_part = $cur_part;
+        }
+
+        close STREAM;
+    }
+
+    # writing to files
+    my $input_file_md5 = "$var_path/relsum.md5";
+    my $input_file_sha1 = "$var_path/relsum.sha1";
+    my $input_file_sha256 = "$var_path/relsum.sha256";
+
+    open FILE_SUM_MD5, ">$input_file_md5" or die("apt-mirror: can't write to intermediate file (MD5) \n[$input_file_md5]");
+    open FILE_SUM_SHA1, ">$input_file_sha1" or die("apt-mirror: can't write to intermediate file (SHA1) \n[$input_file_sha1]");
+    open FILE_SUM_SHA256, ">$input_file_sha256" or die("apt-mirror: can't write to intermediate file (SHA256) \n[$input_file_sha256]");
+
+    my @keys_md5 = sort keys %lines_md5;
+    my @keys_sha1 = sort keys %lines_sha1;
+    my @keys_sha256 = sort keys %lines_sha256;
+    print FILE_SUM_MD5 join("\n", @keys_md5);
+    print FILE_SUM_SHA1 join("\n", @keys_sha1);
+    print FILE_SUM_SHA256 join("\n", @keys_sha256);
+
+    close FILE_SUM_MD5;
+    close FILE_SUM_SHA1;
+    close FILE_SUM_SHA256;
+    my $num_file_to_check = scalar @keys_md5 + scalar @keys_sha1 + scalar @keys_sha256;
+    print "] {$num_file_to_check checks [files + checksum-kind]}. \n"  if $progress;
+
+    #--- do check
+    my $checksum_fails = 0;
+    $checksum_fails += checking_file_sum("release", "md5", $input_file_md5);
+    $checksum_fails += checking_file_sum("release", "sha1", $input_file_sha1);
+    $checksum_fails += checking_file_sum("release", "sha256", $input_file_sha256);
+
+    #--- re-download skel, if fails
+    if ( $checksum_fails > 0 )
+    {
+        print "\n\n --- Redownloading index files: \n"  if $progress;
+        mainsub_process_skel();
     }
 }
 
-chdir get_variable("skel_path") or die("apt-mirror: can't chdir to skel");
-@index_urls = sort keys %urls_to_download;
-download_urls( "index", @index_urls );
 
-foreach ( keys %urls_to_download )
-{
-    s[^(\w+)://][];
-    s[~][%7E]g if get_variable("_tilde");
-    s[\+][%2B]g if get_variable("_plus");
-    $skipclean{$_} = 1;
-    $skipclean{$_} = 1 if s[\.gz$][];
-    $skipclean{$_} = 1 if s[\.bz2$][];
-    $skipclean{$_} = 1 if s[\.xz$][];
-}
 
 ######################################################################################
 ## Translation index download
@@ -717,7 +951,7 @@ sub find_translation_files_in_release
 
     unless ( open STREAM, "<$release_path" )
     {
-        warn( "Failed to open Release file from " . $release_uri );
+        warn( "Failed to open Release file from " . $release_uri )  if ($verbose > 1);
         return;
     }
 
@@ -740,7 +974,7 @@ sub find_translation_files_in_release
                 }
                 else
                 {
-                    warn("Malformed checksum line \"$1\" in $release_uri");
+                    warn("Malformed checksum line \"$1\" in $release_uri")  if ($verbose > 1);
                 }
             }
             else
@@ -793,7 +1027,7 @@ sub process_translation_index
                 }
                 else
                 {
-                    warn("Malformed checksum line \"$1\" in $index_uri");
+                    warn("Malformed checksum line \"$1\" in $index_uri")  if ($verbose > 1);
                 }
             }
             else
@@ -876,7 +1110,7 @@ sub find_dep11_files_in_release
 
     unless ( open STREAM, "<$release_path" )
     {
-        warn( "Failed to open Release file from " . $release_uri );
+        warn( "Failed to open Release file from " . $release_uri )  if ($verbose > 1);
         return;
     }
 
@@ -899,7 +1133,7 @@ sub find_dep11_files_in_release
                 }
                 else
                 {
-                    warn("Malformed checksum line \"$1\" in $release_uri");
+                    warn("Malformed checksum line \"$1\" in $release_uri")  if ($verbose > 1);
                 }
             }
             else
@@ -980,7 +1214,7 @@ if ( get_variable("exec_by_hash") > 0 )
 
         unless ( open STREAM, "<$release_path" )
         {
-            warn( "Failed to open Release file from " . $release_uri );
+            warn( "Failed to open Release file from " . $release_uri )  if ($verbose > 1);
             return;
         }
 
@@ -1004,7 +1238,7 @@ if ( get_variable("exec_by_hash") > 0 )
                     }
                     else
                     {
-                        warn("Malformed checksum line \"$1\" in $release_uri");
+                        warn("Malformed checksum line \"$1\" in $release_uri")  if ($verbose > 1);
                     }
                 }
                 else
@@ -1081,7 +1315,7 @@ if ( get_variable("exec_cnf") > 0 )
 
         unless ( open STREAM, "<$release_path" )
         {
-            warn( "Failed to open Release file from " . $release_uri );
+            warn( "Failed to open Release file from " . $release_uri )  if ($verbose > 1);
             return;
         }
 
@@ -1104,7 +1338,7 @@ if ( get_variable("exec_cnf") > 0 )
                     }
                     else
                     {
-                        warn("Malformed checksum line \"$1\" in $release_uri");
+                        warn("Malformed checksum line \"$1\" in $release_uri")  if ($verbose > 1);
                     }
                 }
                 else
@@ -1183,7 +1417,7 @@ if ( get_variable("exec_deb_ins") > 0 )
 
         unless ( open STREAM, "<$release_path" )
         {
-            warn( "Failed to open Release file from " . $release_uri );
+            warn( "Failed to open Release file from " . $release_uri )  if ($verbose > 1);
             return;
         }
 
@@ -1206,7 +1440,7 @@ if ( get_variable("exec_deb_ins") > 0 )
                     }
                     else
                     {
-                        warn("Malformed checksum line \"$1\" in $release_uri");
+                        warn("Malformed checksum line \"$1\" in $release_uri")  if ($verbose > 1);
                     }
                 }
                 else
@@ -1359,7 +1593,7 @@ sub process_index
 
     unless ( open STREAM, "<$path_index" )
     {
-        warn("apt-mirror: can't open index $path_index in process_index");
+        warn("apt-mirror: can't open index $path_index in process_index")  if ($verbose > 1);
         return;
     }
 
@@ -1536,101 +1770,26 @@ sub mainsub_process_indexes
 }
 
 
-sub parse_checksum_result
-{
-    my $fileres = shift;
-    my @bad_files;
-
-    open FH, '<', $fileres or die $!;
-    while(<FH>){
-        my ($afilename, $aresult) = split /\:/, $_;
-        # print "\n $afilename --- $aresult ";
-        push ( @bad_files, $afilename )  if ( $afilename =~ /\/mirror\//);
-    }
-    close(FH);
-
-    if ( scalar @bad_files && get_variable("delete_bad_file") > 0 )
-    {
-        unlink( @bad_files );
-    }
-}
-
 sub checksum_checking
 {
     my ( $type ) = @_;
-    print "\n\n Checksum $type-Checking.. "  if $progress;
+    $type = lc($type);
+
+    my $type_str = "";
+    $type_str = "Pre-Mirroring"  if ( $type eq "pre" );
+    $type_str = "Post-Mirroring"  if ( $type eq "post" );
+    print "\n\n Checksum Checking: $type.. "  if $progress;
 
     my $var_path = get_variable("var_path");
     my $checksum_fails = 0;
 
+    my $input_file_md5 = "$var_path/MD5";
+    my $input_file_sha1 = "$var_path/SHA1";
+    my $input_file_sha256 = "$var_path/SHA256";
 
-    #--- SHA256 checking
-    my $checksum_file = "$var_path/SHA256";
-    my $checksum_res = "$var_path/res-sha256";
-    my $checksum_tmp = "$var_path/tmp-sha256";
-
-    print "\n Checksum Type: SHA256 "  if $progress;
-    if (-e $checksum_file && -s $checksum_file )
-    {
-        system ("cat $checksum_file | sort -u | sort > $checksum_tmp; cp $checksum_tmp $checksum_file");
-        system ("/usr/bin/shasum -a 256 -c $checksum_file 2>&1 | grep -v WARNING | grep -v OK > $checksum_res");
-        parse_checksum_result($checksum_res);
-
-        my $curfail = int(`cat $checksum_res | grep -v WARNING | grep -v OK | wc -l`);
-        $checksum_fails += $curfail;
-        print ( $curfail > 0? " \t--- fails= $curfail " : " \t--- OK " )  if $progress;
-    }
-    else
-    {
-        print " \t--- checksum file not exists" if (-e $checksum_file && $progress);
-        print " \t--- empty checksum file" if (-s $checksum_file && $progress);
-    }
-
-
-    #--- SHA1 checking
-    $checksum_file = get_variable("var_path") . "/SHA1";
-    $checksum_res = "$var_path/res-sha1";
-    $checksum_tmp = "$var_path/tmp-sha1";
-
-    print "\n Checksum Type: SHA1   "  if $progress;
-    if (-e $checksum_file && -s $checksum_file )
-    {
-        system ("cat $checksum_file | sort -u | sort > $checksum_tmp; cp $checksum_tmp $checksum_file");
-        system ("/usr/bin/shasum -a 1 -c $checksum_file 2>&1 | grep -v WARNING | grep -v OK > $checksum_res");
-        parse_checksum_result($checksum_res);
-
-        my $curfail = int(`cat $checksum_res | grep -v WARNING | grep -v OK | wc -l`);
-        $checksum_fails += $curfail;
-        print ( $curfail > 0? " \t--- fails= $curfail " : " \t--- OK " )  if $progress;
-    }
-    else
-    {
-        print " \t--- checksum file not exists" if (-e $checksum_file && $progress);
-        print " \t--- empty checksum file" if (-s $checksum_file && $progress);
-    }
-
-
-    #--- MD5 checking
-    $checksum_file = get_variable("var_path") . "/MD5";
-    $checksum_res = "$var_path/res-md5";
-    $checksum_tmp = "$var_path/tmp-md5";
-
-    print "\n Checksum Type: MD5    "  if $progress;
-    if (-e $checksum_file && -s $checksum_file )
-    {
-        system ("cat $checksum_file | sort -u | sort > $checksum_tmp; cp $checksum_tmp $checksum_file");
-        system ("/usr/bin/md5sum -c $checksum_file 2>&1 | grep -v WARNING | grep -v OK > $checksum_res");
-        parse_checksum_result($checksum_res);
-
-        my $curfail = int(`cat $checksum_res | grep -v WARNING | grep -v OK | wc -l`);
-        $checksum_fails += $curfail;
-        print ( $curfail > 0? " \t--- fails= $curfail " : " \t--- OK " )  if $progress;
-    }
-    else
-    {
-        print " \t--- checksum file not exists" if (-e $checksum_file && $progress);
-        print " \t--- empty checksum file" if (-s $checksum_file && $progress);
-    }
+    $checksum_fails += checking_file_sum($type, "md5", $input_file_md5);
+    $checksum_fails += checking_file_sum($type, "sha1", $input_file_sha1);
+    $checksum_fails += checking_file_sum($type, "sha256", $input_file_sha256);
 }
 
 mainsub_process_indexes();
@@ -1670,7 +1829,7 @@ sub mainsub_main_download
     (my $directory_size) = format_bytes(`$command`*1000) =~ /\A([^:\s]+)/;
 
     if ($directory_size <= $size_mirror) {
-        warn("apt-mirror: need space $size_output\n");
+        warn("apt-mirror: need space $size_output\n")  if ($verbose > 1);
     }
     else
     {
@@ -1693,7 +1852,7 @@ sub mainsub_main_download
             }
             unless ( copy( $from, $to ) )
             {
-                warn("apt-mirror: can't copy $from to $to");
+                warn("apt-mirror: can't copy $from to $to")  if ($verbose > 1);
                 return;
             }
             my ( $atime, $mtime ) = ( stat($from) )[ 8, 9 ];
