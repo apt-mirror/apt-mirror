@@ -52,6 +52,7 @@ See also:
 	- checksum checking for binary & sources files. checksum checking can be executed at pre and post mirroring. both can be enabled/disabled via config file.
 	- using absolute full path for uncompress *.gz, *.xs and *.bz2
 	- Release and Packages files checksum checking
+	- ISO netinst mirroring
 
 
 ## TODO :

@@ -82,6 +82,10 @@ set exec_deb_ins      0
 # Default: 0
 set exec_by_hash      0
 
+#-- Download iso files
+# Default: 0
+set exec_deb_iso      1
+
 #-- Create and execute clean script
 # You may enable (set exec_clean 1) if you have limited storage space.
 # Old packages is useful for backup and maintenance
@@ -189,11 +193,20 @@ set ip_v6             0
 #deb-src   http://archive.raspberrypi.org/debian buster main contrib non-free rpi firmware ui untested
 
 
-deb-armhf http://cdn-fastly.deb.debian.org/debian bullseye main/debian-installer
-deb-arm64 http://cdn-fastly.deb.debian.org/debian bullseye main/debian-installer
-deb-amd64 http://cdn-fastly.deb.debian.org/debian bullseye main/debian-installer
-deb-src   http://cdn-fastly.deb.debian.org/debian bullseye main/debian-installer
+#deb-armhf http://cdn-fastly.deb.debian.org/debian bullseye main/debian-installer
+#deb-arm64 http://cdn-fastly.deb.debian.org/debian bullseye main/debian-installer
+#deb-amd64 http://cdn-fastly.deb.debian.org/debian bullseye main/debian-installer
+#deb-src   http://cdn-fastly.deb.debian.org/debian bullseye main/debian-installer
 
+iso https://cdimage.debian.org/cdimage/unofficial/non-free/cd-including-firmware/current/amd64/iso-cd/
+iso https://cdimage.debian.org/cdimage/unofficial/non-free/cd-including-firmware/current/i386/iso-cd/
+iso https://cdimage.debian.org/debian-cd/current/amd64/iso-cd/
+iso https://cdimage.debian.org/debian-cd/current/arm64/iso-cd/
+iso https://cdimage.debian.org/debian-cd/current/armhf/iso-cd/
+iso https://cdimage.debian.org/debian-cd/current/i386/iso-cd/
+
+skip-clean https://cdimage.debian.org/cdimage
+skip-clean https://cdimage.debian.org/debian-cd
 
 clean http://security.debian.org/debian-security
 clean http://cdn-fastly.deb.debian.org/debian
