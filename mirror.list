@@ -1,35 +1,75 @@
 ############# config ##################
 #
-# set base_path         /var/spool/apt-mirror
-#
-# set mirror_path       $base_path/mirror
-# set skel_path         $base_path/skel
-# set var_path          $base_path/var
-# set cleanscript       $var_path/clean.sh
-# set postmirror_script $var_path/postmirror.sh
-# set run_postmirror    0
-# set premirror_script  $var_path/premirror.sh
-# set run_premirror     0
-# set defaultarch       <running host architecture>
-# set defaultarch       amd64
 
+#== Path locations.
+#==============================================
+# For most users, it won't be necessary to change these path location settings.
+# Only the base_path, if you need to put the mirror folder at other location.
+# apt-mirror will create these folders automatically, if they are not exists.
+
+#-- The absolute full path location of all the files needed by apt-mirror.
+#
+# Default: /var/spool/apt-mirror
+# Example:
+# set base_path       /var/spool/apt-mirror
 set base_path         /mnt/hdd/apt-test
+
+#-- Mirror directory is used to store actual packages and sources file of repositories to be cloned.
+#
+# Default: $base_path/mirror
+# Example:
+# set mirror_path     $base_path/mirror
+
+#-- Skel directory is used to store the skeleton structure. It will be processed before mirroring.
+#
+# Default: $base_path/skel
+# Example:
+# set skel_path       $base_path/skel
+
+#-- Var directory is used to store all of runtime files.
+#
+# Default: $base_path/var
+# Example:
+# set var_path        $base_path/var
+
+#-- Tmp directory is used to store all of temporary files, usually needed for caching purposes.
+#
+# Default: /tmp/apt-mirror-tmp
+# Example:
+# set tmp_path        /tmp/apt-mirror-tmp
+#==============================================
+
+
+#-- Default architecture that will be used for mirroring process, if not stated in the settings below.
+# Debian based repository currently supports: amd64 arm64 armel armhf i386 mips64el mipsel ppc64el s390x
+# If not setted, apt-mirror will use host architecture.
+#
+# Default: <running host architecture>
+# Example:
+# set defaultarch     amd64
 
 
 #-- Number concurrent wget instances
-# Make sure you have enough bandwidth space. Check also limit_rate
+# Make sure you have enough bandwidth space. Check also limit_rate setting below.
 # Default: 20
+# Example:
+# set nthreads        20
 set nthreads          128
 
 
 #== Options for URL sanitizing
 #==============================================
 #-- Convert tilde '~' into '%7E'  (without quote)
+#
 # Default: 1
+# Example:
+# set _tilde          1
 set _tilde            1
 
 #-- Convert plus '+' into '%2B'  (without quote)
 # Default: 1
+# Example:
+# set _plus           1
 set _plus             1
 #==============================================
 
@@ -38,24 +78,41 @@ set _plus             1
 #==============================================
 #-- Executed before download process
 # Default: 1
-set run_premirror     0
+# Example:
+# set run_premirror   1
+set run_premirror     1
+
+#-- The pre-mirroring script
+# Default: $var_path/premirror.sh
+# Example:
+# set premirror_script  $var_path/premirror.sh
 
 #-- Executed after download process
 # Default: 1
-set run_postmirror    0
+# Example:
+# set run_postmirror  1
+set run_postmirror    1
+
+#-- The post-mirroring script
+# Default: $var_path/postmirror.sh
+# Example:
+# set postmirror_script $var_path/postmirror.sh
 #==============================================
 
 
 #-- Show only space needed, NO actual downloads executed except for the indexes
 # Default: 0
+# Example:
 set dry_run           0
 
 #--  Also download Contents.* files
 # Default: 1
+# Example:
 set _contents         1
 
 #-- Auto delete unused files
 # Default: 1
+# Example:
 set _autoclean        1
 
 
@@ -64,33 +121,46 @@ set _autoclean        1
 #==============================================
 #-- Download translation files
 # Default: 1
+# Example:
 set exec_translation  1
 
 #-- Download Dep 11 files
 # Default: 1
+# Example:
 set exec_dep11        1
 
 #-- Download CNF files
 # Default: 0
-set exec_cnf          0
-
-#-- Download installer files (for remote boot)
-# Default: 0
-set exec_deb_ins      0
+# Example:
+set exec_cnf          1
 
 #-- Download By_hash files
 # Default: 0
-set exec_by_hash      0
+# Example:
+set exec_by_hash      1
+
+#-- Download installer files (for remote boot)
+# Default: 0
+# Example:
+set exec_deb_ins      1
 
 #-- Download iso files
 # Default: 0
+# Example:
 set exec_deb_iso      1
 
 #-- Create and execute clean script
 # You may enable (set exec_clean 1) if you have limited storage space.
 # Old packages is useful for backup and maintenance
 # Default: 0
+# Example:
 set exec_clean        0
+
+#-- Cleanup script that will be executed after mirroring process.
+# apt-mirror will create this file automatically. You don't need to change anything here
+# Default: set cleanscript $var_path/clean.sh
+# Example:
+# set cleanscript     $var_path/clean.sh
 #==============================================
 
 
@@ -99,77 +169,132 @@ set exec_clean        0
 #==============================================
 #-- Executed before download process
 # Default: 1
+# Example:
+# set pre_check_sum   1
 set pre_check_sum     1
 
 #-- Executed before download process
 # Default: 1
+# Example:
+# set post_check_sum  1
 set post_check_sum    1
 #==============================================
 
 
 #-- delete files with mismatch size or sum
 # Default: 1
+# Example:
+# set delete_bad_file 1
 set delete_bad_file   1
 
 
 
 
-#-- WGET CONFIGS
-#-- these settings is control wget
-#------------------------------------------
+#** WGET CONFIGS
+#** these settings will be used as WGET and CURL arguments
+#**********************************************************
 
 #-- disable SSL certificate checks
 # Default: 1
-set no_check_certificate 1
+# Example:
+# set no_check_certificate 1
+set no_check_certificate   1
 
 #-- disable auth challenge
 # Default: 1
-set auth_no_challenge    1
+# Example:
+# set auth_no_challenge 1
+set auth_no_challenge   1
 
-#-- proxy settings
+
+#== HTTP Proxy Server settings
+#==============================================
+
+#-- Main settings to enable/disable proxy server feature at apt-mirror.
+# If use_proxy disabled (setted to 0), subsequence settings, ie:
+# http_proxy, proxy_user and proxy_password will be ignored.
+# It is recommended to install caching proxy since apt-proxy don't have
+# features such as: stale handling, expiry handling, etc.
+# Default: 1
+# Example:
+# set use_proxy       1
 set use_proxy         1
-set http_proxy        127.0.0.1:3128
-# set proxy_user      auser
-# set proxy_password  apassword
 
-#-- mimic as other user agent
+#-- Proxy server ip address and its port
+# Default: <empty>
+# Example:
+# set http_proxy      127.0.0.1:3128
+set http_proxy        127.0.0.1:3128
+
+#-- Username to access the proxy server
+# Default: <empty>
+# Example:
+# set proxy_user      auser
+
+#-- Password to access the proxy server
+# Default: <empty>
+# Example:
+# set proxy_password  apassword
+#==============================================
+
+
+
+#-- Mimic as other user agent
 # Default: Aptly/1.0
+# Example:
+# set user_agent      Aptly/1.0
 set user_agent        Aptly/1.0
 
 #-- General network timeout, ie: read, connect and dns timeout
 # Default: 30
+# Example:
+# set timeout         30
 set timeout           30
 
 #-- if download is failed, wget will retry with this number before give up
 # Default: 3
+# Example:
+# set tries           3
 set tries             3
 
 #-- if URL is redirected to another URL, wget will follow the new URL.
-# This number is maximum follow attempt
+# This number is maximum redirection follows attempt
 # Default: 3
+# Example:
+# set max_redirect    3
 set max_redirect      3
 
 #-- Some repository servers (most of them not) need to save cookies.
-# We need to save cookies between download sessions, to act as legitimate
+# apt-mirror need to save cookies between download sessions, to act as legitimate
 # and trustful repo client
 # Default: /tmp/apt-mirror.cookies
+# Example:
+# set cookies_file    /tmp/apt-mirror.cookies
 set cookies_file      /tmp/apt-mirror.cookies
 
 #-- Make wget silent
 # Default: 1
+# Example:
+# set no_verbose      1
 set no_verbose        1
 
 #-- Use --unlink with wget (for use with hardlinked directories)
-# Default: {no default value}
+# Default: 1
+# Example:
+# set unlink          1
 set unlink            1
 
 #-- limit download rate per wget instances
-# Default: {no default value}
+# Default: 20m (20 mbps)
+# Example:
+# set limit_rate      25m
 set limit_rate        25m
 
 #-- using IPv6 only
 # if disabled (set ip_v6 0) wget will use to use only IPv4
 # Default: 0
+# Example:
+# set ip_v6           0
 set ip_v6             0
 
 #
@@ -193,13 +318,18 @@ set ip_v6             0
 #deb-src   http://archive.raspberrypi.org/debian buster main contrib non-free rpi firmware ui untested
 
 
-#deb-armhf http://cdn-fastly.deb.debian.org/debian bullseye main/debian-installer
-#deb-arm64 http://cdn-fastly.deb.debian.org/debian bullseye main/debian-installer
-#deb-amd64 http://cdn-fastly.deb.debian.org/debian bullseye main/debian-installer
-#deb-src   http://cdn-fastly.deb.debian.org/debian bullseye main/debian-installer
+deb-armhf http://cdn-fastly.deb.debian.org/debian bullseye main/debian-installer
+deb-arm64 http://cdn-fastly.deb.debian.org/debian bullseye main/debian-installer
+deb-amd64 http://cdn-fastly.deb.debian.org/debian bullseye main/debian-installer
+deb-src   http://cdn-fastly.deb.debian.org/debian bullseye main/debian-installer
+
+
+#--------------------------------------------------------------------------
+#--- DEBIAN ISO
 
 iso https://cdimage.debian.org/cdimage/unofficial/non-free/cd-including-firmware/current/amd64/iso-cd/
 iso https://cdimage.debian.org/cdimage/unofficial/non-free/cd-including-firmware/current/i386/iso-cd/
+
 iso https://cdimage.debian.org/debian-cd/current/amd64/iso-cd/
 iso https://cdimage.debian.org/debian-cd/current/arm64/iso-cd/
 iso https://cdimage.debian.org/debian-cd/current/armhf/iso-cd/
@@ -208,10 +338,32 @@ iso https://cdimage.debian.org/debian-cd/current/i386/iso-cd/
 skip-clean https://cdimage.debian.org/cdimage
 skip-clean https://cdimage.debian.org/debian-cd
 
-clean http://security.debian.org/debian-security
-clean http://cdn-fastly.deb.debian.org/debian
+#--- DEBIAN ISO
+#--------------------------------------------------------------------------
 
-clean http://raspbian.raspberrypi.org/raspbian
-clean http://archive.raspberrypi.org/debian
-clean http://raspbian.raspberrypi.org/
-clean http://archive.raspberrypi.org/
+
+
+clean http://archive.raspberrypi.org
+clean http://cdn-fastly.deb.debian.org
+clean http://dl.google.com/linux
+clean http://download.proxmox.com
+clean http://downloads.linux.hpe.com
+clean http://downloads.mariadb.com
+clean http://download.virtualbox.org
+clean http://linux.dropbox.com
+clean http://linux.teamviewer.com
+clean http://mirror.rackspace.com
+clean http://nginx.org
+clean http://ppa.launchpad.net
+clean http://raspbian.raspberrypi.org
+clean http://repository.spotify.com
+clean http://repo.vivaldi.com
+clean http://repo.zabbix.com/
+clean https://deb.nodesource.com
+clean https://deb.opera.com
+clean https://dl.winehq.org
+clean https://download.sublimetext.com
+clean http://security.debian.org
+clean https://packages.sury.org
+clean https://repo.skype.com
+clean https://www.deb-multimedia.org

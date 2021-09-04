@@ -19,9 +19,11 @@
 	  #112, #115, #116, #120, #127, #131, #136, #143
 	* bz2 or xz or gz (buster-backports i18n xz) (fixes #130)
 	* port number (fixes #19)
-	* Release and Packages files checksum checking
+	* Packages* files checksum checking
 	* Absolute path for compressed files (bug fixes #1730285 Ubuntu)
 	* ISO netinst mirroring
+	* Only non empty distribution Release file will be downloaded.
+	* Merge all download parts into one (in the archive).
 
 
 0.5.4 (2017-05-29)

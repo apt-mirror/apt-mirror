@@ -100,31 +100,33 @@ use Digest::MD5 qw(md5_hex);
 use Digest::SHA qw(sha1_hex sha256_hex);
 use File::Slurp;
 use feature 'fc';
+use File::Path;
 
 my $config_file;
 
 my %config_variables = (
-		# PATH configs
+	# PATH configs
     "base_path"            => '/var/spool/apt-mirror',
     "mirror_path"          => '$base_path/mirror',
     "skel_path"            => '$base_path/skel',
     "var_path"             => '$base_path/var',
+    "tmp_path"             => '/tmp/apt-mirror-tmp',
 
-		"defaultarch"          => `dpkg --print-architecture 2>/dev/null` || 'amd64',
+	"defaultarch"          => `dpkg --print-architecture 2>/dev/null` || 'amd64',
 
-		# main config
+	# main config
     "nthreads"             => 20,
-		"cleanscript"          => '$var_path/clean.sh',
+	"cleanscript"          => '$var_path/clean.sh',
     "_contents"            => 1,
     "_autoclean"           => 1,
     "dry_run"              => 0,
 
-		# URL sanitizen
+	# URL sanitizen
     "_tilde"               => 0,
     "_plus"                => 0,
 
-		# subroutine execution
-		"exec_dep11"           => 0,
+	# subroutine execution
+	"exec_dep11"           => 0,
     "exec_translation"     => 0,
     "exec_cnf"             => 0,
     "exec_deb_ins"         => 0,
@@ -132,19 +134,19 @@ my %config_variables = (
     "exec_by_hash"         => 0,
     "exec_clean"           => 0,
 
-		# post/pre mirroring
+	# post/pre mirroring
     "postmirror_script"    => '$var_path/postmirror.sh',
     "run_postmirror"       => 1,
     "premirror_script"     => '$var_path/premirror.sh',
     "run_premirror"        => 1,
 
-		# checksum operations
+	# checksum operations
     "pre_check_sum"        => 1,
     "post_check_sum"       => 1,
     "delete_bad_file"      => 1,
 
-		# WGET configs
-		"unlink"               => 0,
+	# WGET configs
+	"unlink"               => 0,
     "limit_rate"           => '20m',
     "auth_no_challenge"    => 1,
     "no_check_certificate" => 1,
@@ -408,7 +410,7 @@ sub download_urls
     push( @args, " --no-cache --no-hsts --retry-on-host-error" );
     push( @args, " --retry-connrefused --waitretry=3 --retry-on-http-error=503,429" );
 
-    print " Downloading " . scalar(@urls) . " $stage files using $nthreads threads...\n";
+    print "   Downloading " . scalar(@urls) . " $stage files using $nthreads threads...\n";
 
 
     while ( scalar @urls )
@@ -436,7 +438,7 @@ sub download_urls
 
     if ( $nums_now > 2)
     {
-        print "\n wget ins= $nums_now";
+        print "   wget ins= $nums_now";
         while ($nums_now > 1)
         {
             sleep(3);
@@ -448,7 +450,7 @@ sub download_urls
 
             $nums_now = $nums_new;
         }
-        print "\n\n";
+        print "\n";
     }
 
 }
@@ -540,22 +542,33 @@ if ( get_variable("run_premirror") )
 {
     print "Running the Pre Mirror script ...\n";
     print "(" . get_variable("premirror_script") . ")\n\n";
-    if ( -x get_variable("premirror_script") )
-    {
-        system(get_variable("premirror_script") .'');
-    }
-    else
-    {
-        system('/bin/sh', get_variable("premirror_script"));
-    }
-    print "\nPre Mirror script has completed. See above output for any possible errors.\n\n";
+    if ( -e get_variable("premirror_script") )
+	{
+		if ( -x get_variable("premirror_script") )
+		{
+			system(get_variable("premirror_script") .'');
+		}
+		else
+		{
+			system('/bin/sh', get_variable("premirror_script"));
+		}
+		print "\nPre Mirror script has completed. See above output for any possible errors.\n\n";
+	}
+	else {
+		print "--- Pre Mirror script not exists.";
+	}
 }
 
 
 
 ######################################################################################
 ## Create the 3 needed directories if they don't exist yet
-my @needed_directories = ( get_variable("mirror_path"), get_variable("skel_path"), get_variable("var_path") );
+my @needed_directories = ( get_variable("mirror_path"), get_variable("skel_path"), get_variable("var_path"), get_variable("tmp_path") );
+
+# fresh skel_path
+my $skel_path = get_variable("skel_path");
+my $dump = `find -L $skel_path -type f -delete >/dev/null 2>&1 &`;
+
 foreach my $needed_directory (@needed_directories)
 {
     unless ( -d $needed_directory )
@@ -573,6 +586,8 @@ lock_aptmirror();
 
 
 my %urls_to_download = ();
+my %stat_cache = ();
+
 my @release_files = ();
 my ( $url, $arch );
 
@@ -591,22 +606,181 @@ sub remove_double_slashes
     return $_;
 }
 
+sub flatten_url
+{
+	my ( $url ) = @_;
+	$url = sanitise_uri($url);
+	$url =~ s/\//\-/g;
+	$url =~ s/\./\-/g;
+	return $url;
+}
+
+
+my $tmp_path = get_variable("tmp_path");
+
+sub get_curl_args
+{
+	my @args = ();
+
+	push( @args, " -ILks --no-keepalive --retry-connrefused --tcp-fastopen --tcp-nodelay" );
+	push( @args, " --cookie-jar /tmp/apt-mirror-curl.cookies" );
+
+	if ( get_variable("tries") > 0 )
+	{
+		push( @args, " --retry " . get_variable("tries") );
+	}
+
+    if ( get_variable("timeout") > 0 )
+    {
+        push( @args, " --max-time " . get_variable("timeout") );
+        push( @args, " --connect-timeout " . get_variable("timeout") );
+    }
+
+    if ( length( get_variable("user_agent") ) )
+    {
+        push( @args, " --user-agent " . get_variable("user_agent") );
+    }
+    else
+    {
+        push( @args, " --user-agent Aptly/1.0" );
+    }
+
+
+    if ( length( get_variable("use_proxy") ) && ( get_variable("use_proxy") eq 'yes' || get_variable("use_proxy") eq 'on'  || get_variable("use_proxy") eq 'true' || get_variable("use_proxy") eq '1' ) )
+    {
+		if ( length( get_variable("http_proxy") ) ) { push( @args, " --proxy " . get_variable("http_proxy") ); }
+        if ( length( get_variable("https_proxy") ) ) { push( @args, " --proxy " . get_variable("https_proxy") ); }
+
+        if ( length( get_variable("proxy_user") ) && length( get_variable("proxy_password") ) )
+		{
+			my $proxy = " --proxy_user ";
+
+			if ( length( get_variable("proxy_user") ) )
+			{
+				$proxy .= get_variable("proxy_user");
+			}
+
+			if ( length( get_variable("proxy_password") ) )
+			{
+				$proxy .= ":" . get_variable("proxy_password");
+			}
+
+			push( @args, $proxy );
+			push( @args, " --proxy-insecure" );
+			push( @args, " --proxytunnel" );
+		}
+    }
+	else
+	{
+		push( @args, " --noproxy" );
+	}
+
+    if ( get_variable("ip_v6") > 0 )
+    {
+        push( @args, " --ipv6" );
+    }
+    else
+    {
+        push( @args, " --ipv4" );
+    }
+
+	return " " . join( "", @args );
+}
+
+
+sub get_content_length_from_uri
+{
+	my ( $url, $size ) = @_;
+	my ( $tmp, $res, $arg, $code, $delta, @parts ) = ();
+	$url = remove_double_slashes($url);
+	$tmp = "$tmp_path/" . flatten_url($url) . ".tmp";
+
+	# delete temp file if too old
+	if (-e $tmp )
+	{
+		$delta = time() - (stat($tmp))[9];
+		unlink( $tmp )  if ( $delta > 86400*2 );
+	}
+
+	unless (-e $tmp ) {
+		$arg = get_curl_args();
+		$res = `curl $arg $url 2>&1 -o $tmp`;
+		return -1  unless (-e $tmp);
+	}
+
+	# check if multi result from curl
+	$res = read_file($tmp);
+	$res =~ s/HTTP/\n\nHTTP/g;
+	@parts = split /\n\n/, $res;
+	@parts = grep { $_ ne '' } @parts;
+
+	if ( @parts > 1 )
+	{
+		$res = $parts[-1]; #last
+		$res =~ s/^\s+|\s+$//g;
+
+		open(my $fh, ">$tmp" );
+		print $fh $res;
+		close $fh;
+	}
+
+	$code = `cat $tmp | head -n1`;
+
+	if ( index($code, 200) != -1 )
+	{
+		$size = `cat $tmp | grep -i "content\-length" | cut -d' ' -f2`;
+		$size = length($size)? int($size) : -1;
+	}
+	else
+	{
+		$size = -1;
+	}
+	# print " code=$code size=$size $url \n";
+	# print "." if $progress;
+
+	return $size;
+}
+
 sub add_url_to_download
 {
-    my $url = remove_double_slashes(shift);
-    $urls_to_download{$url} = shift;
+	my ( $url, $size ) = @_;
+    $url = remove_double_slashes($url);
 
-    if (index($url, "Release") != -1 && index($url, ".gpg") < 0) {
+	# check file size
+	$size = defined $size? int($size) : 1;
+	$urls_to_download{$url} = $size;
+
+    if ( index($url, "Release") != -1 && index($url, ".gpg" ) < 0) {
         my $apath = $url;
         $apath =~ s/https?\:\/\///g;
         $apath = $mirror_path . "/" . remove_double_slashes($apath);
         push( @release_files, $apath );
         # print "\n$apath";
     }
+
+	return $size;
+}
+
+sub add_url_to_download_check
+{
+	my ( $url, $size ) = @_;
+    $url = remove_double_slashes($url);
+
+	# check file size
+	$size = defined $size? int($size) : 1;
+	$size = get_content_length_from_uri($url) if ( $size < 2);
+	if ( $size > 0 )
+	{
+		add_url_to_download($url, $size);
+		print "." if $progress;
+	}
+	return $size;
 }
 
 sub mainsub_process_skel
 {
+	print "\n\n Prepare indexes files: ["  if $progress;
+
     foreach (@config_sources)
     {
         my ( $uri, $distribution, @components ) = @{$_};
@@ -616,7 +790,7 @@ sub mainsub_process_skel
             $url = $uri . "/dists/" . $distribution . "/";
 
             add_url_to_download( $url . "InRelease" );
-            add_url_to_download( $url . "Release" );
+            add_url_to_download_check( $url . "Release" );
             add_url_to_download( $url . "Release.gpg" );
             foreach (@components)
             {
@@ -630,7 +804,7 @@ sub mainsub_process_skel
         else
         {
             add_url_to_download( $uri . "/$distribution/InRelease" );
-            add_url_to_download( $uri . "/$distribution/Release" );
+            add_url_to_download_check( $uri . "/$distribution/Release" );
             add_url_to_download( $uri . "/$distribution/Release.gpg" );
             add_url_to_download( $uri . "/$distribution/Sources.gz" );
             add_url_to_download( $uri . "/$distribution/Sources.bz2" );
@@ -647,7 +821,7 @@ sub mainsub_process_skel
             $url = $uri . "/dists/" . $distribution . "/";
 
             add_url_to_download( $url . "InRelease" );
-            add_url_to_download( $url . "Release" );
+            add_url_to_download_check( $url . "Release" );
             add_url_to_download( $url . "Release.gpg" );
             if ( get_variable("_contents") )
             {
@@ -676,7 +850,7 @@ sub mainsub_process_skel
         elsif ($distribution)
         {
             add_url_to_download( $uri . "/$distribution/InRelease" );
-            add_url_to_download( $uri . "/$distribution/Release" );
+            add_url_to_download_check( $uri . "/$distribution/Release" );
             add_url_to_download( $uri . "/$distribution/Release.gpg" );
             add_url_to_download( $uri . "/$distribution/Packages" );
             add_url_to_download( $uri . "/$distribution/Packages.gz" );
@@ -686,7 +860,7 @@ sub mainsub_process_skel
         else
         {
             add_url_to_download( $uri . "/InRelease" );
-            add_url_to_download( $uri . "/Release" );
+            add_url_to_download_check( $uri . "/Release" );
             add_url_to_download( $uri . "/Release.gpg" );
             add_url_to_download( $uri . "/Packages" );
             add_url_to_download( $uri . "/Packages.gz" );
@@ -700,12 +874,13 @@ sub mainsub_process_skel
         my $uri = $_;
         chomp $uri;
         # print "\n $uri";
-        add_url_to_download( $uri . "/SHA256SUMS" );
+        add_url_to_download_check( $uri . "/SHA256SUMS" );
+        add_url_to_download_check( $uri . "/SHA512SUMS" );
         add_url_to_download( $uri . "/SHA256SUMS.sign" );
-        add_url_to_download( $uri . "/SHA512SUMS" );
         add_url_to_download( $uri . "/SHA512SUMS.sign" );
     }
 
+	print "]\n" if $progress;
 
     chdir get_variable("skel_path") or die("apt-mirror: can't chdir to skel");
     @index_urls = sort keys %urls_to_download;
@@ -721,6 +896,10 @@ sub mainsub_process_skel
         $skipclean{$_} = 1 if s[\.bz2$][];
         $skipclean{$_} = 1 if s[\.xz$][];
     }
+
+	# reset global vars
+	%urls_to_download = ();
+	%stat_cache = ();
 }
 
 mainsub_process_skel();
@@ -762,11 +941,11 @@ sub checking_file_sum
     my $tot_line = 0;
     my $ajob_str = 0;
 
-    $ajob_str = "Release Files"  if ( $ajob eq "release" );
+    $ajob_str = "Packages* Files"  if ( $ajob eq "packages" );
     $ajob_str = "Pre Mirroring"  if ( $ajob eq "pre" );
     $ajob_str = "Post Mirroring"  if ( $ajob eq "post" );
 
-    print "\n [$ajob_str] Checksum Type: " . sprintf("%6s", uc($akind))  if $progress;
+    print "\n   [$ajob_str] Checksum Type: " . sprintf("%6s", uc($akind))  if $progress;
     if (-e $checksum_file && -s $checksum_file )
     {
         my $grepm = 'grep "\/mirror\/"';
@@ -794,7 +973,7 @@ sub checking_file_sum
 my (@lines_md5, @lines_sha1, @lines_sha256) = ();
 if ( scalar @release_files )
 {
-    print "\n\n Checksum Checking: Release-file.. "  if $progress;
+    print "\n\n\n Checksum Checking: Packages* files.. "  if $progress;
 
     my %lines_md5 = ();
     my %lines_sha1 = ();
@@ -829,16 +1008,10 @@ if ( scalar @release_files )
             print "R"  if (-e $afile_path && $progress );
             print "\n OK=$apart $afile_path "  if (-e $afile_path && $verbose > 2 );
         }
-
-        # print FILE_SUM_MD5 "$asum  $afile_path\n"  if ( $apart eq "md5" );
-        # print FILE_SUM_SHA1 "$asum  $afile_path\n"  if ( $apart eq "sha1" );
-        # print FILE_SUM_SHA256 "$asum  $afile_path\n"  if ( $apart eq "sha256" );
-
-        # $num_file_to_check++;
     }
 
     #--- preparing file checksum
-    print "\n\n Preparing Release files checksum: [" if $progress;
+    print "\n   Preparing Packages* files checksum: [" if $progress;
     foreach my $arel (@release_files) {
         next unless (-e $arel );
 
@@ -847,8 +1020,6 @@ if ( scalar @release_files )
             warn( "Failed to open Release file from " . $arel )  if ($verbose > 1);
             return;
         }
-
-        # print "\n $arel"  if $progress;
 
         my $cur_part = "";
         my $prev_part = "";
@@ -904,9 +1075,9 @@ if ( scalar @release_files )
     }
 
     # writing to files
-    my $input_file_md5 = "$var_path/relsum.md5";
-    my $input_file_sha1 = "$var_path/relsum.sha1";
-    my $input_file_sha256 = "$var_path/relsum.sha256";
+    my $input_file_md5 = "$var_path/packages.md5";
+    my $input_file_sha1 = "$var_path/packages.sha1";
+    my $input_file_sha256 = "$var_path/packages.sha256";
 
     open FILE_SUM_MD5, ">$input_file_md5" or die("apt-mirror: can't write to intermediate file (MD5) \n[$input_file_md5]");
     open FILE_SUM_SHA1, ">$input_file_sha1" or die("apt-mirror: can't write to intermediate file (SHA1) \n[$input_file_sha1]");
@@ -923,13 +1094,14 @@ if ( scalar @release_files )
     close FILE_SUM_SHA1;
     close FILE_SUM_SHA256;
     my $num_file_to_check = scalar @keys_md5 + scalar @keys_sha1 + scalar @keys_sha256;
-    print "] {$num_file_to_check checks [files + checksum-kind]}. \n"  if $progress;
+    print "] {$num_file_to_check lines}. "  if $progress;
 
     #--- do check
     my $checksum_fails = 0;
-    $checksum_fails += checking_file_sum("release", "md5", $input_file_md5);
-    $checksum_fails += checking_file_sum("release", "sha1", $input_file_sha1);
-    $checksum_fails += checking_file_sum("release", "sha256", $input_file_sha256);
+    $checksum_fails += checking_file_sum("packages", "md5", $input_file_md5);
+    $checksum_fails += checking_file_sum("packages", "sha1", $input_file_sha1);
+    $checksum_fails += checking_file_sum("packages", "sha256", $input_file_sha256);
+	print "\n\n"  if $progress;
 
     #--- re-download skel, if fails
     if ( $checksum_fails > 0 )
@@ -945,7 +1117,7 @@ if ( scalar @release_files )
 ## Translation index download
 
 
-%urls_to_download = ();
+# %urls_to_download = ();
 
 sub sanitise_uri
 {
@@ -1072,7 +1244,7 @@ sub process_translation_index
 
 sub mainsub_process_translation
 {
-    print "\n\n Processing translation indexes: ["
+    print "\n Processing translation indexes: ["
         if $progress;
 
     foreach (@config_binaries)
@@ -1093,18 +1265,18 @@ sub mainsub_process_translation
         }
     }
 
-    print "]\n\n" if $progress;
+    print "]\n" if $progress;
 
-    push( @index_urls, sort keys %urls_to_download );
-    download_urls( "translation", sort keys %urls_to_download );
+    # push( @index_urls, sort keys %urls_to_download );
+    # download_urls( "translation", sort keys %urls_to_download );
 
-    foreach ( keys %urls_to_download )
-    {
-        s[^(\w+)://][];
-        s[~][%7E]g if get_variable("_tilde");
-        s[\+][%2B]g if get_variable("_plus");
-        $skipclean{$_} = 1;
-    }
+    # foreach ( keys %urls_to_download )
+    # {
+    #     s[^(\w+)://][];
+    #     s[~][%7E]g if get_variable("_tilde");
+    #     s[\+][%2B]g if get_variable("_plus");
+    #     $skipclean{$_} = 1;
+    # }
 }
 
 mainsub_process_translation()  if ( get_variable("exec_translation") > 0 );
@@ -1115,7 +1287,7 @@ mainsub_process_translation()  if ( get_variable("exec_translation") > 0 );
 ## DEP-11 index download
 
 
-%urls_to_download = ();
+# %urls_to_download = ();
 
 sub find_dep11_files_in_release
 {
@@ -1176,7 +1348,7 @@ sub find_dep11_files_in_release
 
 sub mainsub_process_dep11
 {
-    print "\n\n Processing DEP-11 indexes: ["
+    print "\n Processing DEP-11 indexes: ["
             if $progress;
 
     foreach (@config_binaries)
@@ -1197,18 +1369,18 @@ sub mainsub_process_dep11
         }
     }
 
-    print "]\n\n" if $progress;
+    print "]\n" if $progress;
 
-    push( @index_urls, sort keys %urls_to_download );
-    download_urls( "dep11", sort keys %urls_to_download );
+    # push( @index_urls, sort keys %urls_to_download );
+    # download_urls( "dep11", sort keys %urls_to_download );
 
-    foreach ( keys %urls_to_download )
-    {
-        s[^(\w+)://][];
-        s[~][%7E]g if get_variable("_tilde");
-        s[\+][%2B]g if get_variable("_plus");
-        $skipclean{$_} = 1;
-    }
+    # foreach ( keys %urls_to_download )
+    # {
+    #     s[^(\w+)://][];
+    #     s[~][%7E]g if get_variable("_tilde");
+    #     s[\+][%2B]g if get_variable("_plus");
+    #     $skipclean{$_} = 1;
+    # }
 }
 
 mainsub_process_dep11()  if ( get_variable("exec_dep11") > 0 );
@@ -1219,7 +1391,7 @@ mainsub_process_dep11()  if ( get_variable("exec_dep11") > 0 );
 
 if ( get_variable("exec_by_hash") > 0 )
 {
-    %urls_to_download = ();
+    # %urls_to_download = ();
 
     sub find_by_hash_sha256_files_in_release
     {
@@ -1255,7 +1427,7 @@ if ( get_variable("exec_by_hash") > 0 )
                         my $dirname = dirname($filename);
                         my $sha256_filename = '/'.$dirname.'/by-hash/SHA256/'.$sha256;
                         {
-                            add_url_to_download( $dist_uri . $sha256_filename );
+                            add_url_to_download( $dist_uri . $sha256_filename, $size );
                         }
                     }
                     else
@@ -1278,13 +1450,13 @@ if ( get_variable("exec_by_hash") > 0 )
         }
     }
 
-    print "\n\n Processing SHA256 by-hash files ["
+    print "\n Processing SHA256 by-hash files ["
         if $progress;
 
     foreach (@config_binaries)
     {
         my ( $arch, $uri, $distribution, @components ) = @{$_};
-        print "D" if $progress;
+        print "H" if $progress;
         # print "D-$distribution " if $progress;
         if (@components)
         {
@@ -1299,18 +1471,18 @@ if ( get_variable("exec_by_hash") > 0 )
         }
     }
 
-    print "]\n\n" if $progress;
+    print "]\n" if $progress;
 
-    push( @index_urls, sort keys %urls_to_download );
-    download_urls( "by-hash-SHA256", sort keys %urls_to_download );
+    # push( @index_urls, sort keys %urls_to_download );
+    # download_urls( "by-hash-SHA256", sort keys %urls_to_download );
 
-    foreach ( keys %urls_to_download )
-    {
-        s[^(\w+)://][];
-        s[~][%7E]g if get_variable("_tilde");
-        s[\+][%2B]g if get_variable("_plus");
-        $skipclean{$_} = 1;
-    }
+    # foreach ( keys %urls_to_download )
+    # {
+    #     s[^(\w+)://][];
+    #     s[~][%7E]g if get_variable("_tilde");
+    #     s[\+][%2B]g if get_variable("_plus");
+    #     $skipclean{$_} = 1;
+    # }
 }
 
 ######################################################################################
@@ -1320,7 +1492,7 @@ if ( get_variable("exec_by_hash") > 0 )
 if ( get_variable("exec_cnf") > 0 )
 {
 
-    %urls_to_download = ();
+    # %urls_to_download = ();
 
     sub find_cnf_files_in_release
     {
@@ -1378,7 +1550,7 @@ if ( get_variable("exec_cnf") > 0 )
         }
     }
 
-    print "\n\n Processing cnf indexes: ["
+    print "\n Processing cnf indexes: ["
         if $progress;
 
     foreach (@config_binaries)
@@ -1399,18 +1571,18 @@ if ( get_variable("exec_cnf") > 0 )
         }
     }
 
-    print "]\n\n" if $progress;
+    print "]\n" if $progress;
 
-    push( @index_urls, sort keys %urls_to_download );
-    download_urls( "cnf", sort keys %urls_to_download );
+    # push( @index_urls, sort keys %urls_to_download );
+    # download_urls( "cnf", sort keys %urls_to_download );
 
-    foreach ( keys %urls_to_download )
-    {
-        s[^(\w+)://][];
-        s[~][%7E]g if get_variable("_tilde");
-        s[\+][%2B]g if get_variable("_plus");
-        $skipclean{$_} = 1;
-    }
+    # foreach ( keys %urls_to_download )
+    # {
+    #     s[^(\w+)://][];
+    #     s[~][%7E]g if get_variable("_tilde");
+    #     s[\+][%2B]g if get_variable("_plus");
+    #     $skipclean{$_} = 1;
+    # }
 }
 
 
@@ -1422,7 +1594,7 @@ if ( get_variable("exec_cnf") > 0 )
 if ( get_variable("exec_deb_ins") > 0 )
 {
 
-    %urls_to_download = ();
+    # %urls_to_download = ();
 
     sub find_debian_files_in_release
     {
@@ -1480,13 +1652,13 @@ if ( get_variable("exec_deb_ins") > 0 )
         }
     }
 
-    print "\n\n Processing debian-installer: ["
+    print "\n Processing debian-installer: ["
         if $progress;
 
     foreach (@config_binaries)
     {
         my ( $arch, $uri, $distribution, @components ) = @{$_};
-        print "D" if $progress;
+        print "E" if $progress;
         # print "D-$distribution " if $progress;
         if (@components)
         {
@@ -1501,30 +1673,32 @@ if ( get_variable("exec_deb_ins") > 0 )
         }
     }
 
-    print "]\n\n" if $progress;
+    print "]\n" if $progress;
 
-    push( @index_urls, sort keys %urls_to_download );
-    download_urls( "debian-installer", sort keys %urls_to_download );
+    # push( @index_urls, sort keys %urls_to_download );
+    # download_urls( "debian-installer", sort keys %urls_to_download );
 
-    foreach ( keys %urls_to_download )
-    {
-        s[^(\w+)://][];
-        s[~][%7E]g if get_variable("_tilde");
-        s[\+][%2B]g if get_variable("_plus");
-        $skipclean{$_} = 1;
-    }
+    # foreach ( keys %urls_to_download )
+    # {
+    #     s[^(\w+)://][];
+    #     s[~][%7E]g if get_variable("_tilde");
+    #     s[\+][%2B]g if get_variable("_plus");
+    #     $skipclean{$_} = 1;
+    # }
 }
 
 
 
-######################################################################################
-## debian-iso download
 
+
+######################################################################################
+## debian-iso process indexes
 
 if ( get_variable("exec_deb_iso") > 0 )
 {
 
-    %urls_to_download = ();
+    # %urls_to_download = ();
+    my %urls_iso = ();
 
     sub find_file_iso_at_sums
     {
@@ -1539,23 +1713,29 @@ if ( get_variable("exec_deb_iso") > 0 )
             return;
         }
         my $checksums = 0;
-        my $aline = "";
-        while ( $aline = <STREAM> )
+        my $line = "";
+        while ( $line = <STREAM> )
         {
-            chomp $aline;
-            my @parts = split / /, $aline;
-            @parts = grep { $_ ne '' } @parts;
-            my ( $asum, $afile ) = @parts;
-            add_url_to_download( "$uri_base/$afile", 1 );
+            chomp $line;
+			my @parts = split( / +/, $line );
+			if ( @parts == 2 )
+			{
+				my ( $asum, $afile ) = @parts;
+				chomp $afile;
+				$urls_iso{"$uri_base/$afile"} = $afile;
+				# my $size = add_url_to_download( "$uri_base/$afile", 1 );
+				# print "\n size=$size $afile ";
+			}
         }
     }
 
-    print "\n\n Processing debian-iso files: ["
+    print "\n Processing debian-iso files: ["
         if $progress;
 
     my $mirror_path = get_variable("mirror_path");
     foreach (@config_isos)
     {
+        print "I" if $progress;
         my $uri = $_;
         chomp $uri;
 
@@ -1568,18 +1748,25 @@ if ( get_variable("exec_deb_iso") > 0 )
         find_file_iso_at_sums($uri, "$mirror_path/$path", "SHA512SUMS");
     }
 
-    print "]\n\n" if $progress;
+	foreach (sort keys %urls_iso) {
+		my $url = $_;
+		my $size = add_url_to_download( $url, 1 );
+		my $afile = $urls_iso{$url};
+		print "\n size=$size $afile " if ( $verbose > 1 );
+	}
 
-    push( @index_urls, sort keys %urls_to_download );
-    download_urls( "debian-iso", sort keys %urls_to_download );
+    print "]\n" if $progress;
 
-    foreach ( keys %urls_to_download )
-    {
-        s[^(\w+)://][];
-        s[~][%7E]g if get_variable("_tilde");
-        s[\+][%2B]g if get_variable("_plus");
-        $skipclean{$_} = 1;
-    }
+    # push( @index_urls, sort keys %urls_to_download );
+    # download_urls( "debian-iso", sort keys %urls_to_download );
+
+    # foreach ( keys %urls_to_download )
+    # {
+    #     s[^(\w+)://][];
+    #     s[~][%7E]g if get_variable("_tilde");
+    #     s[\+][%2B]g if get_variable("_plus");
+    #     $skipclean{$_} = 1;
+    # }
 }
 
 
@@ -1590,8 +1777,8 @@ if ( get_variable("exec_deb_iso") > 0 )
 ## Main download preparations
 
 
-%urls_to_download = ();
-my %stat_cache = ();
+# %urls_to_download = ();
+# my %stat_cache = ();
 
 
 sub _stat
@@ -1792,7 +1979,7 @@ sub mainsub_process_indexes
     open FILES_SHA1, ">" . get_variable("var_path") . "/SHA1" or die("apt-mirror: can't write to intermediate file (SHA1)");
     open FILES_SHA256, ">" . get_variable("var_path") . "/SHA256" or die("apt-mirror: can't write to intermediate file (SHA256)");
 
-    print "\n\n Processing indexes: {S=source, B=Binary} ["
+    print "\n Processing indexes: {S=source, B=Binary} ["
         if $progress;
 
     foreach (@config_sources)
@@ -1841,7 +2028,7 @@ sub mainsub_process_indexes
     }
 
     clear_stat_cache();
-    print "]\n\n" if $progress;
+    print "]\n" if $progress;
 
     if ( scalar @del_files )
     {
@@ -1870,7 +2057,7 @@ sub checksum_checking
     my $type_str = "";
     $type_str = "Pre-Mirroring"  if ( $type eq "pre" );
     $type_str = "Post-Mirroring"  if ( $type eq "post" );
-    print "\n\n Checksum Checking: $type.. "  if $progress;
+    print "\n\n\n Checksum Checking: $type_str "  if $progress;
 
     my $var_path = get_variable("var_path");
     my $checksum_fails = 0;
@@ -1882,10 +2069,13 @@ sub checksum_checking
     $checksum_fails += checking_file_sum($type, "md5", $input_file_md5);
     $checksum_fails += checking_file_sum($type, "sha1", $input_file_sha1);
     $checksum_fails += checking_file_sum($type, "sha256", $input_file_sha256);
+	print "\n\n"  if $progress;
 }
 
 mainsub_process_indexes();
 checksum_checking('Pre')  if ( get_variable("pre_check_sum") > 0 );
+
+
 
 
 ######################################################################################
@@ -2087,15 +2277,21 @@ if ( get_variable("exec_clean") > 0 )
     {
         print "Running the Post Mirror script ...\n";
         print "(" . get_variable("postmirror_script") . ")\n\n";
-        if ( -x get_variable("postmirror_script") )
-        {
-            system(get_variable("postmirror_script").'');
-        }
-        else
-        {
-            system('/bin/sh', get_variable("postmirror_script"));
-        }
-        print "\nPost Mirror script has completed. See above output for any possible errors.\n\n";
+        if (-e get_variable("postmirror_script") )
+		{
+			if (-x get_variable("postmirror_script") )
+			{
+				system(get_variable("postmirror_script").'');
+			}
+			else
+			{
+				system('/bin/sh', get_variable("postmirror_script"));
+			}
+			print "\nPost Mirror script has completed. See above output for any possible errors.\n\n";
+		}
+		else {
+			print "--- Post Mirror script not exists.";
+		}
     }
 }
 

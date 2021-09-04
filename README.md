@@ -51,17 +51,18 @@ See also:
 	- port number (fixes #19)
 	- checksum checking for binary & sources files. checksum checking can be executed at pre and post mirroring. both can be enabled/disabled via config file.
 	- using absolute full path for uncompress *.gz, *.xs and *.bz2
-	- Release and Packages files checksum checking
+	- Packages* files checksum checking
 	- ISO netinst mirroring
+	- Translation and DEP-11 files checksum checking. Unified downloads, so we can include these files at pre and post mirroring.
 
 
 ## TODO :
-- Translation files checksum checking
-- DEP-11 files checksum checking
-
+- concurrent checksum checks
+- caching download feature. only re-download stale/expire or corruted uri
+- any idea? please sumbit issue. thanks.
 
 ## DROPPED TODO LIST :
--not yet-
+- Release files checksum checking. Workaround: clear skel_path before mirroring
 
 
 ## List all of PR merged
