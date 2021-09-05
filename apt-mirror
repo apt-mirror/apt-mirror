@@ -96,37 +96,38 @@ use File::Basename;
 use Fcntl qw(:flock);
 use Fcntl qw(F_GETFL F_SETFL O_NONBLOCK);
 use Getopt::Long;
-use Digest::MD5 qw(md5_hex);
-use Digest::SHA qw(sha1_hex sha256_hex);
-use File::Slurp;
+# use Digest::MD5 qw(md5_hex);
+# use Digest::SHA qw(sha1_hex sha256_hex);
 use feature 'fc';
 use File::Path;
+use File::Slurp; # libfile-slurp-perl
+use File::Touch qw(touch); #libfile-touch-perl
 
 my $config_file;
 
 my %config_variables = (
-	# PATH configs
+    # PATH configs
     "base_path"            => '/var/spool/apt-mirror',
     "mirror_path"          => '$base_path/mirror',
     "skel_path"            => '$base_path/skel',
     "var_path"             => '$base_path/var',
     "tmp_path"             => '/tmp/apt-mirror-tmp',
 
-	"defaultarch"          => `dpkg --print-architecture 2>/dev/null` || 'amd64',
+    "defaultarch"          => `dpkg --print-architecture 2>/dev/null` || 'amd64',
 
-	# main config
+    # main config
     "nthreads"             => 20,
-	"cleanscript"          => '$var_path/clean.sh',
+    "cleanscript"          => '$var_path/clean.sh',
     "_contents"            => 1,
     "_autoclean"           => 1,
     "dry_run"              => 0,
 
-	# URL sanitizen
+    # URL sanitizen
     "_tilde"               => 0,
     "_plus"                => 0,
 
-	# subroutine execution
-	"exec_dep11"           => 0,
+    # subroutine execution
+    "exec_dep11"           => 0,
     "exec_translation"     => 0,
     "exec_cnf"             => 0,
     "exec_deb_ins"         => 0,
@@ -134,19 +135,22 @@ my %config_variables = (
     "exec_by_hash"         => 0,
     "exec_clean"           => 0,
 
-	# post/pre mirroring
+    # post/pre mirroring
     "postmirror_script"    => '$var_path/postmirror.sh',
     "run_postmirror"       => 1,
     "premirror_script"     => '$var_path/premirror.sh',
     "run_premirror"        => 1,
 
-	# checksum operations
+    # checksum operations
     "pre_check_sum"        => 1,
     "post_check_sum"       => 1,
     "delete_bad_file"      => 1,
 
-	# WGET configs
-	"unlink"               => 0,
+    # 404 history logs
+    "min_delta_404"        => 259200, # 3 days
+
+    # WGET configs
+    "unlink"               => 0,
     "limit_rate"           => '20m',
     "auth_no_challenge"    => 1,
     "no_check_certificate" => 1,
@@ -266,7 +270,7 @@ sub lock_aptmirror
     {
         #-- die("apt-mirror is already running, exiting");
         my $flags = fcntl( LOCK_FILE, F_GETFL, 0) or die "Cannot set flags for lock file: $!\n";
-		    fcntl( LOCK_FILE, F_SETFL, $flags | O_NONBLOCK) or die "Cannot get lock file, apt-mirror is running already: $!\n";
+            fcntl( LOCK_FILE, F_SETFL, $flags | O_NONBLOCK) or die "Cannot get lock file, apt-mirror is running already: $!\n";
     }
 }
 
@@ -275,6 +279,104 @@ sub unlock_aptmirror
     close(LOCK_FILE);
     unlink( get_variable("var_path") . "/apt-mirror.lock" );
 }
+
+# global vars
+my %url_404s = ();
+my $url_404_file = "";
+
+sub normalize_404_url
+{
+    my ( $url ) = @_;
+    $url = remove_double_slashes($url);
+    $url = sanitise_uri($url);
+    return $url;
+}
+
+
+sub load_404_log
+{
+    %url_404s = ();
+
+    $url_404_file = get_variable("var_path") . "/url404.log";
+    touch($url_404_file);
+
+    open URL_404, "<$url_404_file"  or die("apt-mirror: can't open url 404 history file ($url_404_file)");
+    while (<URL_404>)
+    {
+        next if /^\s*#/;
+        next unless /\S/;
+        my $line = $_;
+
+        my @arrs = split /\:/, $line;
+        next if ( @arrs > 2);
+
+        my ( $aurl, $atime ) = @arrs;
+        $url_404s{$aurl} = $atime;
+    }
+    close URL_404;
+}
+
+sub update_404_log
+{
+    my ( $num_files, $stage ) = @_;
+    chomp $stage;
+    $stage = lc($stage);
+    $num_files = int($num_files);
+
+    # load url history from file
+    load_404_log() unless %url_404s;
+
+    # update vars
+    for ( my $i=0; $i<=$num_files; $i++ )
+    {
+        my $log_file = get_variable("var_path") . "/$stage-log.$i";
+        my $sed = 'sed "s/http/\nhttp/g"';
+        my $log_res = `cat $log_file | grep -v ' -> ' | tr -d '\n' | $sed | grep 404`;
+        my @log_lines = split /\n/, $log_res;
+
+        # example line
+        # http://archive.raspberrypi.org/debian/dists/buster/Contents-arm64.bz2:2021-09-06 00:10:18 ERROR 404: Not Found
+
+        foreach my $aline ( @log_lines ) {
+            chomp $aline;
+            $aline =~ s/^\s+|\s+$//g;
+            next  if ( length($aline) < 1 );
+
+            my ( $scheme, $aurl, undef ) = split /\:/, $aline;
+            $aurl = "$scheme:$aurl";
+
+            # normalizing url
+            $aurl = normalize_404_url($aurl);
+
+            $url_404s{$aurl} = time();
+        }
+        print "=" if $progress;
+    }
+
+    # save to file
+    open FILE_404, ">$url_404_file"  or die("apt-mirror: can't open url 404 history file ($url_404_file)");
+    foreach my $url_key (keys %url_404s)
+    {
+        my $atime = int($url_404s{$url_key});
+        print FILE_404 $url_key . ":" . $atime . "\n";
+    }
+    close FILE_404;
+
+    %url_404s = ();
+}
+
+my $min_delta_404 = get_variable("min_delta_404");
+sub allow_download_by_404_log
+{
+    my ( $url ) = @_;
+    $url = normalize_404_url($url);
+    return 1  unless $url_404s{$url};
+
+    my $delta = time() - int($url_404s{$url});
+    return $delta > $min_delta_404;
+}
+
+
 
 sub download_urls
 {
@@ -289,6 +391,8 @@ sub download_urls
     @urls = @_;
     $nthreads = @urls if @urls < $nthreads;
 
+    chomp $stage;
+    $stage = lc($stage);
 
     # set auth_no_challenge 1
     if ( get_variable("auth_no_challenge") == 1 )
@@ -387,7 +491,7 @@ sub download_urls
         push( @args, " --verbose --progress=dot" );
     }
 
-	# --prefer-family=none/IPv4/IPv6 --inet4-only --inet6-only
+    # --prefer-family=none/IPv4/IPv6 --inet4-only --inet6-only
     if ( get_variable("ip_v6") > 0 )
     {
         push( @args, " --inet6-only --prefer-family=IPv6" );
@@ -410,11 +514,11 @@ sub download_urls
     push( @args, " --no-cache --no-hsts --retry-on-host-error" );
     push( @args, " --retry-connrefused --waitretry=3 --retry-on-http-error=503,429" );
 
-	#-- special args for index
-	push ( @args, " --no-if-modified-since" )  if ( $stage eq "index" );
+    #-- special args for index
+    push ( @args, " --no-if-modified-since" )  if ( $stage eq "index" );
 
-	#-- special args for archive
-	push ( @args, " -c" )  if ( $stage eq "archive" );
+    #-- special args for archive
+    push ( @args, " -c" )  if ( $stage eq "archive" );
 
 
     print "   Downloading " . scalar(@urls) . " $stage files using $nthreads threads...\n";
@@ -424,13 +528,13 @@ sub download_urls
     {
         my @part = splice( @urls, 0, int( @urls / $nthreads ) );
 
-		# construct url file
+        # construct url file
         open URLS, ">" . get_variable("var_path") . "/$stage-urls.$i" or die("apt-mirror: can't write to intermediate file ($stage-urls.$i)");
         foreach (@part) { print URLS "$_\n"; }
         close URLS or die("apt-mirror: can't close intermediate file ($stage-urls.$i)");
-		print join("\n  ", "Downloading batch $i:", @part), "\n"  if ($verbose >= 2);
+        print join("\n  ", "Downloading batch $i:", @part), "\n"  if ($verbose >= 2);
 
-		# spawn wget (no fork)
+        # spawn wget (no fork)
         my @dowget = ('nohup /usr/bin/wget', ' -o ', get_variable("var_path") . "/$stage-log.$i", ' -i ', get_variable("var_path") . "/$stage-urls.$i", @args);
         my $exwget = join(' ', @dowget) . ' >/dev/null 2>&1 &';
         system($exwget);
@@ -439,8 +543,9 @@ sub download_urls
         $nthreads--;
     }
 
+    my $num_files = $i - 1;
 
-	# wait for wget child instances to finish
+    # wait for wget child instances to finish
     sleep(5);
     my $nums_now = `ps auxw | grep -v grep | grep wget | grep Aptly | wc -l`;
     $nums_now = int($nums_now);
@@ -462,6 +567,8 @@ sub download_urls
         print "\n";
     }
 
+    # updating 404 history for later use
+    update_404_log($num_files, $stage);
 }
 
 ## Parse config
@@ -552,20 +659,20 @@ if ( get_variable("run_premirror") )
     print "Running the Pre Mirror script ...\n";
     print "(" . get_variable("premirror_script") . ")\n\n";
     if ( -e get_variable("premirror_script") )
-	{
-		if ( -x get_variable("premirror_script") )
-		{
-			system(get_variable("premirror_script") .'');
-		}
-		else
-		{
-			system('/bin/sh', get_variable("premirror_script"));
-		}
-		print "\nPre Mirror script has completed. See above output for any possible errors.\n\n";
-	}
-	else {
-		print "--- Pre Mirror script not exists.";
-	}
+    {
+        if ( -x get_variable("premirror_script") )
+        {
+            system(get_variable("premirror_script") .'');
+        }
+        else
+        {
+            system('/bin/sh', get_variable("premirror_script"));
+        }
+        print "\nPre Mirror script has completed. See above output for any possible errors.\n\n";
+    }
+    else {
+        print "--- Pre Mirror script not exists.";
+    }
 }
 
 
@@ -574,10 +681,6 @@ if ( get_variable("run_premirror") )
 ## Create the 3 needed directories if they don't exist yet
 my @needed_directories = ( get_variable("mirror_path"), get_variable("skel_path"), get_variable("var_path"), get_variable("tmp_path") );
 
-# fresh skel_path
-my $skel_path = get_variable("skel_path");
-my $dump = `find -L $skel_path -type f -delete >/dev/null 2>&1 &`;
-
 foreach my $needed_directory (@needed_directories)
 {
     unless ( -d $needed_directory )
@@ -585,6 +688,12 @@ foreach my $needed_directory (@needed_directories)
         make_path($needed_directory) or die("apt-mirror: can't create $needed_directory directory");
     }
 }
+
+# fresh skel_path
+my $skel_path = get_variable("skel_path");
+my $dump = `find -L $skel_path -type f -delete >/dev/null 2>&1 &`;
+load_404_log();
+
 #
 #######################################################################################
 
@@ -617,11 +726,11 @@ sub remove_double_slashes
 
 sub flatten_url
 {
-	my ( $url ) = @_;
-	$url = sanitise_uri($url);
-	$url =~ s/\//\-/g;
-	$url =~ s/\./\-/g;
-	return $url;
+    my ( $url ) = @_;
+    $url = sanitise_uri($url);
+    $url =~ s/\//\-/g;
+    $url =~ s/\./\-/g;
+    return $url;
 }
 
 
@@ -629,15 +738,15 @@ my $tmp_path = get_variable("tmp_path");
 
 sub get_curl_args
 {
-	my @args = ();
+    my @args = ();
 
-	push( @args, " -ILks --no-keepalive --retry-connrefused --tcp-fastopen --tcp-nodelay" );
-	push( @args, " --cookie-jar /tmp/apt-mirror-curl.cookies" );
+    push( @args, " -ILks --no-keepalive --retry-connrefused --tcp-fastopen --tcp-nodelay" );
+    push( @args, " --cookie-jar /tmp/apt-mirror-curl.cookies" );
 
-	if ( get_variable("tries") > 0 )
-	{
-		push( @args, " --retry " . get_variable("tries") );
-	}
+    if ( get_variable("tries") > 0 )
+    {
+        push( @args, " --retry " . get_variable("tries") );
+    }
 
     if ( get_variable("timeout") > 0 )
     {
@@ -657,32 +766,32 @@ sub get_curl_args
 
     if ( length( get_variable("use_proxy") ) && ( get_variable("use_proxy") eq 'yes' || get_variable("use_proxy") eq 'on'  || get_variable("use_proxy") eq 'true' || get_variable("use_proxy") eq '1' ) )
     {
-		if ( length( get_variable("http_proxy") ) ) { push( @args, " --proxy " . get_variable("http_proxy") ); }
+        if ( length( get_variable("http_proxy") ) ) { push( @args, " --proxy " . get_variable("http_proxy") ); }
         if ( length( get_variable("https_proxy") ) ) { push( @args, " --proxy " . get_variable("https_proxy") ); }
 
         if ( length( get_variable("proxy_user") ) && length( get_variable("proxy_password") ) )
-		{
-			my $proxy = " --proxy_user ";
+        {
+            my $proxy = " --proxy_user ";
 
-			if ( length( get_variable("proxy_user") ) )
-			{
-				$proxy .= get_variable("proxy_user");
-			}
+            if ( length( get_variable("proxy_user") ) )
+            {
+                $proxy .= get_variable("proxy_user");
+            }
 
-			if ( length( get_variable("proxy_password") ) )
-			{
-				$proxy .= ":" . get_variable("proxy_password");
-			}
+            if ( length( get_variable("proxy_password") ) )
+            {
+                $proxy .= ":" . get_variable("proxy_password");
+            }
 
-			push( @args, $proxy );
-			push( @args, " --proxy-insecure" );
-			push( @args, " --proxytunnel" );
-		}
+            push( @args, $proxy );
+            push( @args, " --proxy-insecure" );
+            push( @args, " --proxytunnel" );
+        }
     }
-	else
-	{
-		push( @args, " --noproxy" );
-	}
+    else
+    {
+        push( @args, " --noproxy" );
+    }
 
     if ( get_variable("ip_v6") > 0 )
     {
@@ -693,71 +802,78 @@ sub get_curl_args
         push( @args, " --ipv4" );
     }
 
-	return " " . join( "", @args );
+    return " " . join( "", @args );
 }
 
 
 sub get_content_length_from_uri
 {
-	my ( $url, $size ) = @_;
-	my ( $tmp, $res, $arg, $code, $delta, @parts ) = ();
-	$url = remove_double_slashes($url);
-	$tmp = "$tmp_path/" . flatten_url($url) . ".tmp";
+    my ( $url, $size ) = @_;
+    my ( $tmp, $res, $arg, $code, $delta, @parts ) = ();
+    $url = remove_double_slashes($url);
+    $tmp = "$tmp_path/" . flatten_url($url) . ".tmp";
 
-	# delete temp file if too old
-	if (-e $tmp )
-	{
-		$delta = time() - (stat($tmp))[9];
-		unlink( $tmp )  if ( $delta > 86400*2 );
-	}
+    # delete temp file if too old
+    if (-e $tmp )
+    {
+        $delta = time() - (stat($tmp))[9];
+        unlink( $tmp )  if ( $delta > 86400*2 );
+    }
 
-	unless (-e $tmp ) {
-		$arg = get_curl_args();
-		$res = `curl $arg $url 2>&1 -o $tmp`;
-		return -1  unless (-e $tmp);
-	}
+    unless (-e $tmp ) {
+        $arg = get_curl_args();
+        $res = `curl $arg $url 2>&1 -o $tmp`;
+        return -1  unless (-e $tmp);
+    }
 
-	# check if multi result from curl
-	$res = read_file($tmp);
-	$res =~ s/HTTP/\n\nHTTP/g;
-	@parts = split /\n\n/, $res;
-	@parts = grep { $_ ne '' } @parts;
+    # check if multi result from curl
+    $res = read_file($tmp);
+    $res =~ s/HTTP/\n\nHTTP/g;
+    @parts = split /\n\n/, $res;
+    @parts = grep { $_ ne '' } @parts;
 
-	if ( @parts > 1 )
-	{
-		$res = $parts[-1]; #last
-		$res =~ s/^\s+|\s+$//g;
+    if ( @parts > 1 )
+    {
+        $res = $parts[-1]; #last
+        $res =~ s/^\s+|\s+$//g;
 
-		open(my $fh, ">$tmp" );
-		print $fh $res;
-		close $fh;
-	}
+        open(my $fh, ">$tmp" );
+        print $fh $res;
+        close $fh;
+    }
 
-	$code = `cat $tmp | head -n1`;
+    $code = `cat $tmp | head -n1`;
 
-	if ( index($code, 200) != -1 )
-	{
-		$size = `cat $tmp | grep -i "content\-length" | cut -d' ' -f2`;
-		$size = length($size)? int($size) : -1;
-	}
-	else
-	{
-		$size = -1;
-	}
-	# print " code=$code size=$size $url \n";
-	# print "." if $progress;
+    if ( index($code, 200) != -1 )
+    {
+        $size = `cat $tmp | grep -i "content\-length" | cut -d' ' -f2`;
+        $size = length($size)? int($size) : -1;
+    }
+    else
+    {
+        $size = -1;
+    }
+    # print " code=$code size=$size $url \n";
+    # print "." if $progress;
 
-	return $size;
+    return $size;
 }
 
 sub add_url_to_download
 {
-	my ( $url, $size ) = @_;
+    my ( $url, $size ) = @_;
     $url = remove_double_slashes($url);
 
-	# check file size
-	$size = defined $size? int($size) : 1;
-	$urls_to_download{$url} = $size;
+    # immediate return if not too many 404
+    unless (allow_download_by_404_log($url))
+    {
+        print "%" if $progress;
+        return $size;
+    }
+
+    # check file size
+    $size = defined $size? int($size) : 1;
+    $urls_to_download{$url} = $size;
 
     if ( index($url, "Release") != -1 && index($url, ".gpg" ) < 0) {
         my $apath = $url;
@@ -767,28 +883,32 @@ sub add_url_to_download
         # print "\n$apath";
     }
 
-	return $size;
+    return $size;
 }
 
 sub add_url_to_download_check
 {
-	my ( $url, $size ) = @_;
+    my ( $url, $size ) = @_;
     $url = remove_double_slashes($url);
 
-	# check file size
-	$size = defined $size? int($size) : 1;
-	$size = get_content_length_from_uri($url) if ( $size < 2);
-	if ( $size > 0 )
-	{
-		add_url_to_download($url, $size);
-		print "." if $progress;
-	}
-	return $size;
+    # check file size
+    $size = defined $size? int($size) : 1;
+    $size = get_content_length_from_uri($url) if ( $size < 2);
+    if ( $size > 0 )
+    {
+        add_url_to_download($url, $size);
+        print "." if $progress;
+    }
+    return $size;
 }
 
 sub mainsub_process_skel
 {
-	print "\n\n Prepare indexes files: ["  if $progress;
+    print "\n\n Prepare indexes files: ["  if $progress;
+
+    # load 404 history from file for later checking
+    load_404_log();
+
 
     foreach (@config_sources)
     {
@@ -889,7 +1009,7 @@ sub mainsub_process_skel
         add_url_to_download( $uri . "/SHA512SUMS.sign" );
     }
 
-	print "]\n" if $progress;
+    print "]\n" if $progress;
 
     chdir get_variable("skel_path") or die("apt-mirror: can't chdir to skel");
     @index_urls = sort keys %urls_to_download;
@@ -906,9 +1026,9 @@ sub mainsub_process_skel
         $skipclean{$_} = 1 if s[\.xz$][];
     }
 
-	# reset global vars
-	%urls_to_download = ();
-	%stat_cache = ();
+    # reset global vars
+    %urls_to_download = ();
+    %stat_cache = ();
 }
 
 mainsub_process_skel();
@@ -931,6 +1051,7 @@ sub parsing_checksum_result
     # print "\n" . join("\n", @bad_files) . "\n";
 }
 
+my @checksum_fails_results = ();
 sub checking_file_sum
 {
     my ( $ajob, $akind, $checksum_file ) = @_;
@@ -963,14 +1084,37 @@ sub checking_file_sum
         system ("cat $checksum_file | $grepm | sort -u | sort > $checksum_tmp; cp $checksum_tmp $checksum_file");
         system ("$bin_tool -c $checksum_file 2>&1 | $grepv > $checksum_res");
 
-		# only delete files if not post-mirroring checking
+        # only delete files if not post-mirroring checking
         parsing_checksum_result($checksum_res)  if ($ajob ne "post");
 
         $tot_line = int(`cat $checksum_file | wc -l`);
-        $cur_fail = int(`cat $checksum_res | $grepv | wc -l`);
         print ( " \t--- lines= $tot_line \t")  if $progress;
+
+        # actual checking
+        $cur_fail = int(`cat $checksum_res | $grepv | wc -l`);
+
+        # repeat it if fails
+        if ($cur_fail > 0)
+        {
+            my $loopsum = 0;
+            my $old_fail = 0;
+            print " " if $progress;
+
+            while ( $loopsum < 5 )
+            {
+                $loopsum++;
+                $old_fail = $cur_fail;
+
+                sleep(1);
+                $old_fail = int(`cat $checksum_res | $grepv | wc -l`);
+                last  if ( $old_fail == $cur_fail );
+                print "c" if $progress;
+            }
+        }
         print ( $cur_fail > 0? "fails= $cur_fail " : "[ OK ]" )  if $progress;
         print ( " \t$checksum_file")  if (-e $checksum_file && $progress);
+
+        push ( @checksum_fails_results, `cat $checksum_res | $grepv` )  if ( $cur_fail > 0 );
     }
     else
     {
@@ -1109,10 +1253,13 @@ if ( scalar @release_files )
 
     #--- do check
     my $checksum_fails = 0;
+    @checksum_fails_results = ();  # global var
     $checksum_fails += checking_file_sum("packages", "md5", $input_file_md5);
     $checksum_fails += checking_file_sum("packages", "sha1", $input_file_sha1);
     $checksum_fails += checking_file_sum("packages", "sha256", $input_file_sha256);
-	print "\n\n"  if $progress;
+
+    # print join("\n--\n", @checksum_fails_results) if ( scalar @checksum_fails_results );
+    print "\n\n"  if $progress;
 
     #--- re-download skel, if fails
     if ( $checksum_fails > 0 )
@@ -1136,7 +1283,7 @@ sub sanitise_uri
     $uri =~ s[^(\w+)://][];
     #$uri =~ s/^([^@]+)?@?// if $uri =~ /@/;
     $uri =~ s/^([^@]+)?@?// if (split '/',$uri)[0] =~ /@/;
-		$uri =~ s&:\d+/$&/&;   # and port information
+    $uri =~ s&:\d+/$&/&;   # and port information
     $uri =~ s/~/\%7E/g if get_variable("_tilde");
     $uri =~ s/\+/\%2B/g if get_variable("_plus");
     return $uri;
@@ -1728,15 +1875,13 @@ if ( get_variable("exec_deb_iso") > 0 )
         while ( $line = <STREAM> )
         {
             chomp $line;
-			my @parts = split( / +/, $line );
-			if ( @parts == 2 )
-			{
-				my ( $asum, $afile ) = @parts;
-				chomp $afile;
-				$urls_iso{"$uri_base/$afile"} = $afile;
-				# my $size = add_url_to_download( "$uri_base/$afile", 1 );
-				# print "\n size=$size $afile ";
-			}
+            my @parts = split( / +/, $line );
+            if ( @parts == 2 )
+            {
+                my ( $asum, $afile ) = @parts;
+                chomp $afile;
+                $urls_iso{"$uri_base/$afile"} = $afile;
+            }
         }
     }
 
@@ -1759,12 +1904,12 @@ if ( get_variable("exec_deb_iso") > 0 )
         find_file_iso_at_sums($uri, "$mirror_path/$path", "SHA512SUMS");
     }
 
-	foreach (sort keys %urls_iso) {
-		my $url = $_;
-		my $size = add_url_to_download( $url, 1 );
-		my $afile = $urls_iso{$url};
-		print "\n size=$size $afile " if ( $verbose > 1 );
-	}
+    foreach (sort keys %urls_iso) {
+        my $url = $_;
+        my $size = add_url_to_download( $url, 1 );
+        my $afile = $urls_iso{$url};
+        print "\n size=$size $afile " if ( $verbose > 1 );
+    }
 
     print "]\n" if $progress;
 
@@ -1840,21 +1985,6 @@ sub un_sanitise_filename
     return $filename;
 }
 
-sub need_update_by_sum
-{
-		my ($afile, $asum, $atype) = @_;
-		return 1  unless (-e $afile);
-
-		$asum =~ s/^\s+|\s+$//g;
-		my $fsum = "";
-		$fsum = md5_hex(read_file($afile))  if ( $atype eq 'md5' );
-		$fsum = sha1_hex(read_file($afile))  if ( $atype eq 'sha1' );
-		$fsum = sha256_hex(read_file($afile))  if ( $atype eq 'sha256' );
-
-		return fc($asum) ne fc($fsum);
-}
-
-
 sub process_index
 {
 
@@ -1899,7 +2029,7 @@ sub process_index
 
         if ( exists $lines{"Filename:"} )
         {    # Packages index
-						$fullpath_filename = un_sanitise_filename(remove_double_slashes( $mirror . "/" . $lines{"Filename:"} ));
+            $fullpath_filename = un_sanitise_filename(remove_double_slashes( $mirror . "/" . $lines{"Filename:"} ));
             $skipclean{ $fullpath_filename } = 1;
 
             print FILES_ALL $fullpath_filename . "\n";
@@ -1908,20 +2038,7 @@ sub process_index
 
 
             # check if need to update
-            my $need_update = 0;
-
-            # check file size
-            $need_update = need_update_by_size( $fullpath_filename, $lines{"Size:"} );
-
-            # check file sum
-            if (-e $fullpath_filename && $need_update < 1 && get_variable("pre_check_sum") > 0 )
-            {
-                # $need_update = need_update_by_sum($fullpath_filename, $lines{"MD5sum:"}, "md5") if defined $lines{"MD5sum:"};
-                # $need_update = need_update_by_sum($fullpath_filename, $lines{"SHA1:"}, "sha1") if defined $lines{"SHA1:"};
-                # $need_update = need_update_by_sum($fullpath_filename, $lines{"SHA256:"}, "sha256") if defined $lines{"SHA256:"};
-            }
-
-            if ( $need_update > 0 )
+            if ( need_update_by_size( $fullpath_filename, $lines{"Size:"} ) > 0 )
             {
                 print FILES_NEW remove_double_slashes( $uri . "/" . $lines{"Filename:"} ) . "\n";
                 print "NEW: " . remove_double_slashes( $uri . "/" . $lines{"Filename:"} ) . "\n"
@@ -1952,18 +2069,7 @@ sub process_index
 
 
                 # check if need to update
-                my $need_update = 0;
-
-                # check file size
-                $need_update = need_update_by_size( $fullpath_filename, $file[1] );
-
-                # check file sum
-                if (-e $fullpath_filename && $need_update < 1 && get_variable("pre_check_sum") > 0 )
-                {
-                        # $need_update = need_update_by_sum($fullpath_filename, $file[0], "md5");
-                }
-
-                if ( $need_update > 0 )
+                if ( need_update_by_size( $fullpath_filename, $file[1] ) > 0 )
                 {
                     print FILES_NEW remove_double_slashes( $uri . "/" . $lines{"Directory:"} . "/" . $file[2] ) . "\n";
                     print "NEW: " . remove_double_slashes( $uri . "/" . $lines{"Directory:"} . "/" . $file[2] ) . "\n"
@@ -2077,12 +2183,15 @@ sub checksum_checking
     my $input_file_sha1 = "$var_path/SHA1";
     my $input_file_sha256 = "$var_path/SHA256";
 
+    @checksum_fails_results = (); # global var
     $checksum_fails += checking_file_sum($ajob, "md5", $input_file_md5);
     $checksum_fails += checking_file_sum($ajob, "sha1", $input_file_sha1);
     $checksum_fails += checking_file_sum($ajob, "sha256", $input_file_sha256);
-	print "\n\n"  if $progress;
 
-	return $checksum_fails;
+    # print join("\n--\n", @checksum_fails_results) if ( scalar @checksum_fails_results );
+    print "\n\n"  if $progress;
+
+    return $checksum_fails;
 }
 
 mainsub_process_indexes();
@@ -2293,20 +2402,20 @@ if ( get_variable("exec_clean") > 0 && $post_fails < 1 )
         print "Running the Post Mirror script ...\n";
         print "(" . get_variable("postmirror_script") . ")\n\n";
         if (-e get_variable("postmirror_script") )
-		{
-			if (-x get_variable("postmirror_script") )
-			{
-				system(get_variable("postmirror_script").'');
-			}
-			else
-			{
-				system('/bin/sh', get_variable("postmirror_script"));
-			}
-			print "\nPost Mirror script has completed. See above output for any possible errors.\n\n";
-		}
-		else {
-			print "--- Post Mirror script not exists.";
-		}
+        {
+            if (-x get_variable("postmirror_script") )
+            {
+                system(get_variable("postmirror_script").'');
+            }
+            else
+            {
+                system('/bin/sh', get_variable("postmirror_script"));
+            }
+            print "\nPost Mirror script has completed. See above output for any possible errors.\n\n";
+        }
+        else {
+            print "--- Post Mirror script not exists.";
+        }
     }
 }
 

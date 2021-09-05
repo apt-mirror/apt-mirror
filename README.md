@@ -29,7 +29,8 @@ See also:
 
 - Coded at debian buster 10.10
 - Enough explanation at config file
-- New features added
+- Merge almost all open PR from parent project
+- Tons of new features added, including some workaround to support it
 
 
 ## Some new features added :
@@ -57,6 +58,7 @@ See also:
 - Packages* files checksum checking
 - ISO netinst mirroring
 - Translation and DEP-11 files checksum checking. Unified downloads, so we can include these files at pre and post mirroring.
+- minimum time to re-download missing file/URL (404 HTTP error)
 
 
 ## WORKAROUND :
@@ -67,7 +69,13 @@ See also:
 
 ## TODO :
 - clone any "distribution name" {buster, bullseye, xenial, etc} from uri
+syntax example: deb http://adomain.com/folder any main contrib non-free
 - clone any "components name" {main, contrib, non-free, ui} from specific "distribution name"
+syntax example: deb http://adomain.com/folder bullseye any
+- clone any "distribution name" AND "components name" from uri
+syntax example: deb http://adomain.com/folder any any
+- clone any "architecture" {including source} AND "distribution name" AND "components name" from uri
+syntax example: deb-any http://adomain.com/folder any any
 - any idea? please sumbit issue. thanks.
 
 
