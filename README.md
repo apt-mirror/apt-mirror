@@ -29,40 +29,55 @@ See also:
 
 - Coded at debian buster 10.10
 - Enough explanation at config file
-- Some new features added :
-	- new config option "use_proxy"  (PR #48)
-	- new config option "http_proxy"  (PR #48)
-	- new config option "proxy_user"  (PR #48)
-	- new config option "proxy_password"  (PR #48)
-	- new config option "user_agent"  (fixes #146)
-	- new config option "timeout"
-		previously hard-coded, now the setup will affect on read, dns and connect timeout
-	- new config option "tries"
-		previously hard-coded
-	- new config option "cookies_file"
-		some server provide cookies, so we should provide cookies to legitimate cookie-full servers
-	- new config option "dry_run" (PR #86)
-	- new config option "max_redirect"
-		reducing redirect attempt, to fasten Wget
-	- new config option "ip_v6"
-		some network problematic with ipv6
-	- merge pull request (PR) #36, #40, #48, #77, #86, #95, #96, #100, #103, #105, #111, #112, #115, #116, #120, #127, #131, #136, #143
-	- bz2 or xz or gz (buster-backports i18n xz) (fixes #130)
-	- port number (fixes #19)
-	- checksum checking for binary & sources files. checksum checking can be executed at pre and post mirroring. both can be enabled/disabled via config file.
-	- using absolute full path for uncompress *.gz, *.xs and *.bz2
-	- Packages* files checksum checking
-	- ISO netinst mirroring
-	- Translation and DEP-11 files checksum checking. Unified downloads, so we can include these files at pre and post mirroring.
+- New features added
+
+
+## Some new features added :
+- new config option "use_proxy"  (PR #48)
+- new config option "http_proxy"  (PR #48)
+- new config option "proxy_user"  (PR #48)
+- new config option "proxy_password"  (PR #48)
+- new config option "user_agent"  (fixes #146)
+- new config option "timeout"
+	previously hard-coded, now the setup will affect on read, dns and connect timeout
+- new config option "tries"
+	previously hard-coded
+- new config option "cookies_file"
+	some server provide cookies, so we should provide cookies to legitimate cookie-full servers
+- new config option "dry_run" (PR #86)
+- new config option "max_redirect"
+	reducing redirect attempt, to fasten Wget
+- new config option "ip_v6"
+	some network problematic with ipv6
+- merge pull request (PR) #36, #40, #48, #77, #86, #95, #96, #100, #103, #105, #111, #112, #115, #116, #120, #127, #131, #136, #143
+- bz2 or xz or gz (buster-backports i18n xz) (fixes #130)
+- port number (fixes #19)
+- checksum checking for binary & sources files. checksum checking can be executed at pre and post mirroring. both can be enabled/disabled via config file.
+- using absolute full path for uncompress *.gz, *.xs and *.bz2
+- Packages* files checksum checking
+- ISO netinst mirroring
+- Translation and DEP-11 files checksum checking. Unified downloads, so we can include these files at pre and post mirroring.
+
+
+## WORKAROUND :
+- checksum checking ONLY on indexes files and "new/missing files"
+- clear skel_path before mirroring
+- add special aqrguments for "archive" stage and "index" stage
 
 
 ## TODO :
-- concurrent checksum checks
-- caching download feature. only re-download stale/expire or corruted uri
+- clone any "distribution name" {buster, bullseye, xenial, etc} from uri
+- clone any "components name" {main, contrib, non-free, ui} from specific "distribution name"
 - any idea? please sumbit issue. thanks.
 
+
 ## DROPPED TODO LIST :
-- Release files checksum checking. Workaround: clear skel_path before mirroring
+- Concurrent checksum checks
+Workaround: checksum checking ONLY on indexes files and "new/missing files"
+- Release files checksum checking.
+Workaround: clear skel_path before mirroring
+- Caching download feature. only re-download stale/expire or corruted uri
+Workaround: add special aqrguments for "archive" stage and "index" stage
 
 
 ## List all of PR merged

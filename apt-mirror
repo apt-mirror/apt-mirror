@@ -387,7 +387,7 @@ sub download_urls
         push( @args, " --verbose --progress=dot" );
     }
 
-		# --prefer-family=none/IPv4/IPv6 --inet4-only --inet6-only
+	# --prefer-family=none/IPv4/IPv6 --inet4-only --inet6-only
     if ( get_variable("ip_v6") > 0 )
     {
         push( @args, " --inet6-only --prefer-family=IPv6" );
@@ -406,9 +406,16 @@ sub download_urls
     #-----------------------------
     # '-v', '-r', '-c', '-N', '-l', 'inf',
     # '--no-cache', '--no-hsts', '--retry-connrefused', '--waitretry=3',
-    push( @args, " -b -r -c -N -l inf" );
+    push( @args, " -b -r -N -l inf" );
     push( @args, " --no-cache --no-hsts --retry-on-host-error" );
     push( @args, " --retry-connrefused --waitretry=3 --retry-on-http-error=503,429" );
+
+	#-- special args for index
+	push ( @args, " --no-if-modified-since" )  if ( $stage eq "index" );
+
+	#-- special args for archive
+	push ( @args, " -c" )  if ( $stage eq "archive" );
+
 
     print "   Downloading " . scalar(@urls) . " $stage files using $nthreads threads...\n";
 
@@ -416,22 +423,24 @@ sub download_urls
     while ( scalar @urls )
     {
         my @part = splice( @urls, 0, int( @urls / $nthreads ) );
+
+		# construct url file
         open URLS, ">" . get_variable("var_path") . "/$stage-urls.$i" or die("apt-mirror: can't write to intermediate file ($stage-urls.$i)");
         foreach (@part) { print URLS "$_\n"; }
         close URLS or die("apt-mirror: can't close intermediate file ($stage-urls.$i)");
-        if ($verbose >= 2) {
-            print join("\n  ", "Downloading batch $i:", @part), "\n";
-        }
+		print join("\n  ", "Downloading batch $i:", @part), "\n"  if ($verbose >= 2);
 
+		# spawn wget (no fork)
         my @dowget = ('nohup /usr/bin/wget', ' -o ', get_variable("var_path") . "/$stage-log.$i", ' -i ', get_variable("var_path") . "/$stage-urls.$i", @args);
         my $exwget = join(' ', @dowget) . ' >/dev/null 2>&1 &';
-				# print "\n $exwget";
         system($exwget);
 
         $i++;
         $nthreads--;
     }
 
+
+	# wait for wget child instances to finish
     sleep(5);
     my $nums_now = `ps auxw | grep -v grep | grep wget | grep Aptly | wc -l`;
     $nums_now = int($nums_now);
@@ -953,7 +962,9 @@ sub checking_file_sum
 
         system ("cat $checksum_file | $grepm | sort -u | sort > $checksum_tmp; cp $checksum_tmp $checksum_file");
         system ("$bin_tool -c $checksum_file 2>&1 | $grepv > $checksum_res");
-        parsing_checksum_result($checksum_res);
+
+		# only delete files if not post-mirroring checking
+        parsing_checksum_result($checksum_res)  if ($ajob ne "post");
 
         $tot_line = int(`cat $checksum_file | wc -l`);
         $cur_fail = int(`cat $checksum_res | $grepv | wc -l`);
@@ -2051,13 +2062,13 @@ sub mainsub_process_indexes
 
 sub checksum_checking
 {
-    my ( $type ) = @_;
-    $type = lc($type);
+    my ( $ajob ) = @_;
+    $ajob = lc($ajob);
 
-    my $type_str = "";
-    $type_str = "Pre-Mirroring"  if ( $type eq "pre" );
-    $type_str = "Post-Mirroring"  if ( $type eq "post" );
-    print "\n\n\n Checksum Checking: $type_str "  if $progress;
+    my $ajob_str = "";
+    $ajob_str = "Pre-Mirroring"  if ( $ajob eq "pre" );
+    $ajob_str = "Post-Mirroring"  if ( $ajob eq "post" );
+    print "\n\n\n Checksum Checking: $ajob_str "  if $progress;
 
     my $var_path = get_variable("var_path");
     my $checksum_fails = 0;
@@ -2066,10 +2077,12 @@ sub checksum_checking
     my $input_file_sha1 = "$var_path/SHA1";
     my $input_file_sha256 = "$var_path/SHA256";
 
-    $checksum_fails += checking_file_sum($type, "md5", $input_file_md5);
-    $checksum_fails += checking_file_sum($type, "sha1", $input_file_sha1);
-    $checksum_fails += checking_file_sum($type, "sha256", $input_file_sha256);
+    $checksum_fails += checking_file_sum($ajob, "md5", $input_file_md5);
+    $checksum_fails += checking_file_sum($ajob, "sha1", $input_file_sha1);
+    $checksum_fails += checking_file_sum($ajob, "sha256", $input_file_sha256);
 	print "\n\n"  if $progress;
+
+	return $checksum_fails;
 }
 
 mainsub_process_indexes();
@@ -2153,7 +2166,9 @@ sub mainsub_main_download
 }
 
 mainsub_main_download();
-checksum_checking('Post')  if ( get_variable("post_check_sum") > 0 );
+
+my $post_fails = 0;
+$post_fails = checksum_checking('Post')  if ( get_variable("post_check_sum") > 0 );
 
 
 
@@ -2161,7 +2176,7 @@ checksum_checking('Post')  if ( get_variable("post_check_sum") > 0 );
 ## Make cleaning script
 
 
-if ( get_variable("exec_clean") > 0 )
+if ( get_variable("exec_clean") > 0 && $post_fails < 1 )
 {
 
     print "\n\n Create clean script.. "  if $progress;
