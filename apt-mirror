@@ -1275,8 +1275,6 @@ if ( scalar @release_files )
 ## Translation index download
 
 
-# %urls_to_download = ();
-
 sub sanitise_uri
 {
     my $uri = shift;
@@ -1424,17 +1422,6 @@ sub mainsub_process_translation
     }
 
     print "]\n" if $progress;
-
-    # push( @index_urls, sort keys %urls_to_download );
-    # download_urls( "translation", sort keys %urls_to_download );
-
-    # foreach ( keys %urls_to_download )
-    # {
-    #     s[^(\w+)://][];
-    #     s[~][%7E]g if get_variable("_tilde");
-    #     s[\+][%2B]g if get_variable("_plus");
-    #     $skipclean{$_} = 1;
-    # }
 }
 
 mainsub_process_translation()  if ( get_variable("exec_translation") > 0 );
@@ -1444,8 +1431,6 @@ mainsub_process_translation()  if ( get_variable("exec_translation") > 0 );
 ######################################################################################
 ## DEP-11 index download
 
-
-# %urls_to_download = ();
 
 sub find_dep11_files_in_release
 {
@@ -1528,17 +1513,6 @@ sub mainsub_process_dep11
     }
 
     print "]\n" if $progress;
-
-    # push( @index_urls, sort keys %urls_to_download );
-    # download_urls( "dep11", sort keys %urls_to_download );
-
-    # foreach ( keys %urls_to_download )
-    # {
-    #     s[^(\w+)://][];
-    #     s[~][%7E]g if get_variable("_tilde");
-    #     s[\+][%2B]g if get_variable("_plus");
-    #     $skipclean{$_} = 1;
-    # }
 }
 
 mainsub_process_dep11()  if ( get_variable("exec_dep11") > 0 );
@@ -1549,7 +1523,6 @@ mainsub_process_dep11()  if ( get_variable("exec_dep11") > 0 );
 
 if ( get_variable("exec_by_hash") > 0 )
 {
-    # %urls_to_download = ();
 
     sub find_by_hash_sha256_files_in_release
     {
@@ -1630,17 +1603,6 @@ if ( get_variable("exec_by_hash") > 0 )
     }
 
     print "]\n" if $progress;
-
-    # push( @index_urls, sort keys %urls_to_download );
-    # download_urls( "by-hash-SHA256", sort keys %urls_to_download );
-
-    # foreach ( keys %urls_to_download )
-    # {
-    #     s[^(\w+)://][];
-    #     s[~][%7E]g if get_variable("_tilde");
-    #     s[\+][%2B]g if get_variable("_plus");
-    #     $skipclean{$_} = 1;
-    # }
 }
 
 ######################################################################################
@@ -1649,8 +1611,6 @@ if ( get_variable("exec_by_hash") > 0 )
 
 if ( get_variable("exec_cnf") > 0 )
 {
-
-    # %urls_to_download = ();
 
     sub find_cnf_files_in_release
     {
@@ -1730,17 +1690,6 @@ if ( get_variable("exec_cnf") > 0 )
     }
 
     print "]\n" if $progress;
-
-    # push( @index_urls, sort keys %urls_to_download );
-    # download_urls( "cnf", sort keys %urls_to_download );
-
-    # foreach ( keys %urls_to_download )
-    # {
-    #     s[^(\w+)://][];
-    #     s[~][%7E]g if get_variable("_tilde");
-    #     s[\+][%2B]g if get_variable("_plus");
-    #     $skipclean{$_} = 1;
-    # }
 }
 
 
@@ -1751,8 +1700,6 @@ if ( get_variable("exec_cnf") > 0 )
 
 if ( get_variable("exec_deb_ins") > 0 )
 {
-
-    # %urls_to_download = ();
 
     sub find_debian_files_in_release
     {
@@ -1832,17 +1779,6 @@ if ( get_variable("exec_deb_ins") > 0 )
     }
 
     print "]\n" if $progress;
-
-    # push( @index_urls, sort keys %urls_to_download );
-    # download_urls( "debian-installer", sort keys %urls_to_download );
-
-    # foreach ( keys %urls_to_download )
-    # {
-    #     s[^(\w+)://][];
-    #     s[~][%7E]g if get_variable("_tilde");
-    #     s[\+][%2B]g if get_variable("_plus");
-    #     $skipclean{$_} = 1;
-    # }
 }
 
 
@@ -1855,7 +1791,6 @@ if ( get_variable("exec_deb_ins") > 0 )
 if ( get_variable("exec_deb_iso") > 0 )
 {
 
-    # %urls_to_download = ();
     my %urls_iso = ();
 
     sub find_file_iso_at_sums
@@ -1912,17 +1847,6 @@ if ( get_variable("exec_deb_iso") > 0 )
     }
 
     print "]\n" if $progress;
-
-    # push( @index_urls, sort keys %urls_to_download );
-    # download_urls( "debian-iso", sort keys %urls_to_download );
-
-    # foreach ( keys %urls_to_download )
-    # {
-    #     s[^(\w+)://][];
-    #     s[~][%7E]g if get_variable("_tilde");
-    #     s[\+][%2B]g if get_variable("_plus");
-    #     $skipclean{$_} = 1;
-    # }
 }
 
 
@@ -1932,9 +1856,6 @@ if ( get_variable("exec_deb_iso") > 0 )
 ######################################################################################
 ## Main download preparations
 
-
-# %urls_to_download = ();
-# my %stat_cache = ();
 
 
 sub _stat
