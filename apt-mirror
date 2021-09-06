@@ -40,19 +40,19 @@ Or uncomment the line in F</etc/cron.d/apt-mirror> to enable daily mirror update
 =head1 FILES
 
 F</etc/apt/mirror.list>
-        Main configuration file
+	Main configuration file
 
 F</etc/cron.d/apt-mirror>
-        Cron configuration template
+	Cron configuration template
 
 F</var/spool/apt-mirror/mirror>
-        Mirror places here
+	Mirror places here
 
 F</var/spool/apt-mirror/skel>
-        Place for temporarily downloaded indexes
+	Place for temporarily downloaded indexes
 
 F</var/spool/apt-mirror/var>
-        Log files placed here. URLs and MD5 checksums also here.
+	Log files placed here. URLs and MD5 checksums also here.
 
 =head1 CONFIGURATION EXAMPLES
 
@@ -327,6 +327,7 @@ sub update_404_log
     load_404_log() unless %url_404s;
 
     # update vars
+	my $cur_404_fails = 0;
     for ( my $i=0; $i<=$num_files; $i++ )
     {
         my $log_file = get_variable("var_path") . "/$stage-log.$i";
@@ -349,9 +350,12 @@ sub update_404_log
             $aurl = normalize_404_url($aurl);
 
             $url_404s{$aurl} = time();
+			$cur_404_fails++;
         }
         print "=" if $progress;
     }
+
+	print "  current 404 Fails: $cur_404_fails "  if $progress;
 
     # save to file
     open FILE_404, ">$url_404_file"  or die("apt-mirror: can't open url 404 history file ($url_404_file)");
@@ -373,7 +377,7 @@ sub allow_download_by_404_log
     return 1  unless $url_404s{$url};
 
     my $delta = time() - int($url_404s{$url});
-    return $delta > $min_delta_404;
+    return $delta > $min_delta_404? 1 : 0;
 }
 
 
@@ -407,7 +411,7 @@ sub download_urls
     }
 
     # set unlink 1
-    if ( get_variable("unlink") == 1 )
+    if ( get_variable("unlink") > 0 )
     {
         push( @args, " --unlink" );
     }
@@ -656,7 +660,7 @@ die("Please explicitly specify 'defaultarch' in mirror.list") unless get_variabl
 
 if ( get_variable("run_premirror") )
 {
-    print "Running the Pre Mirror script ...\n";
+    print " Running the Pre Mirror script ...\n";
     print "(" . get_variable("premirror_script") . ")\n\n";
     if ( -e get_variable("premirror_script") )
     {
@@ -668,7 +672,7 @@ if ( get_variable("run_premirror") )
         {
             system('/bin/sh', get_variable("premirror_script"));
         }
-        print "\nPre Mirror script has completed. See above output for any possible errors.\n\n";
+        print "\n Pre Mirror script has completed. See above output for any possible errors.\n\n";
     }
     else {
         print "--- Pre Mirror script not exists.";
@@ -2011,11 +2015,11 @@ sub process_index
 
 sub mainsub_process_indexes
 {
-    open FILES_ALL, ">" . get_variable("var_path") . "/ALL" or die("apt-mirror: can't write to intermediate file (ALL)");
-    open FILES_NEW, ">" . get_variable("var_path") . "/NEW" or die("apt-mirror: can't write to intermediate file (NEW)");
-    open FILES_MD5, ">" . get_variable("var_path") . "/MD5" or die("apt-mirror: can't write to intermediate file (MD5)");
-    open FILES_SHA1, ">" . get_variable("var_path") . "/SHA1" or die("apt-mirror: can't write to intermediate file (SHA1)");
-    open FILES_SHA256, ">" . get_variable("var_path") . "/SHA256" or die("apt-mirror: can't write to intermediate file (SHA256)");
+    open FILES_ALL, ">" . get_variable("var_path") . "/archive.all" or die("apt-mirror: can't write to intermediate file (ALL)");
+    open FILES_NEW, ">" . get_variable("var_path") . "/archive.new" or die("apt-mirror: can't write to intermediate file (NEW)");
+    open FILES_MD5, ">" . get_variable("var_path") . "/archive.md5" or die("apt-mirror: can't write to intermediate file (MD5)");
+    open FILES_SHA1, ">" . get_variable("var_path") . "/archive.sha1" or die("apt-mirror: can't write to intermediate file (SHA1)");
+    open FILES_SHA256, ">" . get_variable("var_path") . "/archive.sha256" or die("apt-mirror: can't write to intermediate file (SHA256)");
 
     print "\n Processing indexes: {S=source, B=Binary} ["
         if $progress;
@@ -2068,7 +2072,7 @@ sub mainsub_process_indexes
     clear_stat_cache();
     print "]\n" if $progress;
 
-    if ( scalar @del_files )
+    if ( scalar @del_files && get_variable("delete_bad_file") > 0 )
     {
         print "\n --- Delete file with mismatch size: " . scalar @del_files . " files"  if $progress;
         unlink( @del_files );
@@ -2100,9 +2104,9 @@ sub checksum_checking
     my $var_path = get_variable("var_path");
     my $checksum_fails = 0;
 
-    my $input_file_md5 = "$var_path/MD5";
-    my $input_file_sha1 = "$var_path/SHA1";
-    my $input_file_sha256 = "$var_path/SHA256";
+    my $input_file_md5 = "$var_path/archive.md5";
+    my $input_file_sha1 = "$var_path/archive.sha1";
+    my $input_file_sha256 = "$var_path/archive.sha256";
 
     @checksum_fails_results = (); # global var
     $checksum_fails += checking_file_sum($ajob, "md5", $input_file_md5);
@@ -2320,7 +2324,7 @@ if ( get_variable("exec_clean") > 0 && $post_fails < 1 )
 
     if ( get_variable("run_postmirror") )
     {
-        print "Running the Post Mirror script ...\n";
+        print " Running the Post Mirror script ...\n";
         print "(" . get_variable("postmirror_script") . ")\n\n";
         if (-e get_variable("postmirror_script") )
         {
@@ -2332,7 +2336,7 @@ if ( get_variable("exec_clean") > 0 && $post_fails < 1 )
             {
                 system('/bin/sh', get_variable("postmirror_script"));
             }
-            print "\nPost Mirror script has completed. See above output for any possible errors.\n\n";
+            print "\n Post Mirror script has completed. See above output for any possible errors.\n\n";
         }
         else {
             print "--- Post Mirror script not exists.";

@@ -191,7 +191,7 @@ set delete_bad_file   1
 # Default: 259200 (3 days)
 # Example:
 # set min_delta_404 864000
-set min_delta_404 864000
+set min_delta_404 259200
 
 
 
@@ -350,27 +350,30 @@ skip-clean https://cdimage.debian.org/debian-cd
 
 
 
+clean http://apt.postgresql.org
 clean http://archive.raspberrypi.org
 clean http://cdn-fastly.deb.debian.org
-clean http://dl.google.com/linux
+clean http://deb.nodesource.com
+clean http://deb.opera.com
+clean http://deb.torproject.org
+clean http://dl.google.com
+clean http://dl.winehq.org
 clean http://download.proxmox.com
 clean http://downloads.linux.hpe.com
 clean http://downloads.mariadb.com
+clean http://download.sublimetext.com
 clean http://download.virtualbox.org
 clean http://linux.dropbox.com
 clean http://linux.teamviewer.com
 clean http://mirror.rackspace.com
 clean http://nginx.org
+clean http://packages.sury.org
 clean http://ppa.launchpad.net
+clean http://qgis.org
 clean http://raspbian.raspberrypi.org
 clean http://repository.spotify.com
+clean http://repo.skype.com
 clean http://repo.vivaldi.com
-clean http://repo.zabbix.com/
-clean https://deb.nodesource.com
-clean https://deb.opera.com
-clean https://dl.winehq.org
-clean https://download.sublimetext.com
+clean http://repo.zabbix.com
 clean http://security.debian.org
-clean https://packages.sury.org
-clean https://repo.skype.com
-clean https://www.deb-multimedia.org
+clean http://www.deb-multimedia.org
