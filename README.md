@@ -76,6 +76,7 @@ syntax example: deb http://adomain.com/folder bullseye any
 syntax example: deb http://adomain.com/folder any any
 - clone any "architecture" {including source} AND "distribution name" AND "components name" from uri
 syntax example: deb-any http://adomain.com/folder any any
+- check missing files (especially sources files) using Packages and Sources files
 - any idea? please sumbit issue. thanks.
 
 
