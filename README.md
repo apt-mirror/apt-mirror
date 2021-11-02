@@ -59,6 +59,7 @@ See also:
 - ISO netinst mirroring
 - Translation and DEP-11 files checksum checking. Unified downloads, so we can include these files at pre and post mirroring.
 - minimum time to re-download missing file/URL (404 HTTP error)
+- add arch=all for contents files
 
 
 ## WORKAROUND :

@@ -961,6 +961,10 @@ sub mainsub_process_skel
                 add_url_to_download( $url . "Contents-" . $arch . ".gz" );
                 add_url_to_download( $url . "Contents-" . $arch . ".bz2" );
                 add_url_to_download( $url . "Contents-" . $arch . ".xz" );
+
+                add_url_to_download( $url . "Contents-all.gz" );
+                add_url_to_download( $url . "Contents-all.bz2" );
+                add_url_to_download( $url . "Contents-all.xz" );
             }
             foreach (@components)
             {
@@ -969,7 +973,12 @@ sub mainsub_process_skel
                     add_url_to_download( $url . $_ . "/Contents-" . $arch . ".gz" );
                     add_url_to_download( $url . $_ . "/Contents-" . $arch . ".bz2" );
                     add_url_to_download( $url . $_ . "/Contents-" . $arch . ".xz" );
+
+                    add_url_to_download( $url . $_ . "/Contents-all.gz" );
+                    add_url_to_download( $url . $_ . "/Contents-all.bz2" );
+                    add_url_to_download( $url . $_ . "/Contents-all.xz" );
                 }
+
                 add_url_to_download( $url . $_ . "/binary-" . $arch . "/InRelease" );
                 add_url_to_download( $url . $_ . "/binary-" . $arch . "/Release" );
                 add_url_to_download( $url . $_ . "/binary-" . $arch . "/Packages" );
@@ -978,6 +987,14 @@ sub mainsub_process_skel
                 add_url_to_download( $url . $_ . "/binary-" . $arch . "/Packages.xz" );
                 add_url_to_download( $url . $_ . "/i18n/Index" );
                 add_url_to_download( $url . $_ . "/cnf/Commands-" . $arch . ".xz" );
+
+                add_url_to_download( $url . $_ . "/binary-all/InRelease" );
+                add_url_to_download( $url . $_ . "/binary-all/Release" );
+                add_url_to_download( $url . $_ . "/binary-all/Packages" );
+                add_url_to_download( $url . $_ . "/binary-all/Packages.gz" );
+                add_url_to_download( $url . $_ . "/binary-all/Packages.bz2" );
+                add_url_to_download( $url . $_ . "/binary-all/Packages.xz" );
+                add_url_to_download( $url . $_ . "/cnf/Commands-all.xz" );
             }
         }
         elsif ($distribution)
