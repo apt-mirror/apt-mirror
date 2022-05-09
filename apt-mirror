@@ -783,13 +783,12 @@ sub find_by_hash_sha256_files_in_release
     }
 }
 
-print "Processing SHA256 by-hash files ["
-    if $progress;
+print "Processing SHA256 by-hash files [";
 
 foreach (@config_binaries)
 {
     my ( $arch, $uri, $distribution, @components ) = @{$_};
-    print "D" if $progress;
+    print "D";
     if (@components)
     {
         $url = $uri . "/dists/" . $distribution . "/";
@@ -802,7 +801,7 @@ foreach (@config_binaries)
     }
 }
 
-print "]\n\n" if $progress;
+print "]\n\n";
 
 push( @index_urls, sort keys %urls_to_download );
 download_urls( "by-hash-SHA256", sort keys %urls_to_download );
