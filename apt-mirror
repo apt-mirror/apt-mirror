@@ -388,6 +388,9 @@ sub add_url_to_download
 {
     my $url = remove_double_slashes(shift);
     $urls_to_download{$url} = shift;
+    $url =~ s[^(\w+)://][];
+    $url =~ s[~][%7E]g if get_variable("_tilde");
+    $skipclean{$url} = 1;
 }
 
 foreach (@config_sources)
@@ -435,16 +438,6 @@ foreach (@config_binaries)
 chdir get_variable("skel_path") or die("apt-mirror: can't chdir to skel");
 @index_urls = sort keys %urls_to_download;
 download_urls( "index", @index_urls );
-
-foreach ( keys %urls_to_download )
-{
-    s[^(\w+)://][];
-    s[~][%7E]g if get_variable("_tilde");
-    $skipclean{$_} = 1;
-    $skipclean{$_} = 1 if s[\.gz$][];
-    $skipclean{$_} = 1 if s[\.bz2$][];
-    $skipclean{$_} = 1 if s[\.xz$][];
-}
 
 ######################################################################################
 ## Download all relevant metadata
@@ -584,13 +577,6 @@ print "]\n\n";
 
 push( @index_urls, sort keys %urls_to_download );
 download_urls( "metadata", sort keys %urls_to_download );
-
-foreach ( keys %urls_to_download )
-{
-    s[^(\w+)://][];
-    s[~][%7E]g if get_variable("_tilde");
-    $skipclean{$_} = 1;
-}
 
 ######################################################################################
 ## by-hash SHA256 files download
