@@ -251,12 +251,24 @@ sub download_urls
     }
     print "Downloading " . scalar(@urls) . " $stage files using $nthreads threads...\n";
 
-    while ( scalar @urls )
+    my @url_fds;
+    for ($i=0; $i<$nthreads; $i++)
     {
-        my @part = splice( @urls, 0, int( @urls / $nthreads ) );
-        open URLS, ">" . get_variable("var_path") . "/$stage-urls.$i" or die("apt-mirror: can't write to intermediate file ($stage-urls.$i)");
-        foreach (@part) { print URLS "$_\n"; }
-        close URLS or die("apt-mirror: can't close intermediate file ($stage-urls.$i)");
+        open ( $url_fds[$i], ">", get_variable("var_path") . "/$stage-urls.$i") or die("apt-mirror: can't write to intermediate file ($stage-urls.$i)");
+    }
+
+    for ($i=scalar(@urls)-1; $i>=0; $i--)
+    {
+        my $thread = $i % $nthreads;
+        print { $url_fds[$thread] } $urls[$i] . "\n";
+    }
+
+    foreach (@url_fds) {
+        close $_ or die("apt-mirror: can't close intermediate file ($stage-urls.$i)");
+    }
+
+    for ($i=0; $i<$nthreads; $i++)
+    {
 
         $pid = fork();
 
@@ -271,8 +283,6 @@ sub download_urls
         }
 
         push @childrens, $pid;
-        $i++;
-        $nthreads--;
     }
 
     print "Begin time: " . localtime() . "\n[" . scalar(@childrens) . "]... ";
