@@ -397,26 +397,17 @@ foreach (@config_sources)
     if (@components)
     {
         $url = $uri . "/dists/" . $distribution . "/";
-
-        add_url_to_download( $url . "InRelease" );
-        add_url_to_download( $url . "Release" );
-        add_url_to_download( $url . "Release.gpg" );
-        foreach (@components)
-        {
-            add_url_to_download( $url . $_ . "/source/Release" );
-            add_url_to_download( $url . $_ . "/source/Sources.gz" );
-            add_url_to_download( $url . $_ . "/source/Sources.bz2" );
-            add_url_to_download( $url . $_ . "/source/Sources.xz" );
-        }
     }
     else
     {
-        add_url_to_download( $uri . "/$distribution/Release" );
-        add_url_to_download( $uri . "/$distribution/Release.gpg" );
-        add_url_to_download( $uri . "/$distribution/Sources.gz" );
-        add_url_to_download( $uri . "/$distribution/Sources.bz2" );
-        add_url_to_download( $uri . "/$distribution/Sources.xz" );
+        # https://wiki.debian.org/DebianRepository/Format#Flat_Repository_Format
+        $url = $uri . "/" . $distribution . "/";
+        add_url_to_download( $url . "Sources" );
     }
+
+    add_url_to_download( $url . "InRelease" );
+    add_url_to_download( $url . "Release" );
+    add_url_to_download( $url . "Release.gpg" );
 }
 
 foreach (@config_binaries)
@@ -427,38 +418,18 @@ foreach (@config_binaries)
     {
         $url = $uri . "/dists/" . $distribution . "/";
 
-        add_url_to_download( $url . "InRelease" );
-        add_url_to_download( $url . "Release" );
-        add_url_to_download( $url . "Release.gpg" );
-        if ( get_variable("_contents") )
-        {
-            add_url_to_download( $url . "Contents-" . $arch . ".gz" );
-            add_url_to_download( $url . "Contents-" . $arch . ".bz2" );
-            add_url_to_download( $url . "Contents-" . $arch . ".xz" );
-        }
-        foreach (@components)
-        {
-            if ( get_variable("_contents") )
-            {
-                add_url_to_download( $url . $_ . "/Contents-" . $arch . ".gz" );
-                add_url_to_download( $url . $_ . "/Contents-" . $arch . ".bz2" );
-                add_url_to_download( $url . $_ . "/Contents-" . $arch . ".xz" );
-            }
-            add_url_to_download( $url . $_ . "/binary-" . $arch . "/Release" );
-            add_url_to_download( $url . $_ . "/binary-" . $arch . "/Packages.gz" );
-            add_url_to_download( $url . $_ . "/binary-" . $arch . "/Packages.bz2" );
-            add_url_to_download( $url . $_ . "/binary-" . $arch . "/Packages.xz" );
-            add_url_to_download( $url . $_ . "/i18n/Index" );
-        }
     }
     else
     {
-        add_url_to_download( $uri . "/$distribution/Release" );
-        add_url_to_download( $uri . "/$distribution/Release.gpg" );
-        add_url_to_download( $uri . "/$distribution/Packages.gz" );
-        add_url_to_download( $uri . "/$distribution/Packages.bz2" );
-        add_url_to_download( $uri . "/$distribution/Packages.xz" );
+        # https://wiki.debian.org/DebianRepository/Format#Flat_Repository_Format
+        $url = $uri . "/" . $distribution . "/";
+        add_url_to_download( $url . "Packages" );
     }
+
+    add_url_to_download( $url . "InRelease" );
+    add_url_to_download( $url . "Release" );
+    add_url_to_download( $url . "Release.gpg" );
+
 }
 
 chdir get_variable("skel_path") or die("apt-mirror: can't chdir to skel");
@@ -476,7 +447,7 @@ foreach ( keys %urls_to_download )
 }
 
 ######################################################################################
-## Translation index download
+## Download all relevant metadata
 
 %urls_to_download = ();
 
@@ -489,15 +460,25 @@ sub sanitise_uri
     return $uri;
 }
 
-sub find_translation_files_in_release
+sub find_metadata_in_release
 {
-    # Look in the dists/$DIST/Release file for the translation files that belong
-    # to the given component.
+    # Look in the Release file for any files we need to download
+    my ( $arch, $uri, $distribution, @components ) = @_;
 
-    my $dist_uri  = shift;
-    my $component = shift;
     my ( $release_uri, $release_path, $line ) = '';
+    my $component_regex = undef;
+    my $arch_regex = "(?:${arch})";
+    my $compressed_extension_regex = '(?:\.(?:gz|bz2|xz))?$';
+    my $dist_uri;
 
+    if (@components)
+    {
+        $dist_uri  = remove_double_slashes($uri . "/dists/" . $distribution . "/");
+        $component_regex = "(?:" . join("|", @components) . ")";
+    }
+    else {
+        $dist_uri  = remove_double_slashes($uri . "/" . $distribution . "/");
+    }
     $release_uri  = $dist_uri . "Release";
     $release_path = get_variable("skel_path") . "/" . sanitise_uri($release_uri);
 
@@ -518,10 +499,52 @@ sub find_translation_files_in_release
                 my @parts = split( / +/, $1 );
                 if ( @parts == 3 )
                 {
-                    my ( $sha1, $size, $filename ) = @parts;
-                    if ( $filename =~ m{^$component/i18n/Translation-[^./]*\.(bz2|xz)$} )
+                    my ( $sha256, $size, $filename ) = @parts;
+                    if ($arch eq "source")
                     {
-                        add_url_to_download( $dist_uri . $filename, $size );
+                        if ($component_regex)
+                        {
+                            if (
+                                (
+                                    $filename =~ m{^${component_regex}/source/Sources${compressed_extension_regex}}
+                                ) or (
+                                    $filename =~ m{^${component_regex}/Contents-source${compressed_extension_regex}}
+                                )
+                            )
+                            {
+                                add_url_to_download( $dist_uri . $filename, $size );
+                            }
+                        } else {
+                            if ($filename =~ m{^Sources${compressed_extension_regex}}
+                            ) {
+                                add_url_to_download( $dist_uri . $filename, $size );
+                            }
+                        }
+                    } else {
+                        if (
+                            (
+                                $filename =~ m{^Contents-${arch_regex}${compressed_extension_regex}$}
+                            ) or (
+                                $filename =~ m{^Packages${compressed_extension_regex}$}
+                            ) or (
+                                $filename =~ m{^${component_regex}/Contents-${arch_regex}${compressed_extension_regex}$}
+                            ) or (
+                                $filename =~ m{^${component_regex}/binary-${arch_regex}/Packages${compressed_extension_regex}$}
+                            ) or (
+                                $filename =~ m{^${component_regex}/binary-${arch_regex}/Release$}
+                            ) or (
+                                $filename =~ m{^${component_regex}/cnf/Commands-${arch_regex}${compressed_extension_regex}$}
+                            ) or (
+                                $filename =~ m{^${component_regex}/dep11/Components-${arch_regex}}
+                            ) or (
+                                $filename =~ m{^${component_regex}/dep11/icons-}
+                            ) or (
+                                $filename =~ m{^${component_regex}/i18n/Translation-}
+                            )
+                        )
+                        {
+                            add_url_to_download( $dist_uri . $filename, $size );
+                        }
                     }
                 }
                 else
@@ -544,99 +567,23 @@ sub find_translation_files_in_release
     }
 }
 
-push( @index_urls, sort keys %urls_to_download );
-download_urls( "translation", sort keys %urls_to_download );
-
-foreach ( keys %urls_to_download )
-{
-    s[^(\w+)://][];
-    s[~][%7E]g if get_variable("_tilde");
-    $skipclean{$_} = 1;
-}
-
-######################################################################################
-## DEP-11 index download
-
-%urls_to_download = ();
-
-sub find_dep11_files_in_release
-{
-    # Look in the dists/$DIST/Release file for the DEP-11 files that belong
-    # to the given component and architecture.
-
-    my $dist_uri  = shift;
-    my $component = shift;
-    my $arch      = shift;
-    my ( $release_uri, $release_path, $line ) = '';
-
-    $release_uri  = $dist_uri . "Release";
-    $release_path = get_variable("skel_path") . "/" . sanitise_uri($release_uri);
-
-    unless ( open STREAM, "<$release_path" )
-    {
-        warn( "Failed to open Release file from " . $release_uri );
-        return;
-    }
-
-    my $checksums = 0;
-    while ( $line = <STREAM> )
-    {
-        chomp $line;
-        if ($checksums)
-        {
-            if ( $line =~ /^ +(.*)$/ )
-            {
-                my @parts = split( / +/, $1 );
-                if ( @parts == 3 )
-                {
-                    my ( $sha1, $size, $filename ) = @parts;
-                    if ( $filename =~ m{^$component/dep11/(Components-${arch}\.yml|icons-[^./]+\.tar)\.(gz|bz2|xz)$} )
-                    {
-                        add_url_to_download( $dist_uri . $filename, $size );
-                    }
-                }
-                else
-                {
-                    warn("Malformed checksum line \"$1\" in $release_uri");
-                }
-            }
-            else
-            {
-                $checksums = 0;
-            }
-        }
-        if ( not $checksums )
-        {
-            if ( $line eq "SHA256:" )
-            {
-                $checksums = 1;
-            }
-        }
-    }
-}
-
-print "Processing DEP-11 indexes: [";
-
+print "Processing metadata files from releases [";
 foreach (@config_binaries)
 {
     my ( $arch, $uri, $distribution, @components ) = @{$_};
-    print "D";
-    if (@components)
-    {
-        $url = $uri . "/dists/" . $distribution . "/";
-
-        my $component;
-        foreach $component (@components)
-        {
-            find_dep11_files_in_release( $url, $component, $arch );
-        }
-    }
+    print "M";
+    find_metadata_in_release( $arch, $uri, $distribution, @components);
 }
-
+foreach (@config_sources)
+{
+    my ( $uri, $distribution, @components ) = @{$_};
+    print "M";
+    find_metadata_in_release( "source", $uri, $distribution, @components);
+}
 print "]\n\n";
 
 push( @index_urls, sort keys %urls_to_download );
-download_urls( "dep11", sort keys %urls_to_download );
+download_urls( "metadata", sort keys %urls_to_download );
 
 foreach ( keys %urls_to_download )
 {
