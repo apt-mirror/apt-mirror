@@ -467,7 +467,7 @@ sub find_metadata_in_release
 
     my ( $release_uri, $release_path, $line ) = '';
     my $component_regex = undef;
-    my $arch_regex = "(?:${arch})";
+    my $arch_regex = "(?:${arch}|all)";
     my $compressed_extension_regex = '(?:\.(?:gz|bz2|xz))?$';
     my $dist_uri;
 
@@ -739,6 +739,7 @@ sub process_index
 {
     my $uri   = shift;
     my $index = shift;
+    my $optional = shift;
     my ( $path, $package, $mirror, $files ) = '';
 
     $path = sanitise_uri($uri);
@@ -760,6 +761,10 @@ sub process_index
 
     unless ( open STREAM, "<$path/$index" )
     {
+        if ($optional)
+        {
+            return;
+        }
         warn("apt-mirror: can't open index $path/$index in process_index");
         return;
     }
@@ -839,6 +844,7 @@ foreach (@config_binaries)
         foreach $component (@components)
         {
             process_index( $uri, "/dists/$distribution/$component/binary-$arch/Packages" );
+            process_index( $uri, "/dists/$distribution/$component/binary-all/Packages", 1 );
         }
     }
     else
