@@ -885,12 +885,19 @@ sub copy_file
     {
         if ( compare( $from, $to ) != 0 ) { unlink($to); }
     }
-    unless ( copy( $from, $to ) )
+    my @stat_from = stat($from);
+    if ( -f $to )
+    {
+        my @stat_to = stat($to);
+        return if ("@stat_to" eq "@stat_from");
+    }
+
+    unless ( link( $from, $to ) or copy( $from, $to ) )
     {
         warn("apt-mirror: can't copy $from to $to");
         return;
     }
-    my ( $atime, $mtime ) = ( stat($from) )[ 8, 9 ];
+    my ( $atime, $mtime ) = @stat_from[ 8, 9 ];
     utime( $atime, $mtime, $to ) or die("apt-mirror: can't utime $to");
 }
 
