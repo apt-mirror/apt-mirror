@@ -130,6 +130,8 @@ my @childrens       = ();
 my %skipclean       = ();
 my %clean_directory = ();
 
+my %sha256_filenames = ();
+
 ######################################################################################
 ## Setting up $config_file variable
 
@@ -293,6 +295,20 @@ sub download_urls
         print "[" . scalar(@childrens) . "]... ";
     }
     print "\nEnd time: " . localtime() . "\n\n";
+
+    if (scalar keys %sha256_filenames > 0)
+    {
+        print "Begin linking checksums to filenames...\n";
+        foreach my $hash_filename (keys %sha256_filenames)
+        {
+            foreach my $filename (@{$sha256_filenames{$hash_filename}})
+            {
+                copy_file( $hash_filename, $filename );
+            }
+        }
+        print "End linking checksums to filenames...\n";
+    }
+
 }
 
 ## Parse config
@@ -400,11 +416,28 @@ sub remove_double_slashes
 sub add_url_to_download
 {
     my $url = remove_double_slashes(shift);
-    $urls_to_download{$url} = shift;
-    $url =~ s[^(\w+)://][];
-    $url =~ s[~][%7E]g if get_variable("_tilde");
-    $url =~ s[\+][%2B]g if get_variable("_plus");
-    $skipclean{$url} = 1;
+    my $size = shift;
+    my $sha256 = shift;
+
+    my $canonical_filename = $url;
+    $canonical_filename =~ s[^(\w+)://][];
+    $canonical_filename =~ s[~][%7E]g if get_variable("_tilde");
+    $canonical_filename =~ s[\+][%2B]g if get_variable("_plus");
+    $skipclean{$canonical_filename} = 1;
+
+    if ($sha256)
+    {
+        # Download from the "by-hash" directory, and make a copy (or link) it
+        # in the canonical location
+        $url = dirname($url) . "/by-hash/SHA256/" . $sha256;
+
+        my $hash_filename = dirname($canonical_filename) . "/by-hash/SHA256/" . $sha256;
+
+        $sha256_filenames{$hash_filename} ||= [];
+        push @{$sha256_filenames{$hash_filename}}, $canonical_filename;
+        $skipclean{$hash_filename} = 1;
+    }
+    $urls_to_download{$url} = $size;
 }
 
 foreach (@config_sources)
@@ -499,6 +532,8 @@ sub find_metadata_in_release
     }
 
     my $checksums = 0;
+    my $acquire_by_hash = 0;
+    my @parts_to_download = ();
     while ( $line = <STREAM> )
     {
         chomp $line;
@@ -522,12 +557,12 @@ sub find_metadata_in_release
                                 )
                             )
                             {
-                                add_url_to_download( $dist_uri . $filename, $size );
+                                push @parts_to_download, \@parts;
                             }
                         } else {
                             if ($filename =~ m{^Sources${compressed_extension_regex}}
                             ) {
-                                add_url_to_download( $dist_uri . $filename, $size );
+                                push @parts_to_download, \@parts;
                             }
                         }
                     } else {
@@ -551,7 +586,7 @@ sub find_metadata_in_release
                             )
                         )
                         {
-                            add_url_to_download( $dist_uri . $filename, $size );
+                            push @parts_to_download, \@parts;
                         }
                     }
                 }
@@ -571,6 +606,22 @@ sub find_metadata_in_release
             {
                 $checksums = 1;
             }
+            elsif ( $line eq "Acquire-By-Hash: yes" )
+            {
+                $acquire_by_hash = 1;
+            }
+        }
+    }
+    foreach (@parts_to_download)
+    {
+        my ( $sha256, $size, $filename ) = @{$_};
+        if ($acquire_by_hash)
+        {
+            add_url_to_download( $dist_uri . $filename, $size, $sha256 );
+        }
+        else
+        {
+            add_url_to_download( $dist_uri . $filename, $size );
         }
     }
 }
@@ -905,6 +956,15 @@ foreach (@index_urls)
 {
     die("apt-mirror: invalid url in index_urls") unless s[^(\w+)://][];
     copy_file( get_variable("skel_path") . "/" . sanitise_uri("$_"), get_variable("mirror_path") . "/" . sanitise_uri("$_") );
+
+    my $sanitized_uri = sanitise_uri($_);
+    if ($sha256_filenames{$sanitized_uri})
+    {
+        foreach my $filename (@{$sha256_filenames{$sanitized_uri}})
+        {
+            copy_file( get_variable("mirror_path") . "/" . $sanitized_uri, get_variable("mirror_path") . "/" . $filename );
+        }
+    }
 }
 
 ######################################################################################
