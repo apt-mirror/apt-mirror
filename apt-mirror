@@ -129,6 +129,9 @@ my @childrens       = ();
 my %skipclean       = ();
 my %clean_directory = ();
 
+# Map checksum locations to their canonical filename destinations.
+my %sha256_filenames = ();
+
 ######################################################################################
 ## Setting up $config_file variable
 
@@ -282,6 +285,20 @@ sub download_urls
         print "[" . scalar(@childrens) . "]... ";
     }
     print "\nEnd time: " . localtime() . "\n\n";
+
+    if (scalar keys %sha256_filenames > 0)
+    {
+        print "Begin linking checksum files to canonical filenames...\n";
+        foreach my $hash_filename (keys %sha256_filenames)
+        {
+            foreach my $filename (@{$sha256_filenames{$hash_filename}})
+            {
+                copy_file( $hash_filename, $filename );
+            }
+        }
+        print "End linking checksum files to canonical filenames...\n";
+    }
+
 }
 
 ## Parse config
@@ -387,10 +404,28 @@ sub remove_double_slashes
 sub add_url_to_download
 {
     my $url = remove_double_slashes(shift);
-    $urls_to_download{$url} = shift;
-    $url =~ s[^(\w+)://][];
-    $url =~ s[~][%7E]g if get_variable("_tilde");
-    $skipclean{$url} = 1;
+    my $size = shift;
+    my $sha256 = shift;
+
+    my $canonical_filename = $url;
+    $canonical_filename =~ s[^(\w+)://][];
+    $canonical_filename =~ s[~][%7E]g if get_variable("_tilde");
+    $skipclean{$canonical_filename} = 1;
+
+    if ($sha256)
+    {
+        # If the optional sha256 checksum was passed as an argument, then we
+        # should download the file from its checksum location, and copy (or
+        # link) it to the canonical location.
+        $url = dirname($url) . "/by-hash/SHA256/" . $sha256;
+
+        my $hash_filename = dirname($canonical_filename) . "/by-hash/SHA256/" . $sha256;
+
+        $sha256_filenames{$hash_filename} ||= [];
+        push @{$sha256_filenames{$hash_filename}}, $canonical_filename;
+        $skipclean{$hash_filename} = 1;
+    }
+    $urls_to_download{$url} = $size;
 }
 
 foreach (@config_sources)
@@ -482,6 +517,8 @@ sub find_metadata_in_release
     }
 
     my $checksums = 0;
+    my $acquire_by_hash = 0;
+    my @parts_to_download = ();
     while ( $line = <STREAM> )
     {
         chomp $line;
@@ -505,12 +542,12 @@ sub find_metadata_in_release
                                 )
                             )
                             {
-                                add_url_to_download( $dist_uri . $filename, $size );
+                                push @parts_to_download, \@parts;
                             }
                         } else {
                             if ($filename =~ m{^Sources${compressed_extension_regex}}
                             ) {
-                                add_url_to_download( $dist_uri . $filename, $size );
+                                push @parts_to_download, \@parts;
                             }
                         }
                     } else {
@@ -536,7 +573,7 @@ sub find_metadata_in_release
                             )
                         )
                         {
-                            add_url_to_download( $dist_uri . $filename, $size );
+                            push @parts_to_download, \@parts;
                         }
                     }
                 }
@@ -556,6 +593,22 @@ sub find_metadata_in_release
             {
                 $checksums = 1;
             }
+            elsif ( $line eq "Acquire-By-Hash: yes" )
+            {
+                $acquire_by_hash = 1;
+            }
+        }
+    }
+    foreach (@parts_to_download)
+    {
+        my ( $sha256, $size, $filename ) = @{$_};
+        if ($acquire_by_hash)
+        {
+            add_url_to_download( $dist_uri . $filename, $size, $sha256 );
+        }
+        else
+        {
+            add_url_to_download( $dist_uri . $filename, $size );
         }
     }
 }
@@ -577,98 +630,6 @@ print "]\n\n";
 
 push( @index_urls, sort keys %urls_to_download );
 download_urls( "metadata", sort keys %urls_to_download );
-
-######################################################################################
-## by-hash SHA256 files download
-
-%urls_to_download = ();
-
-sub find_by_hash_sha256_files_in_release
-{
-    # Look in the dists/$DIST/Release file for the by-hash SHA256 files that belong
-    # to the given component and architecture.
-
-    my $dist_uri  = shift; 
-    my $component = shift;
-    my $arch      = shift;
-    my ( $release_uri, $release_path, $line ) = '';
-
-    $release_uri  = $dist_uri . "Release";
-    $release_path = get_variable("skel_path") . "/" . sanitise_uri($release_uri);
-
-    unless ( open STREAM, "<$release_path" )
-    {
-        warn( "Failed to open Release file from " . $release_uri );
-        return;
-    }
-
-    my $checksums = 0;
-    while ( $line = <STREAM> )
-    {
-        chomp $line;
-        if ($checksums)
-        {
-            if ( $line =~ /^ +(.*)$/ )
-            {
-                my @parts = split( / +/, $1 );
-                if ( @parts == 3 )
-                {
-                    my ( $sha256, $size, $filename ) = @parts;
-                    my $dirname = dirname($filename);
-                    my $sha256_filename = '/'.$dirname.'/by-hash/SHA256/'.$sha256;
-                    {
-                        add_url_to_download( $dist_uri . $sha256_filename );
-                    }
-                }
-                else
-                {
-                    warn("Malformed checksum line \"$1\" in $release_uri");
-                }
-            }
-            else
-            {
-                $checksums = 0;
-            }
-        }
-        if ( not $checksums )
-        {
-            if ( $line eq "SHA256:" )
-            {
-                $checksums = 1;
-            }
-        }
-    }
-}
-
-print "Processing SHA256 by-hash files [";
-
-foreach (@config_binaries)
-{
-    my ( $arch, $uri, $distribution, @components ) = @{$_};
-    print "D";
-    if (@components)
-    {
-        $url = $uri . "/dists/" . $distribution . "/";
-
-        my $component;
-        foreach $component (@components)
-        {
-            find_by_hash_sha256_files_in_release( $url, $component, $arch );
-        }
-    }
-}
-
-print "]\n\n";
-
-push( @index_urls, sort keys %urls_to_download );
-download_urls( "by-hash-SHA256", sort keys %urls_to_download );
-
-foreach ( keys %urls_to_download )
-{
-    s[^(\w+)://][];
-    s[~][%7E]g if get_variable("_tilde");
-    $skipclean{$_} = 1;
-}
 
 ######################################################################################
 ## Main download preparations
@@ -892,6 +853,18 @@ foreach (@index_urls)
 {
     die("apt-mirror: invalid url in index_urls") unless s[^(\w+)://][];
     copy_file( get_variable("skel_path") . "/" . sanitise_uri("$_"), get_variable("mirror_path") . "/" . sanitise_uri("$_") );
+
+    my $sanitized_uri = sanitise_uri($_);
+
+    # If we downloaded any files from a checksum location, now is the time to
+    # populate the canonical filename.
+    if ($sha256_filenames{$sanitized_uri})
+    {
+        foreach my $filename (@{$sha256_filenames{$sanitized_uri}})
+        {
+            copy_file( get_variable("mirror_path") . "/" . $sanitized_uri, get_variable("mirror_path") . "/" . $filename );
+        }
+    }
 }
 
 ######################################################################################
