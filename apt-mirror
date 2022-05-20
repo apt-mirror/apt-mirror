@@ -342,6 +342,17 @@ sub parse_config_line
     return %config;
 }
 
+sub sanitise_uri
+{
+    my $uri = shift;
+    $uri =~ s[^(\w+)://][];
+    $uri =~ s/^([^@]+)?@?// if (split '/',$uri)[0] =~ /@/;
+    $uri =~ s/~/\%7E/g if get_variable("_tilde");
+    $uri =~ s/\+/\%2B/g if get_variable("_plus");
+    $uri =~ s[/$][];
+    return $uri;
+}
+
 open CONFIG, "<$config_file" or die("apt-mirror: can't open config file ($config_file)");
 while (<CONFIG>)
 {
@@ -362,11 +373,7 @@ while (<CONFIG>)
         push @config_sources, [ $config_line{'uri'}, @{$config_line{'components'}} ];
         next;
     } elsif ( $config_line{'type'} =~ /(skip-clean|clean)/ ) {
-        my $link = $config_line{'uri'};
-        $link =~ s[^(\w+)://][];
-        $link =~ s[/$][];
-        $link =~ s[~][%7E]g if get_variable("_tilde");
-        $link =~ s[\+][%2B]g if get_variable("_plus");
+        my $link = sanitise_uri($config_line{'uri'});
         if ( $config_line{'type'} eq "skip-clean" ) {
             $skipclean{ $link } = 1;
         } elsif ( $config_line{'type'} eq "clean" ) {
@@ -419,10 +426,7 @@ sub add_url_to_download
     my $size = shift;
     my $sha256 = shift;
 
-    my $canonical_filename = $url;
-    $canonical_filename =~ s[^(\w+)://][];
-    $canonical_filename =~ s[~][%7E]g if get_variable("_tilde");
-    $canonical_filename =~ s[\+][%2B]g if get_variable("_plus");
+    my $canonical_filename = sanitise_uri($url);
     $skipclean{$canonical_filename} = 1;
 
     if ($sha256)
@@ -490,18 +494,6 @@ download_urls( "index", @index_urls );
 ## Download all relevant metadata
 
 %urls_to_download = ();
-
-sub sanitise_uri
-{
-    my $uri = shift;
-    $uri =~ s[^(\w+)://][];
-    #$uri =~ s/^([^@]+)?@?// if $uri =~ /@/;
-    $uri =~ s/^([^@]+)?@?// if (split '/',$uri)[0] =~ /@/;
-    $uri =~ s&:\d+/&/&;                       # and port information
-    $uri =~ s/~/\%7E/g if get_variable("_tilde");
-    $uri =~ s/\+/\%2B/g if get_variable("_plus");
-    return $uri;
-}
 
 sub find_metadata_in_release
 {
