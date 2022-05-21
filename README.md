@@ -1,7 +1,12 @@
-This is a fork of the original apt-mirror.
+An actively maintained version of apt-mirror.
 ==========
 
-The easiest way to get going with this version is to first install the original apt-mirror from the Ubuntu repo.
+Please check the wiki for examples, and feel free to add more if you wish. https://github.com/Stifler6996/apt-mirror/wiki
+Also use the discussions section https://github.com/Stifler6996/apt-mirror/discussions if you have queries, dont post help requests to Issues.
+
+---
+
+The easiest way to get going with this version is to first install the original apt-mirror from the Debian or Ubuntu repo.
 
 `sudo apt install apt-mirror`
 
@@ -16,5 +21,3 @@ Either way if you copy or symlink, change the permissions.
 `sudo chown root:root /usr/bin/apt-mirror && sudo chmod 755 /usr/bin/apt-mirror`
 
 ---
-
-Please be patient, I don't get a lot of foot traffic here, and might be a week before I see an issue or a PR. You are welcome to dm/ping me if you feel its urgent enough.
