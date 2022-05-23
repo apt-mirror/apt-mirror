@@ -566,7 +566,7 @@ sub find_metadata_in_release
                             ) or (
                                 $filename =~ m{^${component_regex}/Contents-${arch_regex}${compressed_extension_regex}}
                             ) or (
-                                $filename =~ m{^${component_regex}/binary-${arch_regex}/Packages${compressed_extension_regex}}
+                                $filename =~ m{^${component_regex}/binary-${arch_regex}} #Need all files in this folder for netboot.
                             ) or (
                                 $filename =~ m{^${component_regex}/cnf/Commands-${arch_regex}${compressed_extension_regex}}
                             ) or (
