@@ -566,9 +566,9 @@ sub find_metadata_in_release
                             ) or (
                                 $filename =~ m{^${component_regex}/Contents-${arch_regex}${compressed_extension_regex}}
                             ) or (
-                                $filename =~ m{^${component_regex}/binary-${arch_regex}/Packages${compressed_extension_regex}}
+                                $filename =~ m{^${component_regex}/(?:debian-installer/)?binary-${arch_regex}/Packages${compressed_extension_regex}}
                             ) or (
-                                $filename =~ m{^${component_regex}/binary-${arch_regex}/Release$} # Needed for netboot.
+                                $filename =~ m{^${component_regex}/(?:debian-installer/)?binary-${arch_regex}/Release$}
                             ) or (
                                 $filename =~ m{^${component_regex}/cnf/Commands-${arch_regex}${compressed_extension_regex}}
                             ) or (
@@ -803,6 +803,8 @@ foreach (@config_binaries)
         {
             process_index( $uri, "/dists/$distribution/$component/binary-$arch/Packages" );
             process_index( $uri, "/dists/$distribution/$component/binary-all/Packages", 1 );
+            process_index( $uri, "/dists/$distribution/$component/debian-installer/binary-$arch/Packages", 1 );
+            process_index( $uri, "/dists/$distribution/$component/debian-installer/binary-all/Packages", 1 );
         }
     }
     elsif ($distribution)
