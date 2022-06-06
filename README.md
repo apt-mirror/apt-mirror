@@ -21,3 +21,5 @@ Either way if you copy or symlink, change the permissions.
 `sudo chown root:root /usr/bin/apt-mirror && sudo chmod 755 /usr/bin/apt-mirror`
 
 ---
+[![Maintenance](https://img.shields.io/badge/Maintained%3F-yes-green.svg)](https://GitHub.com/Naereen/StrapDown.js/graphs/commit-activity)  [![Linux](https://svgshare.com/i/Zhy.svg)](https://svgshare.com/i/Zhy.svg)  [![Please Don't ship WIP](https://img.shields.io/badge/Please-Don't%20Ship%20WIP-yellow)](https://dont-ship.it/)
+---
