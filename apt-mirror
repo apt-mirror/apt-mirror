@@ -534,6 +534,7 @@ sub find_metadata_in_release
                     {
                         if ($component_regex)
                         {
+                            # Debian repository format https://wiki.debian.org/DebianRepository/Format#Debian_Repository_Format
                             if (
                                 (
                                     $filename =~ m{^${component_regex}/source/Sources${compressed_extension_regex}}
@@ -545,35 +546,44 @@ sub find_metadata_in_release
                                 push @parts_to_download, \@parts;
                             }
                         } else {
+                            # Flat repository format https://wiki.debian.org/DebianRepository/Format#Flat_Repository_Format
                             if ($filename =~ m{^Sources${compressed_extension_regex}}
                             ) {
                                 push @parts_to_download, \@parts;
                             }
                         }
                     } else {
-                        if (
-                            (
-                                $filename =~ m{^Contents-${arch_regex}${compressed_extension_regex}}
-                            ) or (
-                                $filename =~ m{^Packages${compressed_extension_regex}}
-                            ) or (
-                                $filename =~ m{^${component_regex}/Contents-${arch_regex}${compressed_extension_regex}}
-                            ) or (
-                                $filename =~ m{^${component_regex}/binary-${arch_regex}/Packages${compressed_extension_regex}}
-                            ) or (
-                                $filename =~ m{^${component_regex}/binary-${arch_regex}/Release$}
-                            ) or (
-                                $filename =~ m{^${component_regex}/cnf/Commands-${arch_regex}${compressed_extension_regex}}
-                            ) or (
-                                $filename =~ m{^${component_regex}/dep11/Components-${arch_regex}.*${compressed_extension_regex}}
-                            ) or (
-                                $filename =~ m{^${component_regex}/dep11/icons-.*${compressed_extension_regex}}
-                            ) or (
-                                $filename =~ m{^${component_regex}/i18n/Translation-.*${compressed_extension_regex}}
-                            )
-                        )
+                        if ($component_regex)
                         {
-                            push @parts_to_download, \@parts;
+                            # Debian repository format https://wiki.debian.org/DebianRepository/Format#Debian_Repository_Format
+                            if (
+                                (
+                                    $filename =~ m{^Contents-${arch_regex}${compressed_extension_regex}}
+                                ) or (
+                                    $filename =~ m{^${component_regex}/Contents-${arch_regex}${compressed_extension_regex}}
+                                ) or (
+                                    $filename =~ m{^${component_regex}/binary-${arch_regex}/Packages${compressed_extension_regex}}
+                                ) or (
+                                    $filename =~ m{^${component_regex}/binary-${arch_regex}/Release$}
+                                ) or (
+                                    $filename =~ m{^${component_regex}/cnf/Commands-${arch_regex}${compressed_extension_regex}}
+                                ) or (
+                                    $filename =~ m{^${component_regex}/dep11/Components-${arch_regex}.*${compressed_extension_regex}}
+                                ) or (
+                                    $filename =~ m{^${component_regex}/dep11/icons-.*${compressed_extension_regex}}
+                                ) or (
+                                    $filename =~ m{^${component_regex}/i18n/Translation-.*${compressed_extension_regex}}
+                                )
+                            )
+                            {
+                                push @parts_to_download, \@parts;
+                            }
+                        } else {
+                            # Flat repository format https://wiki.debian.org/DebianRepository/Format#Flat_Repository_Format
+                            if ($filename =~ m{^Packages${compressed_extension_regex}})
+                            {
+                                push @parts_to_download, \@parts;
+                            }
                         }
                     }
                 }
