@@ -128,9 +128,13 @@ my @index_urls;
 my @childrens       = ();
 my %skipclean       = ();
 my %clean_directory = ();
+my @hash_strength   = qw(SHA512 SHA256 SHA1 MD5Sum);
 
-# Map checksum locations to their canonical filename destinations.
-my %sha256_filenames = ();
+# Mapping of files downloaded from a by-hash directory to their canonical locations.
+my %hashsum_to_files = ();
+
+# Mapping of all the checksums for a given canonical filename.
+my %file_to_hashsums;
 
 ######################################################################################
 ## Setting up $config_file variable
@@ -286,17 +290,15 @@ sub download_urls
     }
     print "\nEnd time: " . localtime() . "\n\n";
 
-    if (scalar keys %sha256_filenames > 0)
+    if (scalar keys %hashsum_to_files > 0)
     {
-        print "Begin linking checksum files to canonical filenames...\n";
-        foreach my $hash_filename (keys %sha256_filenames)
+        foreach my $hashsum_filename (keys %hashsum_to_files)
         {
-            foreach my $filename (@{$sha256_filenames{$hash_filename}})
+            foreach my $filename (@{$hashsum_to_files{$hashsum_filename}})
             {
-                copy_file( $hash_filename, $filename );
+                copy_file( $hashsum_filename, $filename );
             }
         }
-        print "End linking checksum files to canonical filenames...\n";
     }
 
 }
@@ -405,27 +407,44 @@ sub add_url_to_download
 {
     my $url = remove_double_slashes(shift);
     my $size = shift;
-    my $sha256 = shift;
+    my $strongest_hash = shift;
+    my $hash = shift;
+    my $hashsum = shift;
 
     my $canonical_filename = $url;
     $canonical_filename =~ s[^(\w+)://][];
     $canonical_filename =~ s[~][%7E]g if get_variable("_tilde");
     $skipclean{$canonical_filename} = 1;
 
-    if ($sha256)
+    if ($hashsum)
     {
-        # If the optional sha256 checksum was passed as an argument, then we
-        # should download the file from its checksum location, and copy (or
-        # link) it to the canonical location.
-        $url = dirname($url) . "/by-hash/SHA256/" . $sha256;
+        # If the optional hashsum was passed as an argument
+        # - download the strongest hash only
+        # - make a copy to the canonical location
+        # - make a copy for the other known hash versions
 
-        my $hash_filename = dirname($canonical_filename) . "/by-hash/SHA256/" . $sha256;
+        $url = dirname($url) . "/by-hash/${hash}/${hashsum}";
 
-        $sha256_filenames{$hash_filename} ||= [];
-        push @{$sha256_filenames{$hash_filename}}, $canonical_filename;
-        $skipclean{$hash_filename} = 1;
+        my $hashsum_filename = dirname($canonical_filename) . "/by-hash/${hash}/${hashsum}";
+        $skipclean{$hashsum_filename} = 1;
+
+        if ($hash eq $strongest_hash)
+        {
+            # This is the strongest hash, which is the one to download.
+            # Also need to remember to which canonical location it should be linked.
+            $hashsum_to_files{$hashsum_filename} ||= [];
+            push @{$hashsum_to_files{$hashsum_filename}}, $canonical_filename;
+            $urls_to_download{$url} = $size;
+        } else {
+            # We are not going to download using this checksum, but we still
+            # need to know where to put the checksum.
+            $file_to_hashsums{$canonical_filename} ||= [];
+            push @{$file_to_hashsums{$canonical_filename}}, $hashsum_filename;
+        }
+    } else {
+        # Not using by-hash, so download the file only.
+        $urls_to_download{$url} = $size;
     }
-    $urls_to_download{$url} = $size;
 }
 
 foreach (@config_sources)
@@ -498,6 +517,7 @@ sub find_metadata_in_release
     my $arch_regex = "(?:${arch}|all)";
     my $compressed_extension_regex = '(?:\.(?:gz|bz2|xz))$';
     my $dist_uri;
+    my $hash_type_regex = "(?:" . join("|", @hash_strength) . ")";
 
     if (@components)
     {
@@ -507,29 +527,40 @@ sub find_metadata_in_release
     else {
         $dist_uri  = remove_double_slashes($uri . "/" . $distribution . "/");
     }
-    $release_uri  = $dist_uri . "Release";
-    $release_path = get_variable("skel_path") . "/" . sanitise_uri($release_uri);
 
-    unless ( open STREAM, "<$release_path" )
+    my $stream;
+    foreach my $release_filename ("InRelease", "Release")
     {
-        warn( "Failed to open Release file from " . $release_uri );
+        $release_uri  = $dist_uri . $release_filename;
+        $release_path = get_variable("skel_path") . "/" . sanitise_uri($release_uri);
+
+        last if ( open $stream, "<", $release_path);
+        $stream = undef;
+    }
+
+    unless ( $stream )
+    {
+        warn( "Failed to find InRelease or Release in " . get_variable("skel_path") . "/" . sanitise_uri($dist_uri) );
         return;
     }
 
-    my $checksums = 0;
+
+    my $hash = undef;
+    my %avaiable_hashes = ();
     my $acquire_by_hash = 0;
     my @parts_to_download = ();
-    while ( $line = <STREAM> )
+    while ( $line = <$stream> )
     {
         chomp $line;
-        if ($checksums)
+        if ($hash)
         {
             if ( $line =~ /^ +(.*)$/ )
             {
                 my @parts = split( / +/, $1 );
                 if ( @parts == 3 )
                 {
-                    my ( $sha256, $size, $filename ) = @parts;
+                    my ( $hashsum, $size, $filename ) = @parts;
+                    push @parts, $hash;
                     if ($arch eq "source")
                     {
                         if ($component_regex)
@@ -594,14 +625,15 @@ sub find_metadata_in_release
             }
             else
             {
-                $checksums = 0;
+                $hash = undef;
             }
         }
-        if ( not $checksums )
+        if ( not $hash )
         {
-            if ( $line eq "SHA256:" )
+            if ( $line =~ /^(${hash_type_regex}):$/ )
             {
-                $checksums = 1;
+                $hash = $1;
+                $avaiable_hashes{$hash} = 1;
             }
             elsif ( $line eq "Acquire-By-Hash: yes" )
             {
@@ -609,12 +641,32 @@ sub find_metadata_in_release
             }
         }
     }
+    close $stream;
+
+    my $strongest_hash;
+    if ($acquire_by_hash)
+    {
+        foreach (@hash_strength)
+        {
+            if ($avaiable_hashes{$_})
+            {
+                $strongest_hash = $_;
+                last;
+            }
+        }
+        unless ($strongest_hash)
+        {
+            warn("Cannot find a supported hash in $release_uri, will download from canonical locations.");
+            $acquire_by_hash = 0;
+        }
+    }
+
     foreach (@parts_to_download)
     {
-        my ( $sha256, $size, $filename ) = @{$_};
+        my ( $hashsum, $size, $filename, $hash ) = @{$_};
         if ($acquire_by_hash)
         {
-            add_url_to_download( $dist_uri . $filename, $size, $sha256 );
+            add_url_to_download( $dist_uri . $filename, $size, $strongest_hash, $hash, $hashsum );
         }
         else
         {
@@ -868,11 +920,18 @@ foreach (@index_urls)
 
     # If we downloaded any files from a checksum location, now is the time to
     # populate the canonical filename.
-    if ($sha256_filenames{$sanitized_uri})
+    if ($hashsum_to_files{$sanitized_uri})
     {
-        foreach my $filename (@{$sha256_filenames{$sanitized_uri}})
+        foreach my $filename (@{$hashsum_to_files{$sanitized_uri}})
         {
             copy_file( get_variable("mirror_path") . "/" . $sanitized_uri, get_variable("mirror_path") . "/" . $filename );
+            if ($file_to_hashsums{$filename})
+            {
+                foreach my $hashsum_filename (@{$file_to_hashsums{$filename}})
+                {
+                    copy_file( get_variable("mirror_path") . "/" . $sanitized_uri, get_variable("mirror_path") . "/" . $hashsum_filename );
+                }
+            }
         }
     }
 }
