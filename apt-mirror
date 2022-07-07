@@ -124,6 +124,7 @@ my %config_variables = (
 my @config_binaries = ();
 my @config_sources  = ();
 
+my @release_urls;
 my @index_urls;
 my @childrens       = ();
 my %skipclean       = ();
@@ -459,7 +460,6 @@ foreach (@config_sources)
     {
         # https://wiki.debian.org/DebianRepository/Format#Flat_Repository_Format
         $url = $uri . "/" . $distribution . "/";
-        add_url_to_download( $url . "Sources" );
     }
 
     add_url_to_download( $url . "InRelease" );
@@ -480,7 +480,6 @@ foreach (@config_binaries)
     {
         # https://wiki.debian.org/DebianRepository/Format#Flat_Repository_Format
         $url = $uri . "/" . $distribution . "/";
-        add_url_to_download( $url . "Packages" );
     }
 
     add_url_to_download( $url . "InRelease" );
@@ -490,8 +489,8 @@ foreach (@config_binaries)
 }
 
 chdir get_variable("skel_path") or die("apt-mirror: can't chdir to skel");
-@index_urls = sort keys %urls_to_download;
-download_urls( "index", @index_urls );
+@release_urls = sort keys %urls_to_download;
+download_urls( "release", @release_urls );
 
 ######################################################################################
 ## Download all relevant metadata
@@ -541,7 +540,7 @@ sub find_metadata_in_release
     unless ( $stream )
     {
         warn( "Failed to find InRelease or Release in " . get_variable("skel_path") . "/" . sanitise_uri($dist_uri) );
-        return;
+        return 0;
     }
 
 
@@ -673,6 +672,7 @@ sub find_metadata_in_release
             add_url_to_download( $dist_uri . $filename, $size );
         }
     }
+    return 1;
 }
 
 print "Processing metadata files from releases [";
@@ -680,18 +680,73 @@ foreach (@config_binaries)
 {
     my ( $arch, $uri, $distribution, @components ) = @{$_};
     print "M";
-    find_metadata_in_release( $arch, $uri, $distribution, @components);
+    unless (find_metadata_in_release( $arch, $uri, $distribution, @components))
+    {
+        # Insecure repo with no release file - try to get the well known indices
+        foreach my $file_extension (".gz", ".xz", ".bz2", "")
+        {
+            if (@components)
+            {
+                # Debian repo
+                foreach my $component (@components)
+                {
+                    foreach my $path (
+                        "/dists/${distribution}/${component}/binary-${arch}/Packages",
+                        "/dists/${distribution}/${component}/binary-all/Packages",
+                        "/dists/${distribution}/${component}/Contents-${arch}",
+                        "/dists/${distribution}/${component}/Contents-all",
+                        "/dists/${distribution}/Contents-${arch}",
+                        "/dists/${distribution}/Contents-all",
+                    )
+                    {
+                        add_url_to_download( "${uri}/${path}${file_extension}" );
+                    }
+                }
+            } else {
+                # Flat repo
+                foreach my $path (
+                    "${distribution}/Packages",
+                    "${distribution}/Contents-${arch}",
+                    "${distribution}/Contents-all",
+                )
+                {
+                    add_url_to_download( "${uri}/${path}${file_extension}" );
+                }
+            }
+        }
+    }
 }
+
 foreach (@config_sources)
 {
     my ( $uri, $distribution, @components ) = @{$_};
     print "M";
-    find_metadata_in_release( "source", $uri, $distribution, @components);
+    unless (find_metadata_in_release( "source", $uri, $distribution, @components))
+    {
+        # Insecure repo with no release file - try to get the well known indices
+        foreach my $file_extension (".gz", ".xz", ".bz2", "")
+        {
+            if (@components)
+            {
+                # Debian repo
+                foreach my $path (
+                    "${distribution}/source/Sources",
+                    "${distribution}/Contents-source",
+                )
+                {
+                    add_url_to_download( "${uri}/${path}${file_extension}" );
+                }
+            } else {
+                # Flat repo
+                add_url_to_download( "${uri}/${distribution}/Sources${file_extension}" );
+            }
+        }
+    }
 }
 print "]\n\n";
 
-push( @index_urls, sort keys %urls_to_download );
-download_urls( "metadata", sort keys %urls_to_download );
+@index_urls = sort keys %urls_to_download;
+download_urls( "index", @index_urls );
 
 ######################################################################################
 ## Main download preparations
@@ -911,7 +966,7 @@ sub copy_file
     utime( $atime, $mtime, $to ) or die("apt-mirror: can't utime $to");
 }
 
-foreach (@index_urls)
+foreach (@release_urls, @index_urls)
 {
     die("apt-mirror: invalid url in index_urls") unless s[^(\w+)://][];
     copy_file( get_variable("skel_path") . "/" . sanitise_uri("$_"), get_variable("mirror_path") . "/" . sanitise_uri("$_") );
