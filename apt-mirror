@@ -109,6 +109,7 @@ my %config_variables = (
     "_autoclean"  => 0,
     "_tilde"      => 0,
     "limit_rate"  => '100m',
+    "downloader"  => 'wget',
     "run_postmirror"       => 1,
     "auth_no_challenge"    => 0,
     "no_check_certificate" => 0,
@@ -272,47 +273,105 @@ sub download_urls
     local $| = 1;
 
     @urls = @_;
-    $nthreads = @urls if @urls < $nthreads;
 
-    if ( get_variable("auth_no_challenge") == 1 )    { push( @args, "--auth-no-challenge" ); }
-    if ( get_variable("no_check_certificate") == 1 ) { push( @args, "--no-check-certificate" ); }
-    if ( get_variable("unlink") == 1 )               { push( @args, "--unlink" ); }
-    if ( length( get_variable("use_proxy") ) && ( get_variable("use_proxy") eq 'yes' || get_variable("use_proxy") eq 'on' ) )
-    {
-        if ( length( get_variable("http_proxy") ) || length( get_variable("https_proxy") ) ) { push( @args, "-e use_proxy=yes" ); }
-        if ( length( get_variable("http_proxy") ) ) { push( @args, "-e http_proxy=" . get_variable("http_proxy") ); }
-        if ( length( get_variable("https_proxy") ) ) { push( @args, "-e https_proxy=" . get_variable("https_proxy") ); }
-        if ( length( get_variable("proxy_user") ) ) { push( @args, "-e proxy_user=" . get_variable("proxy_user") ); }
-        if ( length( get_variable("proxy_password") ) ) { push( @args, "-e proxy_password=" . get_variable("proxy_password") ); }
+    my $downloader = get_variable("downloader");
+
+    if ( $downloader eq "wget" ) {
+        $nthreads = @urls if @urls < $nthreads;
+        if ( get_variable("auth_no_challenge") == 1 )    { push( @args, "--auth-no-challenge" ); }
+        if ( get_variable("no_check_certificate") == 1 ) { push( @args, "--no-check-certificate" ); }
+        if ( get_variable("unlink") == 1 )               { push( @args, "--unlink" ); }
+        if ( length( get_variable("use_proxy") ) && ( get_variable("use_proxy") eq 'yes' || get_variable("use_proxy") eq 'on' ) )
+        {
+            if ( length( get_variable("http_proxy") ) || length( get_variable("https_proxy") ) ) { push( @args, "-e use_proxy=yes" ); }
+            if ( length( get_variable("http_proxy") ) ) { push( @args, "-e http_proxy=" . get_variable("http_proxy") ); }
+            if ( length( get_variable("https_proxy") ) ) { push( @args, "-e https_proxy=" . get_variable("https_proxy") ); }
+            if ( length( get_variable("proxy_user") ) ) { push( @args, "-e proxy_user=" . get_variable("proxy_user") ); }
+            if ( length( get_variable("proxy_password") ) ) { push( @args, "-e proxy_password=" . get_variable("proxy_password") ); }
+        }
+        if ( length( get_variable("certificate") ) ) { push( @args, "--certificate=" . get_variable("certificate") ); }
+        if ( length( get_variable("private_key") ) ) { push( @args, "--private-key=" . get_variable("private_key") ); }
+        if ( length( get_variable("ca_certificate") ) ) { push( @args, "--ca-certificate=" . get_variable("ca_certificate") ); }
+        push @args, "--no-if-modified-since";
+        print "Downloading " . scalar(@urls) . " $stage files using $nthreads threads...\n";
+
+        while ( scalar @urls )
+        {
+            my @part = splice( @urls, 0, int( @urls / $nthreads ) );
+            open URLS, ">" . get_variable("var_path") . "/$stage-urls.$i" or die("apt-mirror: can't write to intermediate file ($stage-urls.$i)");
+            foreach (@part) { print URLS "$_\n"; }
+            close URLS or die("apt-mirror: can't close intermediate file ($stage-urls.$i)");
+
+            $pid = fork();
+
+            die("apt-mirror: can't do fork in download_urls") if !defined($pid);
+
+            if ( $pid == 0 )
+            {
+                exec 'wget', '--no-cache', '--limit-rate=' . get_variable("limit_rate"), '-t', '5', '-r', '-N', '-l', 'inf', '-o', get_variable("var_path") . "/$stage-log.$i", '-i', get_variable("var_path") . "/$stage-urls.$i", @args;
+
+                # shouldn't reach this unless exec fails
+                die("\n\nCould not run wget, please make sure its installed and in your path\n\n");
+            }
+
+            push @childrens, $pid;
+            $i++;
+            $nthreads--;
+        }
     }
-    if ( length( get_variable("certificate") ) ) { push( @args, "--certificate=" . get_variable("certificate") ); }
-    if ( length( get_variable("private_key") ) ) { push( @args, "--private-key=" . get_variable("private_key") ); }
-    if ( length( get_variable("ca_certificate") ) ) { push( @args, "--ca-certificate=" . get_variable("ca_certificate") ); }
-    push @args, "--no-if-modified-since";
-    print "Downloading " . scalar(@urls) . " $stage files using $nthreads threads...\n";
-
-    while ( scalar @urls )
+    elsif ($downloader eq "aria2c")
     {
-        my @part = splice( @urls, 0, int( @urls / $nthreads ) );
-        open URLS, ">" . get_variable("var_path") . "/$stage-urls.$i" or die("apt-mirror: can't write to intermediate file ($stage-urls.$i)");
-        foreach (@part) { print URLS "$_\n"; }
-        close URLS or die("apt-mirror: can't close intermediate file ($stage-urls.$i)");
-
+        if ( get_variable("auth_no_challenge") == 1 )    { push( @args, "--http-auth-challenge=true" ); }
+        if ( get_variable("no_check_certificate") == 1 ) { push( @args, "--check-certificate=false" ); }
+        if ( length( get_variable("use_proxy") ) && ( get_variable("use_proxy") eq 'yes' || get_variable("use_proxy") eq 'on' ) )
+        {
+            if ( length( get_variable("http_proxy") ) ) { push( @args, "--http-proxy=" . get_variable("http_proxy") ); }
+            if ( length( get_variable("https_proxy") ) ) { push( @args, "--https-proxy=" . get_variable("https_proxy") ); }
+            if ( length( get_variable("proxy_user") ) ) {
+                push( @args, "--http-proxy-user=" . get_variable("proxy_user") );
+                push( @args, "--https-proxy-user=" . get_variable("proxy_user") );
+            }
+            if ( length( get_variable("proxy_password") ) ) {
+                push( @args, "--http-proxy-passwd=" . get_variable("proxy_password") );
+                push( @args, "--https-proxy-passwd=" . get_variable("proxy_password") );
+            }
+        }
+        if ( length( get_variable("certificate") ) ) { push( @args, "--certificate=" . get_variable("certificate") ); }
+        if ( length( get_variable("private_key") ) ) { push( @args, "--private-key=" . get_variable("private_key") ); }
+        if ( length( get_variable("ca_certificate") ) ) { push( @args, "--ca-certificate=" . get_variable("ca_certificate") ); }
+        open URLS, ">" . get_variable("var_path") . "/${stage}-urls" or die("apt-mirror: can't write to intermediate file (${stage}-urls)");
+        foreach (@urls) {
+            print URLS $_ . "\n";
+            print URLS "  out=" . sanitise_uri($_) . "\n";
+        }
+        close URLS or die("apt-mirror: can't close intermediate file (${stage}-urls)");
         $pid = fork();
-
         die("apt-mirror: can't do fork in download_urls") if !defined($pid);
-
         if ( $pid == 0 )
         {
-            exec 'wget', '--no-cache', '--limit-rate=' . get_variable("limit_rate"), '-t', '5', '-r', '-N', '-l', 'inf', '-o', get_variable("var_path") . "/$stage-log.$i", '-i', get_variable("var_path") . "/$stage-urls.$i", @args;
+            unlink(get_variable("var_path") . "/${stage}-log");
+            exec 'aria2c',
+                '--quiet=true',
+                '--allow-overwrite=true',
+                '--http-no-cache=true',
+                '--remote-time=true',
+                '--max-overall-download-limit=' . get_variable("limit_rate"),
+                '--max-concurrent-downloads=' . $nthreads,
+                '--max-connection-per-server='. ( $nthreads >= 16 ? 16 : $nthreads ),
+                '--log-level=notice',
+                '--log=' . get_variable("var_path") . "/${stage}-log",
+                '--input-file=' . get_variable("var_path") . "/${stage}-urls",
+                @args;
 
             # shouldn't reach this unless exec fails
-            die("\n\nCould not run wget, please make sure its installed and in your path\n\n");
+            die("\n\nCould not run ${downloader}, please make sure it is installed and in your path\n\n");
         }
 
         push @childrens, $pid;
-        $i++;
-        $nthreads--;
+    }
+    else
+    {
+        die("\n\nUnsupported downloader ${downloader}. Only 'wget' and 'aria2c' are supported.\n\n");
     }
 
     print "Begin time: " . localtime() . "\n[" . scalar(@childrens) . "]... ";

@@ -14,6 +14,8 @@ set use_proxy         off
 set http_proxy        127.0.0.1:3128
 set proxy_user        user
 set proxy_password    password
+# Use aria2c for downloading, default is wget
+set downloader        aria2c
 
 deb http://archive.ubuntu.com/ubuntu precise main restricted universe multiverse
 deb http://archive.ubuntu.com/ubuntu precise-security main restricted universe multiverse
