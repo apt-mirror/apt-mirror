@@ -118,7 +118,8 @@ my %config_variables = (
     "http_proxy"           => '',
     "https_proxy"          => '',
     "proxy_user"           => '',
-    "proxy_password"       => ''
+    "proxy_password"       => '',
+    "dry_run"              => '0'
 );
 
 my @config_binaries = ();
@@ -999,6 +1000,13 @@ foreach ( values %urls_to_download )
 my $size_output = format_bytes($need_bytes);
 
 print "$size_output will be downloaded into archive.\n";
+
+if ( get_variable("dry_run") == 1 )
+{
+    print "\nA dry-run was requested, no download performed, exiting.\n";
+    unlock_aptmirror();
+    exit(0)
+}
 
 download_urls( "archive", sort keys %urls_to_download );
 

@@ -14,6 +14,8 @@ set use_proxy         off
 set http_proxy        127.0.0.1:3128
 set proxy_user        user
 set proxy_password    password
+# dry_run (1) will not perform any downloads but will tell you the size of the download to be peformed
+set dry_run           0
 
 deb http://archive.ubuntu.com/ubuntu precise main restricted universe multiverse
 deb http://archive.ubuntu.com/ubuntu precise-security main restricted universe multiverse
