@@ -785,6 +785,9 @@ sub need_update
 
     return 1 unless ($size);
     return 0 if $size_on_server == $size;
+
+    # The file is corrupted, throw it away so we can download it again
+    unlink $filename;
     return 1;
 }
 
