@@ -998,41 +998,51 @@ foreach ( values %urls_to_download )
 
 my $size_output = format_bytes($need_bytes);
 
-print "$size_output will be downloaded into archive.\n";
+(my $size_mirror) = $size_output =~ /\A([^:\s]+)/;
+my $directory = get_variable("mirror_path");
+my $command = "df $directory | awk -F'[^0-9]*' 'NR==2 {print \$5}'";
+(my $directory_size) = format_bytes(`$command`*1000) =~ /\A([^:\s]+)/;
 
-download_urls( "archive", sort keys %urls_to_download );
-
-######################################################################################
-## Copy skel to main archive
-
-sub copy_file
-{
-    my ( $from, $to ) = @_;
-    my $dir = dirname($to);
-    return unless -f $from;
-    make_path($dir) unless -d $dir;
-    if ( get_variable("unlink") == 1 )
-    {
-        if ( compare( $from, $to ) != 0 ) { unlink($to); }
-    }
-    unless ( copy( $from, $to ) )
-    {
-        warn("apt-mirror: can't copy $from to $to");
-        return;
-    }
-    my ( $atime, $mtime ) = ( stat($from) )[ 8, 9 ];
-    utime( $atime, $mtime, $to ) or die("apt-mirror: can't utime $to");
+if ($directory_size <= $size_mirror) {
+	warn("apt-mirror: need space $size_output\n");
 }
-
-foreach (@index_urls)
+else 
 {
-    die("apt-mirror: invalid url in index_urls") unless s[^(\w+)://][];
-    copy_file( get_variable("skel_path") . "/" . sanitise_uri("$_"), get_variable("mirror_path") . "/" . sanitise_uri("$_") );
-    copy_file( get_variable("skel_path") . "/" . sanitise_uri("$_"), get_variable("mirror_path") . "/" . sanitise_uri("$_") ) if (s/\.gz$//);
-    copy_file( get_variable("skel_path") . "/" . sanitise_uri("$_"), get_variable("mirror_path") . "/" . sanitise_uri("$_") ) if (s/\.bz2$//);
-    copy_file( get_variable("skel_path") . "/" . sanitise_uri("$_"), get_variable("mirror_path") . "/" . sanitise_uri("$_") ) if (s/\.xz$//);
-}
+	print "$size_output will be downloaded into archive.\n";
 
+	download_urls( "archive", sort keys %urls_to_download );
+
+	######################################################################################
+	## Copy skel to main archive
+
+	sub copy_file
+	{
+		my ( $from, $to ) = @_;
+		my $dir = dirname($to);
+		return unless -f $from;
+		make_path($dir) unless -d $dir;
+		if ( get_variable("unlink") == 1 )
+		{
+			if ( compare( $from, $to ) != 0 ) { unlink($to); }
+		}
+		unless ( copy( $from, $to ) )
+		{
+			warn("apt-mirror: can't copy $from to $to");
+			return;
+		}
+		my ( $atime, $mtime ) = ( stat($from) )[ 8, 9 ];
+		utime( $atime, $mtime, $to ) or die("apt-mirror: can't utime $to");
+	}
+
+	foreach (@index_urls)
+	{
+		die("apt-mirror: invalid url in index_urls") unless s[^(\w+)://][];
+		copy_file( get_variable("skel_path") . "/" . sanitise_uri("$_"), get_variable("mirror_path") . "/" . sanitise_uri("$_") );
+		copy_file( get_variable("skel_path") . "/" . sanitise_uri("$_"), get_variable("mirror_path") . "/" . sanitise_uri("$_") ) if (s/\.gz$//);
+		copy_file( get_variable("skel_path") . "/" . sanitise_uri("$_"), get_variable("mirror_path") . "/" . sanitise_uri("$_") ) if (s/\.bz2$//);
+		copy_file( get_variable("skel_path") . "/" . sanitise_uri("$_"), get_variable("mirror_path") . "/" . sanitise_uri("$_") ) if (s/\.xz$//);
+	}
+}
 ######################################################################################
 ## Make cleaning script
 
