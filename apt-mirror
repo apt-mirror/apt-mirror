@@ -142,6 +142,32 @@ if ( $_ = shift )
 chomp $config_variables{"defaultarch"};
 
 ######################################################################################
+
+##################################################
+## Make sure we have all the compression commands
+my @compression_extensions = qw(xz gz bz2);
+my %compression_commands = (
+    xz   => "xz",
+    gz   => "gzip",
+    bz2  => "bzip2",
+);
+
+sub check_compression_commands
+{
+    my $success = 1;
+    foreach (@compression_extensions)
+    {
+        unless("dummy" eq `echo -n dummy | ${compression_commands{$_}} 2>/dev/null | ${compression_commands{$_}} -d 2>/dev/null`)
+        {
+            warn("apt-mirror: You must have a working ${compression_commands{$_}} in your \$PATH to decompress .${_} files.\n");
+            $success = 0;
+        }
+    }
+    return $success;
+}
+
+die("apt-mirror: Failing due to missing compression commands.\n") unless check_compression_commands;
+
 ## Common subroutines
 
 sub round_number
@@ -873,17 +899,13 @@ sub process_index
     local $/ = "\n\n";
     $mirror = get_variable("mirror_path") . "/" . $path;
 
-    if (-e "$path/$index.gz" )
+    foreach my $extension (@compression_extensions)
     {
-        system("gunzip < $path/$index.gz > $path/$index");
-    }
-    elsif (-e "$path/$index.xz" )
-    {
-        system("xz -d < $path/$index.xz > $path/$index");
-    }
-    elsif (-e "$path/$index.bz2" )
-    {
-        system("bzip2 -d < $path/$index.bz2 > $path/$index");
+        if (-e "$path/$index.$extension" )
+        {
+            system("${compression_commands{$extension}} -d < $path/$index.$extension > $path/$index");
+            last;
+        }
     }
 
     unless ( open STREAM, "<$path/$index" )
