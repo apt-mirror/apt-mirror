@@ -256,6 +256,7 @@ sub download_urls
         if ( length( get_variable("proxy_user") ) ) { push( @args, "-e proxy_user=" . get_variable("proxy_user") ); }
         if ( length( get_variable("proxy_password") ) ) { push( @args, "-e proxy_password=" . get_variable("proxy_password") ); }
     }
+    push @args, "--no-if-modified-since";
     print "Downloading " . scalar(@urls) . " $stage files using $nthreads threads...\n";
 
     while ( scalar @urls )
@@ -784,6 +785,9 @@ sub need_update
 
     return 1 unless ($size);
     return 0 if $size_on_server == $size;
+
+    # The file is corrupted, throw it away so we can download it again
+    unlink $filename;
     return 1;
 }
 
