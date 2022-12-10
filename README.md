@@ -1,7 +1,7 @@
 apt-mirror
 ==========
 
-See: http://apt-mirror.github.com
+See: https://apt-mirror.github.io/
 
 New maintainer(s) wanted
 ========================
