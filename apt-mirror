@@ -121,7 +121,7 @@ my %config_variables = (
     "proxy_password"       => '',
     "certificate"          => '',
     "private_key"          => '',
-    "ca_certificate"       => ''
+    "ca_certificate"       => '',
 );
 
 my @config_binaries = ();
@@ -284,10 +284,10 @@ sub download_urls
         if ( length( get_variable("https_proxy") ) ) { push( @args, "-e https_proxy=" . get_variable("https_proxy") ); }
         if ( length( get_variable("proxy_user") ) ) { push( @args, "-e proxy_user=" . get_variable("proxy_user") ); }
         if ( length( get_variable("proxy_password") ) ) { push( @args, "-e proxy_password=" . get_variable("proxy_password") ); }
-        if ( length( get_variable("certificate") ) ) { push( @args, "--certificate=" . get_variable("certificate") ); }
-        if ( length( get_variable("private_key") ) ) { push( @args, "--private-key=" . get_variable("private_key") ); }
-        if ( length( get_variable("ca_certificate") ) ) { push( @args, "--ca-certificate=" . get_variable("ca_certificate") ); }
     }
+    if ( length( get_variable("certificate") ) ) { push( @args, "--certificate=" . get_variable("certificate") ); }
+    if ( length( get_variable("private_key") ) ) { push( @args, "--private-key=" . get_variable("private_key") ); }
+    if ( length( get_variable("ca_certificate") ) ) { push( @args, "--ca-certificate=" . get_variable("ca_certificate") ); }
     push @args, "--no-if-modified-since";
     print "Downloading " . scalar(@urls) . " $stage files using $nthreads threads...\n";
 
