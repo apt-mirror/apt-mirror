@@ -961,6 +961,7 @@ sub process_index
         if ( exists $lines{"Filename"} )
         {    # Packages index
             my $filename = remove_double_slashes( $path . "/" . $lines{"Filename"});
+            $skipclean{ $filename } and next;
             $skipclean{ $filename } = 1;
             print { $files_fh{ALL} } $filename . "\n";
             foreach my $hash (@hash_strength)
@@ -1001,17 +1002,16 @@ sub process_index
                         die("apt-mirror: invalid Sources format") if @file != 3;
                         my $download_url = $uri . "/" . $lines{"Directory"} . "/" . $file[2];
                         my $filename = remove_double_slashes( $path . "/" . $lines{"Directory"} . "/" . $file[2] );
-                        print { $files_fh{$hash} } $file[0] . "  " . ${filename} . "\n";
 
-                        unless ($skipclean{ $filename })
+                        $skipclean{ $filename } and next;
+                        $skipclean{ $filename } = 1;
+
+                        print { $files_fh{$hash} } $file[0] . "  " . ${filename} . "\n";
+                        print { $files_fh{ALL} } ${filename} . "\n";
+                        if ( need_update( $mirror . "/" . $lines{"Directory"} . "/" . $file[2], $file[1] ) )
                         {
-                            $skipclean{ $filename } = 1;
-                            print { $files_fh{ALL} } ${filename} . "\n";
-                            if ( need_update( $mirror . "/" . $lines{"Directory"} . "/" . $file[2], $file[1] ) )
-                            {
-                                print { $files_fh{NEW} } ${filename} . "\n";
-                                add_url_to_download( "archive", $uri . "/" . $lines{"Directory"} . "/" . $file[2], $file[1], $hash, $hash, $file[0], 0 );
-                            }
+                            print { $files_fh{NEW} } ${filename} . "\n";
+                            add_url_to_download( "archive", $uri . "/" . $lines{"Directory"} . "/" . $file[2], $file[1], $hash, $hash, $file[0], 0 );
                         }
                     }
                 }
