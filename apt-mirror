@@ -1008,9 +1008,10 @@ sub copy_file
 foreach (@release_urls, @index_urls)
 {
     die("apt-mirror: invalid url in index_urls") unless s[^(\w+)://][];
-    copy_file( get_variable("skel_path") . "/" . sanitise_uri("$_"), get_variable("mirror_path") . "/" . sanitise_uri("$_") );
 
     my $sanitized_uri = sanitise_uri($_);
+
+    copy_file( get_variable("skel_path") . "/" . $sanitized_uri, get_variable("mirror_path") . "/" . $sanitized_uri );
 
     # If we downloaded any files from a checksum location, now is the time to
     # populate the canonical filename.
