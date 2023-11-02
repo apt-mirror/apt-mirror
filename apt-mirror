@@ -113,6 +113,7 @@ my %config_variables = (
     "auth_no_challenge"    => 0,
     "no_check_certificate" => 0,
     "unlink"               => 0,
+    "paranoid"             => 0,
     "postmirror_script"    => '$var_path/postmirror.sh',
     "use_proxy"            => 'off',
     "http_proxy"           => '',
@@ -133,12 +134,37 @@ my @childrens       = ();
 my %skipclean       = ();
 my %clean_directory = ();
 my @hash_strength   = qw(SHA512 SHA256 SHA1 MD5Sum);
+my %packages_hashes = (
+    SHA512 => "SHA512",
+    SHA256 => "SHA256",
+    SHA1   => "SHA1",
+    MD5Sum => "MD5sum",
+);
+my %sources_hashes = (
+    SHA512 => "Checksums-Sha512",
+    SHA256 => "Checksums-Sha256",
+    SHA1   => "Checksums-Sha1",
+    MD5Sum => "Files",
+);
+my %verify_commands = (
+    SHA512 => "sha512sum",
+    SHA256 => "sha256sum",
+    SHA1   => "sha1sum",
+    MD5Sum => "md5sum",
+);
+my %checksum_filenames = (
+    SHA512 => "SHA512",
+    SHA256 => "SHA256",
+    SHA1   => "SHA1",
+    MD5Sum => "MD5",
+);
 
 # Mapping of files downloaded from a by-hash directory to their canonical locations.
 my %hashsum_to_files = ();
 
 # Mapping of all the checksums for a given canonical filename.
 my %file_to_hashsums;
+my %urls_checksums = ();
 
 ######################################################################################
 ## Setting up $config_file variable
@@ -261,6 +287,33 @@ sub unlock_aptmirror
     unlink( get_variable("var_path") . "/apt-mirror.lock" );
 }
 
+sub delete_corrupted_files
+{
+    my $stage = shift;
+    my $found = 0;
+    foreach my $hash (@hash_strength)
+    {
+        my $file = get_variable("var_path") . "/${stage}-${hash}";
+        if (-s $file)
+        {
+            my $pipe;
+            open $pipe, "-|", qq(env LC_ALL=C ${verify_commands{$hash}} --check --quiet ${file} 2>/dev/null) or die "Failed at ${verify_commands{$hash}} --check --quiet ${file}\n";
+            while (<$pipe>)
+            {
+                my ($filename) = /^(.*): FAILED/;
+                if (-f $filename)
+                {
+                    $found++;
+                    print "$filename is corrupted, deleting....\n";
+                    unlink $filename or die "Cannot delete $filename.\n";
+                }
+            }
+            close $pipe;
+        }
+    }
+    return $found;
+}
+
 sub download_urls
 {
     my $stage = shift;
@@ -323,6 +376,16 @@ sub download_urls
         print "[" . scalar(@childrens) . "]... ";
     }
     print "\nEnd time: " . localtime() . "\n\n";
+
+    if (get_variable("paranoid"))
+    {
+        print "Verifying integrity of downloaded ${stage} files...\n";
+        if (delete_corrupted_files($stage) > 0)
+        {
+            die "Aborting due to downloading corrupted ${stage} files.\n";
+        }
+        print "Downloaded ${stage} files are correct.\n";
+    }
 
     if (scalar keys %hashsum_to_files > 0)
     {
@@ -427,6 +490,25 @@ lock_aptmirror();
 my %urls_to_download = ();
 my ( $url, $arch );
 
+my %files_fh;
+
+sub open_checksum_files
+{
+    my $stage = shift;
+    foreach my $hash (@hash_strength) {
+        open $files_fh{"${stage}-${hash}"}, ">", get_variable("var_path") . "/${stage}-${hash}";
+    }
+}
+
+sub close_checksum_files
+{
+    my $stage = shift;
+    foreach my $hash (@hash_strength) {
+        close $files_fh{"${stage}-${hash}"};
+    }
+}
+
+
 sub remove_double_slashes
 {
     local $_ = shift;
@@ -439,18 +521,20 @@ sub remove_double_slashes
 
 sub add_url_to_download
 {
+    my $stage = shift;
     my $url = remove_double_slashes(shift);
     my $size = shift;
     my $strongest_hash = shift;
     my $hash = shift;
     my $hashsum = shift;
+    my $acquire_by_hash = shift;
 
     my $canonical_filename = $url;
     $canonical_filename =~ s[^(\w+)://][];
     $canonical_filename =~ s[~][%7E]g if get_variable("_tilde");
     $skipclean{$canonical_filename} = 1;
 
-    if ($hashsum)
+    if ($acquire_by_hash)
     {
         # If the optional hashsum was passed as an argument
         # - download the strongest hash only
@@ -469,6 +553,8 @@ sub add_url_to_download
             $hashsum_to_files{$hashsum_filename} ||= [];
             push @{$hashsum_to_files{$hashsum_filename}}, $canonical_filename;
             $urls_to_download{$url} = $size;
+            $urls_checksums{$url} = [ $hash, $hashsum ];
+            print { $files_fh{"${stage}-${hash}"} } "${hashsum}  ${hashsum_filename}\n";
         } else {
             # We are not going to download using this checksum, but we still
             # need to know where to put the checksum.
@@ -478,6 +564,11 @@ sub add_url_to_download
     } else {
         # Not using by-hash, so download the file only.
         $urls_to_download{$url} = $size;
+        if ($strongest_hash and ($hash eq $strongest_hash))
+        {
+            $urls_checksums{$url} = [ $hash, $hashsum ];
+            print { $files_fh{"${stage}-${hash}"} } "${hashsum}  ${canonical_filename}\n";
+        }
     }
 }
 
@@ -495,9 +586,9 @@ foreach (@config_sources)
         $url = $uri . "/" . $distribution . "/";
     }
 
-    add_url_to_download( $url . "InRelease" );
-    add_url_to_download( $url . "Release" );
-    add_url_to_download( $url . "Release.gpg" );
+    add_url_to_download( "release", $url . "InRelease" );
+    add_url_to_download( "release", $url . "Release" );
+    add_url_to_download( "release", $url . "Release.gpg" );
 }
 
 foreach (@config_binaries)
@@ -515,9 +606,9 @@ foreach (@config_binaries)
         $url = $uri . "/" . $distribution . "/";
     }
 
-    add_url_to_download( $url . "InRelease" );
-    add_url_to_download( $url . "Release" );
-    add_url_to_download( $url . "Release.gpg" );
+    add_url_to_download( "release", $url . "InRelease" );
+    add_url_to_download( "release", $url . "Release" );
+    add_url_to_download( "release", $url . "Release.gpg" );
 
 }
 
@@ -529,6 +620,7 @@ download_urls( "release", @release_urls );
 ## Download all relevant metadata
 
 %urls_to_download = ();
+open_checksum_files("index");
 
 sub sanitise_uri
 {
@@ -676,16 +768,17 @@ sub find_metadata_in_release
     close $stream;
 
     my $strongest_hash;
+    foreach (@hash_strength)
+    {
+        if ($avaiable_hashes{$_})
+        {
+            $strongest_hash = $_;
+            last;
+        }
+    }
+
     if ($acquire_by_hash)
     {
-        foreach (@hash_strength)
-        {
-            if ($avaiable_hashes{$_})
-            {
-                $strongest_hash = $_;
-                last;
-            }
-        }
         unless ($strongest_hash)
         {
             warn("Cannot find a supported hash in $release_uri, will download from canonical locations.");
@@ -698,11 +791,11 @@ sub find_metadata_in_release
         my ( $hashsum, $size, $filename, $hash ) = @{$_};
         if ($acquire_by_hash)
         {
-            add_url_to_download( $dist_uri . $filename, $size, $strongest_hash, $hash, $hashsum );
+            add_url_to_download( "index", $dist_uri . $filename, $size, $strongest_hash, $hash, $hashsum, 1 );
         }
         else
         {
-            add_url_to_download( $dist_uri . $filename, $size );
+            add_url_to_download( "index", $dist_uri . $filename, $size, $strongest_hash, $hash, $hashsum, 0 );
         }
     }
     return 1;
@@ -732,7 +825,7 @@ foreach (@config_binaries)
                         "/dists/${distribution}/Contents-all",
                     )
                     {
-                        add_url_to_download( "${uri}/${path}${file_extension}" );
+                        add_url_to_download( "index", "${uri}/${path}${file_extension}" );
                     }
                 }
             } else {
@@ -743,7 +836,7 @@ foreach (@config_binaries)
                     "${distribution}/Contents-all",
                 )
                 {
-                    add_url_to_download( "${uri}/${path}${file_extension}" );
+                    add_url_to_download( "index", "${uri}/${path}${file_extension}" );
                 }
             }
         }
@@ -767,11 +860,11 @@ foreach (@config_sources)
                     "${distribution}/Contents-source",
                 )
                 {
-                    add_url_to_download( "${uri}/${path}${file_extension}" );
+                    add_url_to_download( "index", "${uri}/${path}${file_extension}" );
                 }
             } else {
                 # Flat repo
-                add_url_to_download( "${uri}/${distribution}/Sources${file_extension}" );
+                add_url_to_download( "index", "${uri}/${distribution}/Sources${file_extension}" );
             }
         }
     }
@@ -780,17 +873,21 @@ print "]\n\n";
 
 @index_urls = sort keys %urls_to_download;
 download_urls( "index", @index_urls );
+close_checksum_files("index");
 
 ######################################################################################
 ## Main download preparations
 
 %urls_to_download = ();
 
-open FILES_ALL, ">" . get_variable("var_path") . "/ALL" or die("apt-mirror: can't write to intermediate file (ALL)");
-open FILES_NEW, ">" . get_variable("var_path") . "/NEW" or die("apt-mirror: can't write to intermediate file (NEW)");
-open FILES_MD5, ">" . get_variable("var_path") . "/MD5" or die("apt-mirror: can't write to intermediate file (MD5)");
-open FILES_SHA1, ">" . get_variable("var_path") . "/SHA1" or die("apt-mirror: can't write to intermediate file (SHA1)");
-open FILES_SHA256, ">" . get_variable("var_path") . "/SHA256" or die("apt-mirror: can't write to intermediate file (SHA256)");
+open_checksum_files("archive");
+
+open $files_fh{ALL}, ">" . get_variable("var_path") . "/ALL" or die("apt-mirror: can't write to intermediate file (ALL)");
+open $files_fh{NEW}, ">" . get_variable("var_path") . "/NEW" or die("apt-mirror: can't write to intermediate file (NEW)");
+foreach my $hash (@hash_strength)
+{
+    open $files_fh{$hash}, ">" . get_variable("var_path") . "/" . ${checksum_filenames{$hash}} or die("apt-mirror: can't write to intermediate file (${hash})");
+}
 
 my %stat_cache = ();
 
@@ -821,18 +918,6 @@ sub need_update
     # The file is corrupted, throw it away so we can download it again
     unlink $filename;
     return 1;
-}
-
-sub remove_spaces($)
-{
-    my $hashref = shift;
-    foreach ( keys %{$hashref} )
-    {
-        while ( substr( $hashref->{$_}, 0, 1 ) eq ' ' )
-        {
-            substr( $hashref->{$_}, 0, 1 ) = '';
-        }
-    }
 }
 
 sub process_index
@@ -869,39 +954,66 @@ sub process_index
     {
         local $/ = "\n";
         chomp $package;
-        my ( undef, %lines ) = split( /^([\w\-]+:)/m, $package );
+        my ( undef, %lines ) = split( /^([\w\-]+): */m, $package );
 
-        $lines{"Directory:"} = "" unless defined $lines{"Directory:"};
         chomp(%lines);
-        remove_spaces( \%lines );
 
-        if ( exists $lines{"Filename:"} )
+        if ( exists $lines{"Filename"} )
         {    # Packages index
-            $skipclean{ remove_double_slashes( $path . "/" . $lines{"Filename:"} ) } = 1;
-            print FILES_ALL remove_double_slashes( $path . "/" . $lines{"Filename:"} ) . "\n";
-            print FILES_MD5 $lines{"MD5sum:"} . "  " . remove_double_slashes( $path . "/" . $lines{"Filename:"} ) . "\n" if defined $lines{"MD5sum:"};
-            print FILES_SHA1 $lines{"SHA1:"} . "  " . remove_double_slashes( $path . "/" . $lines{"Filename:"} ) . "\n" if defined $lines{"SHA1:"};
-            print FILES_SHA256 $lines{"SHA256:"} . "  " . remove_double_slashes( $path . "/" . $lines{"Filename:"} ) . "\n" if defined $lines{"SHA256:"};
-            if ( need_update( $mirror . "/" . $lines{"Filename:"}, $lines{"Size:"} ) )
+            my $filename = remove_double_slashes( $path . "/" . $lines{"Filename"});
+            $skipclean{ $filename } and next;
+            $skipclean{ $filename } = 1;
+            print { $files_fh{ALL} } $filename . "\n";
+            foreach my $hash (@hash_strength)
             {
-                print FILES_NEW remove_double_slashes( $uri . "/" . $lines{"Filename:"} ) . "\n";
-                add_url_to_download( $uri . "/" . $lines{"Filename:"}, $lines{"Size:"} );
+                my $index_hash = $packages_hashes{$hash};
+                print { $files_fh{$hash} } $lines{$index_hash} . "  " . $filename . "\n" if $lines{$index_hash};
+            }
+            if ( need_update( $mirror . "/" . $lines{"Filename"}, $lines{"Size"} ) )
+            {
+                my $hashsum = undef;
+                my $hash = undef;
+                foreach (@hash_strength)
+                {
+                    $hash = $_;
+                    my $index_hash = $packages_hashes{$hash};
+                    if ($lines{$index_hash})
+                    {
+                        $hashsum = $lines{$index_hash};
+                        last;
+                    }
+                }
+                print { $files_fh{NEW} } $filename. "\n";
+                add_url_to_download( "archive", $uri . "/" . $lines{"Filename"}, $lines{"Size"}, $hash, $hash, $hashsum, 0 );
             }
         }
         else
         {    # Sources index
-            foreach ( split( /\n/, $lines{"Files:"} ) )
+            $lines{"Directory"} = "" unless defined $lines{"Directory"};
+            foreach my $hash (@hash_strength)
             {
-                next if $_ eq '';
-                my @file = split;
-                die("apt-mirror: invalid Sources format") if @file != 3;
-                $skipclean{ remove_double_slashes( $path . "/" . $lines{"Directory:"} . "/" . $file[2] ) } = 1;
-                print FILES_ALL remove_double_slashes( $path . "/" . $lines{"Directory:"} . "/" . $file[2] ) . "\n";
-                print FILES_MD5 $file[0] . "  " . remove_double_slashes( $path . "/" . $lines{"Directory:"} . "/" . $file[2] ) . "\n";
-                if ( need_update( $mirror . "/" . $lines{"Directory:"} . "/" . $file[2], $file[1] ) )
+                my $index_hash = $sources_hashes{$hash};
+                if ($lines{$index_hash})
                 {
-                    print FILES_NEW remove_double_slashes( $uri . "/" . $lines{"Directory:"} . "/" . $file[2] ) . "\n";
-                    add_url_to_download( $uri . "/" . $lines{"Directory:"} . "/" . $file[2], $file[1] );
+                    foreach ( split( /\n/, $lines{$index_hash} ) )
+                    {
+                        next if $_ eq '';
+                        my @file = split;
+                        die("apt-mirror: invalid Sources format") if @file != 3;
+                        my $download_url = $uri . "/" . $lines{"Directory"} . "/" . $file[2];
+                        my $filename = remove_double_slashes( $path . "/" . $lines{"Directory"} . "/" . $file[2] );
+
+                        $skipclean{ $filename } and next;
+                        $skipclean{ $filename } = 1;
+
+                        print { $files_fh{$hash} } $file[0] . "  " . ${filename} . "\n";
+                        print { $files_fh{ALL} } ${filename} . "\n";
+                        if ( need_update( $mirror . "/" . $lines{"Directory"} . "/" . $file[2], $file[1] ) )
+                        {
+                            print { $files_fh{NEW} } ${filename} . "\n";
+                            add_url_to_download( "archive", $uri . "/" . $lines{"Directory"} . "/" . $file[2], $file[1], $hash, $hash, $file[0], 0 );
+                        }
+                    }
                 }
             }
         }
@@ -953,11 +1065,10 @@ clear_stat_cache();
 
 print "]\n\n";
 
-close FILES_ALL;
-close FILES_NEW;
-close FILES_MD5;
-close FILES_SHA1;
-close FILES_SHA256;
+foreach my $fh (values %files_fh)
+{
+    close $fh;
+}
 
 ######################################################################################
 ## Main download
@@ -975,6 +1086,7 @@ my $size_output = format_bytes($need_bytes);
 print "$size_output will be downloaded into archive.\n";
 
 download_urls( "archive", sort keys %urls_to_download );
+close_checksum_files("archive");
 
 ######################################################################################
 ## Copy skel to main archive
