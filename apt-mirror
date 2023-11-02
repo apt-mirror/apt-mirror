@@ -113,7 +113,7 @@ my %config_variables = (
     "auth_no_challenge"    => 0,
     "no_check_certificate" => 0,
     "unlink"               => 0,
-    "postmirror_script"    => '$var_path/postmirror.sh',
+    "postmirror_script"    => '$var_path/clean.sh',
     "use_proxy"            => 'off',
     "http_proxy"           => '',
     "https_proxy"          => '',
@@ -304,8 +304,15 @@ sub download_urls
 
         if ( $pid == 0 )
         {
-            exec 'wget', '--no-cache', '--limit-rate=' . get_variable("limit_rate"), '-t', '5', '-r', '-N', '-l', 'inf', '-o', get_variable("var_path") . "/$stage-log.$i", '-i', get_variable("var_path") . "/$stage-urls.$i", @args;
-
+      #  exec 'wget', '--no-cache', '--limit-rate=' . get_variable("limit_rate"), '-t', '5', '-r', '-N', '-l', 'inf', '-o', get_variable("var_path") . "/$stage-log.$i", '-i', get_variable("var_path") . "/$stage-urls.$i", @args;
+         if ( $stage eq 'archive')
+           {
+             exec 'wget', '--no-cache', '--limit-rate=' . get_variable("limit_rate"), '-t', '5', '-r', '-c', '-l', 'inf', '-o', get_variable("var_path") . "/$stage-log.$i", '-i', get_variable("var_path") . "/$stage-urls.$i", @args;
+           }
+        else
+          {
+             exec 'wget', '--no-cache', '--limit-rate=' . get_variable("limit_rate"), '-t', '5', '-r', '-N', '-l', 'inf', '-o', get_variable("var_path") . "/$stage-log.$i", '-i', get_variable("var_path") . "/$stage-urls.$i", @args;
+          }
             # shouldn't reach this unless exec fails
             die("\n\nCould not run wget, please make sure its installed and in your path\n\n");
         }
