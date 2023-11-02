@@ -94,6 +94,7 @@ use File::Compare;
 use File::Path qw(make_path);
 use File::Basename;
 use Fcntl qw(:flock);
+use Fcntl qw(F_GETFL F_SETFL O_NONBLOCK);
 
 my $config_file;
 
@@ -251,7 +252,8 @@ sub lock_aptmirror
     my $lock = flock( LOCK_FILE, LOCK_EX | LOCK_NB );
     if ( !$lock )
     {
-        die("apt-mirror is already running, exiting");
+		my $flags = fcntl( LOCK_FILE, F_GETFL, 0) or die "Cannot set flags for lock file: $!\n";
+		fcntl( LOCK_FILE, F_SETFL, $flags | O_NONBLOCK) or die "Cannot get lock file, apt-mirror is running already: $!\n";
     }
 }
 
@@ -277,6 +279,8 @@ sub download_urls
     if ( get_variable("auth_no_challenge") == 1 )    { push( @args, "--auth-no-challenge" ); }
     if ( get_variable("no_check_certificate") == 1 ) { push( @args, "--no-check-certificate" ); }
     if ( get_variable("unlink") == 1 )               { push( @args, "--unlink" ); }
+    if ( get_variable("continue") == 1 )             { push( @args, "--continue" ) ; }
+
     if ( length( get_variable("use_proxy") ) && ( get_variable("use_proxy") eq 'yes' || get_variable("use_proxy") eq 'on' ) )
     {
         if ( length( get_variable("http_proxy") ) || length( get_variable("https_proxy") ) ) { push( @args, "-e use_proxy=yes" ); }
