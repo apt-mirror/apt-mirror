@@ -304,10 +304,26 @@ sub download_urls
 
         if ( $pid == 0 )
         {
-            exec 'wget', '--no-cache', '--limit-rate=' . get_variable("limit_rate"), '-t', '5', '-r', '-N', '-l', 'inf', '-o', get_variable("var_path") . "/$stage-log.$i", '-i', get_variable("var_path") . "/$stage-urls.$i", @args;
-
-            # shouldn't reach this unless exec fails
-            die("\n\nCould not run wget, please make sure its installed and in your path\n\n");
+            system('wget', '--no-cache',
+                   '--limit-rate=' . get_variable("limit_rate"),
+                   '-t', '5', '-r', '-N', '-l', 'inf',
+                   '-o', get_variable("var_path") . "/$stage-log.$i",
+                   '-i', get_variable("var_path") . "/$stage-urls.$i", @args);
+            die("Could not run wget, please make sure it is installed and in your path\n")
+                if $? == -1;
+            my $exit_status = $? >> 8;
+            if ( $exit_status ) {
+                if ( $stage eq 'archive' || $exit_status < 8 ) {
+                    # wget exit code 8 is "server error response".  This is normal for downloading indices where we try
+                    # to download .gz, .xz and .bz2 and don't care about some of them returning 404.  For package
+                    # download, this is probably a real problem which should be investigated.
+                    print "wget failed with exit status $exit_status.  See ",
+                        get_variable("var_path") . "/$stage-log.$i", " for details.\n";
+                    exit ($exit_status);
+                }
+            }
+            # child is done
+            exit (0);
         }
 
         push @childrens, $pid;
