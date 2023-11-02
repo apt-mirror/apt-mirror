@@ -108,6 +108,7 @@ my %config_variables = (
     "_contents"   => 1,
     "_autoclean"  => 0,
     "_tilde"      => 0,
+    "_plus"      => 0,
     "limit_rate"  => '100m',
     "run_postmirror"       => 1,
     "auth_no_challenge"    => 0,
@@ -392,6 +393,7 @@ while (<CONFIG>)
         $link =~ s[^(\w+)://][];
         $link =~ s[/$][];
         $link =~ s[~][%7E]g if get_variable("_tilde");
+        $link =~ s[\+][%2B]g if get_variable("_plus");
         if ( $config_line{'type'} eq "skip-clean" ) {
             $skipclean{ $link } = 1;
         } elsif ( $config_line{'type'} eq "clean" ) {
@@ -434,6 +436,7 @@ sub remove_double_slashes
     while (s[(?<!:)//][/]g)            { }
     while (s[(?<!:/)/[^/]+/\.\./][/]g) { }
     s/~/\%7E/g if get_variable("_tilde");
+    s/\+/\%2B/g if get_variable("_plus");
     return $_;
 }
 
@@ -536,6 +539,7 @@ sub sanitise_uri
     $uri =~ s[^(\w+)://][];
     $uri =~ s/^([^@]+)?@?// if $uri =~ /@/;
     $uri =~ s/~/\%7E/g if get_variable("_tilde");
+    $uri =~ s/\+/\%2B/g if get_variable("_plus");
     return $uri;
 }
 
@@ -1046,6 +1050,7 @@ sub process_file
 {
     my $file = shift;
     $file =~ s[~][%7E]g if get_variable("_tilde");
+    $file =~ s[\+][%2B]g if get_variable("_plus");
     return 1 if $skipclean{$file};
     push @rm_files, sanitise_uri($file);
     my ( undef, undef, undef, undef, undef, undef, undef, $size, undef, undef, undef, undef, $blocks ) = stat($file);
