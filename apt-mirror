@@ -122,6 +122,7 @@ my %config_variables = (
     "certificate"          => '',
     "private_key"          => '',
     "ca_certificate"       => '',
+    "use_acquire_by_hash"  => 'yes',
 );
 
 my @config_binaries = ();
@@ -445,12 +446,15 @@ sub add_url_to_download
     my $hash = shift;
     my $hashsum = shift;
 
+    # Retrieve the value for use_acquire_by_hash, default to 'yes' if it's not set
+    my $use_acquire_by_hash = get_variable("use_acquire_by_hash") || "yes";    
+
     my $canonical_filename = $url;
     $canonical_filename =~ s[^(\w+)://][];
     $canonical_filename =~ s[~][%7E]g if get_variable("_tilde");
     $skipclean{$canonical_filename} = 1;
 
-    if ($hashsum)
+    if ($hashsum && $use_acquire_by_hash ne "no")
     {
         # If the optional hashsum was passed as an argument
         # - download the strongest hash only
