@@ -353,10 +353,10 @@ sub parse_config_line
         $config{'options'} = $+{options} ? $+{options} : "";
         $config{'uri'} = $+{uri};
         $config{'components'} = $+{components};
-        if ( $config{'options'} =~ /arch=((?<arch>[\w\-]+)[,]*)/g ) {
+        if ( $config{'options'} =~ /(^|,)arch=((?<arch>[\w\-]+))(,|$)/ ) {
             $config{'arch'} = $+{arch};
         }
-        if ( $config{'options'} =~ /by-hash=((?<byhash>[\w\-]+)[,]*)/g ) {
+        if ( $config{'options'} =~ /(^|,)by-hash=((?<byhash>[\w\-]+))(,|$)/ ) {
             $config{'by-hash'} = $+{'byhash'};
         }
         $config{'components'} = [ split /\s+/, $config{'components'} ];
