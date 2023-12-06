@@ -65,6 +65,9 @@ deb http://example.com/debian stable main contrib non-free
 Arch Specific: (many other architectures are supported)
 deb-powerpc http://example.com/debian stable main contrib non-free
 
+Ignore by-hash downloads for broken mirrors
+deb [arch=powerpc,by-hash=no] http://example.com/debian stable main contrib non-free
+
 HTTP and FTP Auth or non-standard port:
 deb http://user:pass@example.com:8080/debian stable main contrib non-free
 
@@ -350,8 +353,11 @@ sub parse_config_line
         $config{'options'} = $+{options} ? $+{options} : "";
         $config{'uri'} = $+{uri};
         $config{'components'} = $+{components};
-        if ( $config{'options'} =~ /arch=((?<arch>[\w\-]+)[,]*)/g ) {
+        if ( $config{'options'} =~ /(^|,)arch=((?<arch>[\w\-]+))(,|$)/ ) {
             $config{'arch'} = $+{arch};
+        }
+        if ( $config{'options'} =~ /(^|,)by-hash=((?<byhash>[\w\-]+))(,|$)/ ) {
+            $config{'by-hash'} = $+{'byhash'};
         }
         $config{'components'} = [ split /\s+/, $config{'components'} ];
     } elsif ( $line =~ /set[\t ]+(?<key>[^\s]+)[\t ]+(?<value>"[^"]+"|'[^']+'|[^\s]+)/ ) {
@@ -375,17 +381,36 @@ while (<CONFIG>)
     next unless /\S/;
     my $line = $_;
     my %config_line = parse_config_line;
+    my %options = ( "by-hash" => "y" );
 
     if ( $config_line{'type'} eq "set" ) {
         $config_variables{ $config_line{'key'} } = $config_line{'value'};
         next;
     } elsif ( $config_line{'type'} eq "deb" ) {
         my $arch = $config_line{'arch'};
+        if (defined $config_line{'by-hash'}) {
+            $options{'by-hash'} = $config_line{'by-hash'};
+        }
         $arch = get_variable("defaultarch") if ! defined $config_line{'arch'};
-        push @config_binaries, [ $arch, $config_line{'uri'}, @{$config_line{'components'}} ];
+        push @config_binaries, ({
+            arch => $arch,
+            uri => $config_line{'uri'},
+            distribution => shift(@{$config_line{'components'}}),
+            components => \@{$config_line{'components'}},
+            options => \%options
+        });
         next;
     } elsif ( $config_line{'type'} eq "deb-src" ) {
-        push @config_sources, [ $config_line{'uri'}, @{$config_line{'components'}} ];
+        if (defined $config_line{'by-hash'}) {
+            $options{'by-hash'} = $config_line{'by-hash'};
+        }
+        push @config_sources, ({
+            arch => 'source',
+            uri => $config_line{'uri'},
+            distribution => shift(@{$config_line{'components'}}),
+            components => @{$config_line{'components'}},
+            options => \%options,
+        });
         next;
     } elsif ( $config_line{'type'} =~ /(skip-clean|clean)/ ) {
         my $link = $config_line{'uri'};
@@ -481,9 +506,11 @@ sub add_url_to_download
     }
 }
 
-foreach (@config_sources)
+foreach my $repo (@config_sources)
 {
-    my ( $uri, $distribution, @components ) = @{$_};
+    my $uri = $repo->{'uri'};
+    my $distribution = $repo->{'distribution'};
+    my @components = @{$repo->{'components'}};
 
     if (@components)
     {
@@ -500,9 +527,11 @@ foreach (@config_sources)
     add_url_to_download( $url . "Release.gpg" );
 }
 
-foreach (@config_binaries)
+foreach my $repo (@config_binaries)
 {
-    my ( $arch, $uri, $distribution, @components ) = @{$_};
+    my $uri = $repo->{'uri'};
+    my $distribution = $repo->{'distribution'};
+    my @components = @{$repo->{'components'}};
 
     if (@components)
     {
@@ -542,7 +571,12 @@ sub sanitise_uri
 sub find_metadata_in_release
 {
     # Look in the Release file for any files we need to download
-    my ( $arch, $uri, $distribution, @components ) = @_;
+    my $repo = shift;
+    my $arch = $repo->{'arch'};
+    my $uri = $repo->{'uri'};
+    my $distribution = $repo->{'distribution'};
+    my @components = @{$repo->{'components'}};
+    my %options = %{$repo->{'options'}};
 
     my ( $release_uri, $release_path, $line ) = '';
     my $component_regex = undef;
@@ -669,7 +703,9 @@ sub find_metadata_in_release
             }
             elsif ( $line eq "Acquire-By-Hash: yes" )
             {
-                $acquire_by_hash = 1;
+                unless ( $options{'by-hash'} =~ /^n/i ) { # N/No/Never
+                    $acquire_by_hash = 1;
+                }
             }
         }
     }
@@ -709,11 +745,14 @@ sub find_metadata_in_release
 }
 
 print "Processing metadata files from releases [";
-foreach (@config_binaries)
+foreach my $repo (@config_binaries)
 {
-    my ( $arch, $uri, $distribution, @components ) = @{$_};
+    my $arch = $repo->{'uri'};
+    my $uri = $repo->{'uri'};
+    my $distribution = $repo->{'distribution'};
+    my @components = @{$repo->{'components'}};
     print "M";
-    unless (find_metadata_in_release( $arch, $uri, $distribution, @components))
+    unless (find_metadata_in_release($repo))
     {
         # Insecure repo with no release file - try to get the well known indices
         foreach my $file_extension (".gz", ".xz", ".bz2", "")
@@ -750,11 +789,13 @@ foreach (@config_binaries)
     }
 }
 
-foreach (@config_sources)
+foreach my $repo (@config_sources)
 {
-    my ( $uri, $distribution, @components ) = @{$_};
+    my $uri = $repo->{'uri'};
+    my $distribution = $repo->{'distribution'};
+    my @components = @{$repo->{'components'}};
     print "M";
-    unless (find_metadata_in_release( "source", $uri, $distribution, @components))
+    unless (find_metadata_in_release( $repo))
     {
         # Insecure repo with no release file - try to get the well known indices
         foreach my $file_extension (".gz", ".xz", ".bz2", "")
@@ -912,9 +953,11 @@ sub process_index
 
 print "Processing indexes: [";
 
-foreach (@config_sources)
+foreach my $repo (@config_sources)
 {
-    my ( $uri, $distribution, @components ) = @{$_};
+    my $uri = $repo->{'uri'};
+    my $distribution = $repo->{'distribution'};
+    my @components = @{$repo->{'components'}};
     print "S";
     if (@components)
     {
@@ -930,9 +973,12 @@ foreach (@config_sources)
     }
 }
 
-foreach (@config_binaries)
+foreach my $repo (@config_binaries)
 {
-    my ( $arch, $uri, $distribution, @components ) = @{$_};
+    my $arch = $repo->{'arch'};
+    my $uri = $repo->{'uri'};
+    my $distribution = $repo->{'distribution'};
+    my @components = @{$repo->{'components'}};
     print "P";
     if (@components)
     {
