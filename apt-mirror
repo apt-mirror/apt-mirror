@@ -69,7 +69,7 @@ HTTP and FTP Auth or non-standard port:
 deb http://user:pass@example.com:8080/debian stable main contrib non-free
 
 HTTPS with sending Basic HTTP authentication information (plaintext username and password) for all requests:
-(this was default behaviour of Wget 1.10.2 and prior and is needed for some servers with new version of Wget)
+(this was default behaviour of  1.10.2 and prior and is needed for some servers with new version of )
 set auth_no_challenge 1
 deb https://user:pass@example.com:443/debian stable main contrib non-free
 
@@ -304,8 +304,25 @@ sub download_urls
 
         if ( $pid == 0 )
         {
-            exec 'wget', '--no-cache', '--limit-rate=' . get_variable("limit_rate"), '-t', '5', '-r', '-N', '-l', 'inf', '-o', get_variable("var_path") . "/$stage-log.$i", '-i', get_variable("var_path") . "/$stage-urls.$i", @args;
 
+#if file found for add esm.ubuntu.com support
+            if (-e /etc/apt/auth.conf.d/90ubuntu-advantage){  
+#manual work 
+# exec 'wget', '--header="Authorization: Basic privatkey"', '--no-cache', '--limit-rate=' . get_variable("limit_rate"), '-t', '5', '-r', '-N', '-l', 'inf', '-o', get_variable("var_path") . "/$stage-log.$i", '-i', get_variable("var_path") . "/$stage-urls.$i", @args;
+# I don't know enough perl but I'll give you part of the solution in bash if you can convert it thank you
+# in bash get authorization key
+# ubuntuadvantagelong="$(cat /etc/apt/auth.conf.d/90ubuntu-advantage | grep esm.ubuntu.com/apps| sed 's|machine esm.ubuntu.com/apps/ubuntu/ login bearer password ||' | sed 's|  # ubuntu-advantage-tools||')"
+# ubuntuadvantage=$(echo bearer:${ubuntuadvantagelong:0:146})
+#require result found to ubuntuadvantage variable encode to base64
+#for base64 encoding I was not able to do it in bash the result returns
+#nonsense I had to do it from this site
+#https://www.base64encode.org/
+#If this can help you automate the process I think it would help everyone
+                exec 'wget', '--header="Authorization: Basic $ubuntuadvantagebase64encode"', '--no-cache', '--limit-rate=' . get_variable("limit_rate"), '-t', '5', '-r', '-N', '-l', 'inf', '-o', get_variable("var_path") . "/$stage-log.$i", '-i', get_variable("var_path") . "/$stage-urls.$i", @args;  
+#else normal execution
+            } else {
+                exec 'wget', '--no-cache', '--limit-rate=' . get_variable("limit_rate"), '-t', '5', '-r', '-N', '-l', 'inf', '-o', get_variable("var_path") . "/$stage-log.$i", '-i', get_variable("var_path") . "/$stage-urls.$i", @args;
+            } 
             # shouldn't reach this unless exec fails
             die("\n\nCould not run wget, please make sure its installed and in your path\n\n");
         }
