@@ -109,6 +109,8 @@ my %config_variables = (
     "_autoclean"  => 0,
     "_tilde"      => 0,
     "limit_rate"  => '100m',
+    "tries"       => 5,
+    "retry_on_http_errors" => '',
     "run_postmirror"       => 1,
     "auth_no_challenge"    => 0,
     "no_check_certificate" => 0,
@@ -304,7 +306,7 @@ sub download_urls
 
         if ( $pid == 0 )
         {
-            exec 'wget', '--no-cache', '--limit-rate=' . get_variable("limit_rate"), '-t', '5', '-r', '-N', '-l', 'inf', '-o', get_variable("var_path") . "/$stage-log.$i", '-i', get_variable("var_path") . "/$stage-urls.$i", @args;
+            exec 'wget', '--no-cache', '--limit-rate=' . get_variable("limit_rate"), '-t', get_variable("tries"), '--retry-on-http-error=' . get_variable("retry_on_http_errors"), '-r', '-N', '-l', 'inf', '-o', get_variable("var_path") . "/$stage-log.$i", '-i', get_variable("var_path") . "/$stage-urls.$i", @args;
 
             # shouldn't reach this unless exec fails
             die("\n\nCould not run wget, please make sure its installed and in your path\n\n");
