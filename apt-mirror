@@ -1138,17 +1138,31 @@ chmod( $perm | 0111, get_variable("cleanscript") );
 
 if ( get_variable("run_postmirror") )
 {
-    print "Running the Post Mirror script ...\n";
-    print "(" . get_variable("postmirror_script") . ")\n\n";
-    if ( -x get_variable("postmirror_script") )
+    my $postmirror_script = get_variable("postmirror_script");
+    $postmirror_script =~ s/^\s*//;
+    $postmirror_script =~ s/\s*$//;
+
+    if ( $postmirror_script )
     {
-        system( get_variable("postmirror_script"), '' );
+        unless ( -f $postmirror_script and -r $postmirror_script )
+        {
+            print "\nPost Mirror script is defined but skipped because it doesn't exist or is not readable file.\n\n";
+        }
+        else
+        {
+            print "Running the Post Mirror script ...\n";
+            print "($postmirror_script)\n\n";
+            if ( -x $postmirror_script )
+            {
+                system( $postmirror_script, '' );
+            }
+            else
+            {
+                system( '/bin/sh', $postmirror_script );
+            }
+            print "\nPost Mirror script has completed. See above output for any possible errors.\n\n";
+        }
     }
-    else
-    {
-        system( '/bin/sh', get_variable("postmirror_script") );
-    }
-    print "\nPost Mirror script has completed. See above output for any possible errors.\n\n";
 }
 
 unlock_aptmirror();
