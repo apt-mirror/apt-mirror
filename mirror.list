@@ -3,27 +3,55 @@ set mirror_path       $base_path/mirror
 set skel_path         $base_path/skel
 set var_path          $base_path/var
 set postmirror_script $var_path/postmirror.sh
-set defaultarch       i386
+set defaultarch       amd64
 set run_postmirror    0
 set nthreads          20
 set limit_rate        100m
 set _tilde            0
-# Use --unlink with wget (for use with hardlinked directories)
 set unlink            1
 set use_proxy         off
-set http_proxy        127.0.0.1:3128
-set proxy_user        user
-set proxy_password    password
+# Proxy settings (only used if use_proxy is set to "on" or "yes")
+# Uncomment and configure if you need to use a proxy server
+#set http_proxy        127.0.0.1:3128
+#set https_proxy       127.0.0.1:3128
+#set proxy_user        your_proxy_user
+#set proxy_password    your_proxy_password
 
-deb http://archive.ubuntu.com/ubuntu precise main restricted universe multiverse
-deb http://archive.ubuntu.com/ubuntu precise-security main restricted universe multiverse
-deb http://archive.ubuntu.com/ubuntu precise-updates main restricted universe multiverse
-deb http://archive.ubuntu.com/ubuntu precise-backports main restricted universe multiverse
+# Enable diff generation to reduce bandwidth usage
+set enable_diffs      1
+set diff_algorithm    xdelta3
+set diff_storage_path $base_path/diffs
+set max_diff_size_ratio 0.5
 
-#deb-src http://archive.ubuntu.com/ubuntu precise main restricted universe multiverse
-#deb-src http://archive.ubuntu.com/ubuntu precise-security main restricted universe multiverse
-#deb-src http://archive.ubuntu.com/ubuntu precise-updates main restricted universe multiverse
-#deb-src http://archive.ubuntu.com/ubuntu precise-backports main restricted universe multiverse
+# Retry and verification options
+set retry_attempts    5
+set retry_delay       2.0
+set verify_checksums  1
+set resume_partial_downloads 1
+
+# GPG signature verification (requires gpgv command)
+# Verify GPG signatures of Release files for security
+# set verify_gpg 1
+# Optional: specify global GPG keyring path (empty = use system default)
+# Per-repository keyrings can be specified using [signed-by=/path/to/keyring.gpg] option
+# set gpg_keyring /path/to/keyring.gpg
+
+# Cleanup mode: "off" (no cleanup), "on" (generate clean.sh, default), "auto" (automatic - dangerous!), or "both" (script + auto, for testing)
+# set clean on
+
+# Ubuntu 24.04 LTS (Noble Numbat) repositories
+# Per-repository GPG keyring can be specified using [signed-by=...] option (APT-compatible format)
+# Example: deb [signed-by=/usr/share/keyrings/ubuntu-archive-keyring.gpg] http://archive.ubuntu.com/ubuntu noble main
+deb http://archive.ubuntu.com/ubuntu noble main restricted universe multiverse
+deb http://archive.ubuntu.com/ubuntu noble-updates main restricted universe multiverse
+deb http://archive.ubuntu.com/ubuntu noble-security main restricted universe multiverse
+deb http://archive.ubuntu.com/ubuntu noble-backports main restricted universe multiverse
+
+# Source repositories (optional, uncomment if needed)
+#deb-src http://archive.ubuntu.com/ubuntu noble main restricted universe multiverse
+#deb-src http://archive.ubuntu.com/ubuntu noble-updates main restricted universe multiverse
+#deb-src http://archive.ubuntu.com/ubuntu noble-security main restricted universe multiverse
+#deb-src http://archive.ubuntu.com/ubuntu noble-backports main restricted universe multiverse
 
 clean http://archive.ubuntu.com/ubuntu
 

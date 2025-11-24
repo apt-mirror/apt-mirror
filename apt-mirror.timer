@@ -1,0 +1,23 @@
+[Unit]
+Description=Run apt-mirror daily
+Requires=apt-mirror.service
+
+[Timer]
+# Run daily at 2:00 AM
+OnCalendar=*-*-* 02:00:00
+
+# Run twice daily (2 AM and 2 PM) - uncomment to use:
+# OnCalendar=*-*-* 02,14:00:00
+
+# Run every 6 hours - uncomment to use:
+# OnCalendar=*-*-* 00,06,12,18:00:00
+
+# If the system was off during the scheduled time, run immediately after boot
+Persistent=true
+
+# Randomize start time by up to 30 minutes to avoid thundering herd
+RandomizedDelaySec=30min
+
+[Install]
+WantedBy=timers.target
+

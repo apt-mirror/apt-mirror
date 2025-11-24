@@ -1,0 +1,44 @@
+repo-mirror (0.6.3) unstable; urgency=medium
+
+  * Fix variable expansion to handle dependencies correctly
+  * Add comprehensive logging for file downloads
+  * Fix automatic cleanup to protect files properly
+  * Fix file copying from skel to mirror for all file types
+  * Add support for translation (i18n) files
+  * Improve metadata file pattern matching for modern APT
+  * Add support for all modern APT metadata types (dep11, cnf, i18n)
+  * Handle optional files gracefully (Release.gpg 404s)
+  * Ensure comprehensive coverage of all APT repository features
+
+ -- Debian/Ubuntu Maintainers <debian-apt-mirror@lists.debian.org>  Sun, 24 Nov 2024 00:00:00 +0000
+
+repo-mirror (0.6.2) unstable; urgency=medium
+
+  * Fix size verification for Release files with unknown sizes (size=0)
+  * Fix unpacking error in _process_indexes for binaries and sources
+  * Fix file_versions.json path resolution and directory creation
+  * Improve error handling for files with unknown sizes
+
+ -- Debian/Ubuntu Maintainers <debian-apt-mirror@lists.debian.org>  Sun, 24 Nov 2024 00:00:00 +0000
+
+repo-mirror (0.6.1) unstable; urgency=medium
+
+  * Rename package from apt-mirror to repo-mirror to avoid conflicts with
+    existing apt-mirror package in Debian/Ubuntu repositories
+  * Tool name remains 'apt-mirror' as a drop-in replacement for the Perl version
+
+ -- Debian/Ubuntu Maintainers <debian-apt-mirror@lists.debian.org>  Mon, 01 Jan 2024 00:00:00 +0000
+
+repo-mirror (0.6.0) unstable; urgency=medium
+
+  * Rewrite in Python with async support
+  * Add diff serving capability using xdelta3
+  * Improve error handling and progress reporting
+  * Add automatic retry with exponential backoff
+  * Add resume partial downloads support
+  * Add checksum verification option
+  * Backward compatible with existing mirror.list configuration
+  * All dependencies available in Debian/Ubuntu repositories
+
+ -- Debian/Ubuntu Maintainers <debian-apt-mirror@lists.debian.org>  Mon, 01 Jan 2024 00:00:00 +0000
+

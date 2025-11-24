@@ -1,3 +1,58 @@
+0.6.3 (2024-11-24)
+  * Fix variable expansion to handle dependencies correctly (var_path after base_path)
+  * Add comprehensive logging for each file download with status indicators
+  * Fix automatic cleanup to protect files in skel and download queue
+  * Fix file copying from skel to mirror - now copies all files including packages
+  * Add support for translation (i18n) files - i18n/Index and Translation-*.bz2/xz
+  * Improve metadata file pattern matching to match old Perl implementation exactly
+  * Add support for uncompressed dep11 files (future-proofing for modern APT)
+  * Fix dep11 and cnf file pattern matching to handle all compression formats
+  * Handle optional Release.gpg files gracefully (404 is acceptable)
+  * Improve download summary to show succeeded/failed/skipped counts
+  * Ensure all downloaded files are properly tracked in skip_clean for cleanup protection
+  * Fix Release file copying - ensure all Release files are copied to mirror
+  * Add comprehensive support for all modern APT metadata types
+
+0.6.2 (2024-11-24)
+  * Fix size verification for Release files with unknown sizes (size=0)
+  * Fix unpacking error in _process_indexes for binaries and sources tuples
+  * Fix file_versions.json path resolution and ensure parent directory exists
+  * Improve error handling for files with unknown sizes during download
+  * Add fallback variable expansion for var_path in diff generation
+
+0.6.1 (2024-01-01)
+  * Rename Debian package from apt-mirror to repo-mirror to avoid conflicts
+    with existing apt-mirror package in Debian/Ubuntu repositories
+  * Tool name remains 'apt-mirror' as a drop-in replacement for the Perl version
+  * All functionality and file names remain unchanged
+
+0.6.0 (2024-01-01)
+  * Complete rewrite in Python with async/await support for improved performance
+  * Add diff generation capability using xdelta3, bsdiff, or rsync (for custom tools only - standard APT does not support diffs)
+  * Add optional GPG signature verification for Release files (requires gpgv command, no Python dependencies)
+  * Add support for per-repository GPG keyrings using [signed-by=/path/to/keyring.gpg] option (APT-compatible format)
+  * Add support for mirror.list.d/ directory (similar to APT's sources.list.d/) for organizing repositories into separate files
+  * Implement automatic retry with exponential backoff for failed downloads
+  * Add resume support for partial downloads using HTTP Range requests
+  * Add optional checksum verification after downloads
+  * Add proxy authentication support with BasicAuth (proxy_user/proxy_password)
+  * Improve progress reporting with real-time speed, ETA, and percentage
+  * Enhance error handling with detailed error messages and context
+  * Improve postmirror script execution with better error checking (fixes #196)
+  * Implement cleanup functionality with three modes: "off", "on" (generate clean.sh), "auto" (automatic), and "both" (for testing)
+  * Fix issue #198: Use checksums to verify existing files before downloading
+  * Fix issue #199: Verify file completeness using checksums before parsing
+  * Fix issue #193: Improve Release file downloading with better error handling
+  * All dependencies available in Debian/Ubuntu repositories (python3-aiohttp, xdelta3)
+  * Maintain full backward compatibility with existing mirror.list configuration
+  * Use asyncio.to_thread() for file I/O to avoid blocking operations
+  * Support hardlink-aware file copying with improved unlink handling
+  * Better handling of by-hash directory downloads
+  * Improved Release file parsing with support for all hash types (fixes #197)
+  * Enhanced documentation with reST-formatted docstrings
+  * Add comprehensive Debian packaging support
+  * Add systemd service and timer files to Debian package
+
 0.5.4 (2017-05-29)
   * Add limit_rate to example mirror.list (fixes #72)
   * Fix use of uninitialized value $config{"options"} warning (fixes #68,

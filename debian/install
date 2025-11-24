@@ -1,0 +1,5 @@
+apt-mirror.py usr/bin/
+mirror.list etc/apt/
+apt-mirror.service etc/systemd/system/
+apt-mirror.timer etc/systemd/system/
+

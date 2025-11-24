@@ -1,0 +1,21 @@
+[Unit]
+Description=APT Mirror Update
+Documentation=man:apt-mirror(1)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/apt-mirror /etc/apt/mirror.list
+User=apt-mirror
+StandardOutput=journal
+StandardError=journal
+
+# Resource limits (adjust as needed)
+CPUQuota=200%
+MemoryMax=4G
+IOWeight=100
+
+# Nice priority (lower = higher priority, range -20 to 19)
+Nice=10
+

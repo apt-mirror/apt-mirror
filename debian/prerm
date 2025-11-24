@@ -1,0 +1,22 @@
+#!/bin/sh
+set -e
+
+# prerm script for apt-mirror
+# Runs before package removal
+
+case "$1" in
+    remove|upgrade|deconfigure)
+        # Stop and disable systemd timer if it exists
+        if command -v systemctl >/dev/null 2>&1; then
+            # Stop timer if running
+            systemctl stop apt-mirror.timer >/dev/null 2>&1 || true
+            # Disable timer if enabled
+            systemctl disable apt-mirror.timer >/dev/null 2>&1 || true
+            # Stop service if running
+            systemctl stop apt-mirror.service >/dev/null 2>&1 || true
+        fi
+        ;;
+esac
+
+exit 0
+

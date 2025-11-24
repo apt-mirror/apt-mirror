@@ -1,0 +1,27 @@
+Source: repo-mirror
+Section: admin
+Priority: optional
+Maintainer: Debian/Ubuntu Maintainers <debian-apt-mirror@lists.debian.org>
+Build-Depends: debhelper (>= 9), python3, python3-aiohttp, xdelta3
+Standards-Version: 4.0.0
+Homepage: https://apt-mirror.github.io/
+Vcs-Browser: https://github.com/radawson/apt-mirror
+Vcs-Git: https://github.com/radawson/apt-mirror.git
+
+Package: repo-mirror
+Architecture: all
+Depends: ${python3:Depends}, python3-aiohttp, xdelta3, ${misc:Depends}
+Recommends: gpgv
+Description: APT repository mirroring tool (async Python version)
+ A drop-in replacement for apt-mirror (Perl version) with async support
+ for improved performance. The tool is still called 'apt-mirror' and uses
+ the same configuration format and directory structure.
+ .
+ Features include:
+  * Async downloads using aiohttp
+  * Optional GPG signature verification for Release files
+  * Diff serving capability to reduce bandwidth
+  * Better error handling and progress reporting
+  * Improved performance for large mirrors
+  * Compatible with existing mirror.list configuration format
+

@@ -1,0 +1,29 @@
+#!/usr/bin/make -f
+# debian/rules for repo-mirror (package name), apt-mirror (internal tool name)
+
+export DH_VERBOSE = 1
+
+%:
+	dh $@
+
+override_dh_auto_install:
+	# Skip make install, we'll use dh_install instead
+	# (This prevents installing to /usr/local/bin)
+
+override_dh_install:
+	# Install files from debian/install
+	dh_install
+	# Rename apt-mirror.py to apt-mirror (tool name stays apt-mirror as drop-in replacement)
+	mv debian/repo-mirror/usr/bin/apt-mirror.py debian/repo-mirror/usr/bin/apt-mirror || true
+	# Create base directories
+	install -d debian/repo-mirror/var/spool/apt-mirror/mirror
+	install -d debian/repo-mirror/var/spool/apt-mirror/skel
+	install -d debian/repo-mirror/var/spool/apt-mirror/var
+	install -d debian/repo-mirror/var/spool/apt-mirror/diffs
+
+override_dh_auto_test:
+	# Check that dependencies are available
+	@python3 -c "import aiohttp" || (echo "ERROR: python3-aiohttp not available" && exit 1)
+	@which xdelta3 >/dev/null || (echo "ERROR: xdelta3 not available" && exit 1)
+	@echo "Dependencies check passed"
+

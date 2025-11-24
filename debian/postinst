@@ -1,0 +1,31 @@
+#!/bin/sh
+set -e
+
+# postinst script for apt-mirror
+
+case "$1" in
+    configure)
+        # Create apt-mirror user if it doesn't exist
+        if ! id apt-mirror >/dev/null 2>&1; then
+            adduser --system --group --home /var/spool/apt-mirror \
+                --no-create-home --disabled-login --quiet apt-mirror || true
+        fi
+        
+        # Set ownership of base directory and subdirectories
+        if [ -d /var/spool/apt-mirror ]; then
+            chown -R apt-mirror:apt-mirror /var/spool/apt-mirror || true
+        fi
+        
+        # Reload systemd to recognize new units
+        if command -v systemctl >/dev/null 2>&1; then
+            systemctl daemon-reload >/dev/null 2>&1 || true
+            
+            # Note: Timer is installed but not enabled by default
+            # Users should enable it manually after configuring mirror.list:
+            #   sudo systemctl enable apt-mirror.timer
+            #   sudo systemctl start apt-mirror.timer
+        fi
+        ;;
+esac
+
+exit 0
